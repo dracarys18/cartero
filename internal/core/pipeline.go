@@ -3,7 +3,10 @@ package core
 import (
 	"context"
 	"fmt"
+	"log"
+	"math"
 	"sync"
+	"time"
 )
 
 type SourceRoute struct {
@@ -78,29 +81,18 @@ func (p *Pipeline) Run(ctx context.Context) error {
 	}()
 
 	var wg sync.WaitGroup
-	errChan := make(chan error, len(p.routes))
 
 	for _, route := range p.routes {
 		wg.Add(1)
 		go func(r SourceRoute) {
 			defer wg.Done()
 			if err := p.processSource(ctx, r); err != nil {
-				errChan <- fmt.Errorf("source %s error: %w", r.Source.Name(), err)
+				log.Printf("Error processing source %s: %v", r.Source.Name(), err)
 			}
 		}(route)
 	}
 
-	go func() {
-		wg.Wait()
-		close(errChan)
-	}()
-
-	for err := range errChan {
-		if err != nil {
-			return err
-		}
-	}
-
+	wg.Wait()
 	return nil
 }
 
@@ -125,11 +117,10 @@ func (p *Pipeline) processSource(ctx context.Context, route SourceRoute) error {
 				if err != nil {
 					return err
 				}
-				if exists {
-					continue
-				}
-				if err := p.storage.Store(ctx, item); err != nil {
-					return err
+				if !exists {
+					if err := p.storage.Store(ctx, item); err != nil {
+						return err
+					}
 				}
 			}
 
@@ -193,13 +184,8 @@ func (p *Pipeline) publishToTargets(ctx context.Context, item *ProcessedItem, ro
 				}
 			}
 
-			result, err := t.Publish(ctx, item)
-			if err != nil {
-				errChan <- fmt.Errorf("target %s error: %w", t.Name(), err)
-				return
-			}
-			if !result.Success {
-				errChan <- fmt.Errorf("target %s publish failed: %v", t.Name(), result.Error)
+			if err := p.publishWithRetry(ctx, t, item); err != nil {
+				errChan <- err
 				return
 			}
 
@@ -223,6 +209,47 @@ func (p *Pipeline) publishToTargets(ctx context.Context, item *ProcessedItem, ro
 	}
 
 	return nil
+}
+
+func (p *Pipeline) publishWithRetry(ctx context.Context, target Target, item *ProcessedItem) error {
+	maxRetries := 3
+	var lastErr error
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		result, err := target.Publish(ctx, item)
+
+		if err == nil && result.Success {
+			return nil
+		}
+
+		if err != nil {
+			lastErr = fmt.Errorf("target %s error: %w", target.Name(), err)
+		} else if !result.Success {
+			lastErr = fmt.Errorf("target %s publish failed: %v", target.Name(), result.Error)
+		}
+
+		if attempt < maxRetries {
+			waitDuration := time.Duration(math.Pow(2, float64(attempt))) * time.Second
+
+			if result != nil && result.Metadata != nil {
+				if retryAfter, ok := result.Metadata["retry_after"].(float64); ok && retryAfter > 0 {
+					waitDuration = time.Duration(retryAfter*1000) * time.Millisecond
+				}
+			}
+
+			log.Printf("Target %s: attempt %d/%d failed, retrying in %v: %v",
+				target.Name(), attempt+1, maxRetries+1, waitDuration, lastErr)
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(waitDuration):
+				continue
+			}
+		}
+	}
+
+	return fmt.Errorf("target %s: max retries (%d) exceeded: %w", target.Name(), maxRetries+1, lastErr)
 }
 
 func (p *Pipeline) Shutdown(ctx context.Context) error {

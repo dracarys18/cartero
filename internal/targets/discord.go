@@ -72,6 +72,12 @@ type DiscordEmbedFooter struct {
 	Text string `json:"text"`
 }
 
+type DiscordErrorResponse struct {
+	Message    string  `json:"message"`
+	RetryAfter float64 `json:"retry_after"`
+	Global     bool    `json:"global"`
+}
+
 func NewDiscordPlatform(botToken string, timeout time.Duration, sleep time.Duration) *DiscordPlatform {
 	if timeout == 0 {
 		timeout = 60 * time.Second
@@ -177,6 +183,16 @@ func (d *DiscordTarget) publishToChannel(ctx context.Context, message DiscordMes
 	result.Metadata["status_code"] = resp.StatusCode
 	result.Metadata["channel_id"] = d.channelID
 
+	if resp.StatusCode == 429 {
+		body, _ := io.ReadAll(resp.Body)
+		var errorResp DiscordErrorResponse
+		if json.Unmarshal(body, &errorResp) == nil && errorResp.RetryAfter > 0 {
+			result.Metadata["retry_after"] = errorResp.RetryAfter
+		}
+		result.Error = fmt.Errorf("discord API rate limited, body: %s", string(body))
+		return result, result.Error
+	}
+
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)
 		result.Error = fmt.Errorf("discord API returned status code: %d, body: %s", resp.StatusCode, string(body))
@@ -228,6 +244,16 @@ func (d *DiscordTarget) publishToForum(ctx context.Context, item *core.Processed
 	result.Metadata["status_code"] = resp.StatusCode
 	result.Metadata["channel_id"] = d.channelID
 	result.Metadata["is_forum"] = true
+
+	if resp.StatusCode == 429 {
+		body, _ := io.ReadAll(resp.Body)
+		var errorResp DiscordErrorResponse
+		if json.Unmarshal(body, &errorResp) == nil && errorResp.RetryAfter > 0 {
+			result.Metadata["retry_after"] = errorResp.RetryAfter
+		}
+		result.Error = fmt.Errorf("discord API rate limited, body: %s", string(body))
+		return result, result.Error
+	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)
