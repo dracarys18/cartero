@@ -1,0 +1,4 @@
+bin/
+output/
+*.db
+config.toml

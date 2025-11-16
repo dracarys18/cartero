@@ -1,0 +1,79 @@
+[bot]
+name = "cartero"
+interval = "10m"
+run_once = false
+
+[storage]
+type = "sqlite"
+path = "./cartero.db"
+
+[platforms.discord]
+type = "discord"
+sleep = "1s"
+[platforms.discord.settings]
+bot_token = "YOUR_BOT_TOKEN_HERE"
+timeout = "60s"
+
+[sources.hackernews]
+type = "hackernews"
+enabled = true
+targets = ["discord_hn"]
+[sources.hackernews.settings]
+story_type = "topstories"
+max_items = 30
+
+[sources.lobsters]
+type = "lobsters"
+enabled = false
+targets = ["discord_lobsters"]
+[sources.lobsters.settings]
+max_items = 20
+sort_by = "hot"
+include_categories = ["rust", "go", "programming"]
+exclude_categories = ["rant", "culture"]
+
+[processors.dedupe]
+type = "dedupe"
+enabled = true
+order = 1
+[processors.dedupe.settings]
+ttl = "24h"
+
+[processors.score_filter]
+type = "filter_score"
+enabled = true
+order = 2
+[processors.score_filter.settings]
+min_score = 100
+
+[processors.keyword_filter]
+type = "filter_keyword"
+enabled = false
+order = 3
+[processors.keyword_filter.settings]
+keywords = ["AI", "Go", "Rust"]
+mode = "include"
+
+[processors.rate_limiter]
+type = "rate_limit"
+enabled = false
+order = 4
+[processors.rate_limiter.settings]
+limit = 10
+window = "1m"
+
+[targets.discord_hn]
+type = "discord"
+enabled = true
+platform = "discord"
+[targets.discord_hn.settings]
+channel_id = "YOUR_CHANNEL_ID_HERE"
+channel_type = "forum"
+
+[targets.discord_lobsters]
+type = "discord"
+enabled = true
+platform = "discord"
+[targets.discord_lobsters.settings]
+channel_id = "YOUR_CHANNEL_ID_HERE"
+channel_type = "forum"
