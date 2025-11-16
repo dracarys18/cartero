@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  cartero:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cartero
+    restart: unless-stopped
+    volumes:
+      - ./config.toml:/app/config.toml:ro
+      - ./data:/app/data
+    environment:
+      - TZ=UTC
+    command: ["-config", "/app/config.toml"]
+    networks:
+      - cartero-network
+
+networks:
+  cartero-network:
+    driver: bridge
