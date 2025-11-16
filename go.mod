@@ -1,6 +1,6 @@
 module cartero
 
-go 1.25.4
+go 1.23
 
 require (
 	github.com/BurntSushi/toml v1.3.2
