@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -57,6 +58,7 @@ func (l *LobstersSource) Name() string {
 }
 
 func (l *LobstersSource) Initialize(ctx context.Context) error {
+	log.Printf("Lobsters source %s: initializing (sort_by=%s, max_items=%d)", l.name, l.sortBy, l.maxItems)
 	return nil
 }
 
@@ -68,16 +70,22 @@ func (l *LobstersSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan e
 		defer close(itemChan)
 		defer close(errChan)
 
+		log.Printf("Lobsters source %s: fetching posts", l.name)
 		posts, err := l.fetchPosts(ctx)
 		if err != nil {
+			log.Printf("Lobsters source %s: error fetching posts: %v", l.name, err)
 			errChan <- err
 			return
 		}
+
+		log.Printf("Lobsters source %s: retrieved %d posts", l.name, len(posts))
 
 		limit := l.maxItems
 		if limit > len(posts) {
 			limit = len(posts)
 		}
+
+		log.Printf("Lobsters source %s: processing %d posts", l.name, limit)
 
 		for i := 0; i < limit; i++ {
 			select {
@@ -113,12 +121,16 @@ func (l *LobstersSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan e
 
 				select {
 				case itemChan <- item:
+					log.Printf("Lobsters source %s: sent item %d/%d (id=%s, score=%d)",
+						l.name, i+1, limit, post.ShortID, post.Score)
 				case <-ctx.Done():
 					errChan <- ctx.Err()
 					return
 				}
 			}
 		}
+
+		log.Printf("Lobsters source %s: finished processing all items", l.name)
 	}()
 
 	return itemChan, errChan
@@ -191,6 +203,7 @@ func (l *LobstersSource) shouldIncludePost(post LobstersPost) bool {
 }
 
 func (l *LobstersSource) Shutdown(ctx context.Context) error {
+	log.Printf("Lobsters source %s: shutting down", l.name)
 	l.httpClient.CloseIdleConnections()
 	return nil
 }

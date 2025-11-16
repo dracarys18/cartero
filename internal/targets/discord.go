@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -109,6 +110,8 @@ func (d *DiscordTarget) Name() string {
 }
 
 func (d *DiscordTarget) Initialize(ctx context.Context) error {
+	log.Printf("Discord target %s: initializing (channel_id=%s, type=%s)", d.name, d.channelID, d.channelType)
+
 	if d.platform == nil {
 		return fmt.Errorf("platform is required")
 	}
@@ -120,6 +123,7 @@ func (d *DiscordTarget) Initialize(ctx context.Context) error {
 		d.channelType = "text"
 	}
 
+	log.Printf("Discord target %s: initialization complete", d.name)
 	return nil
 }
 
@@ -136,6 +140,9 @@ func (d *DiscordTarget) Sleep(ctx context.Context) error {
 }
 
 func (d *DiscordTarget) Publish(ctx context.Context, item *core.ProcessedItem) (*core.PublishResult, error) {
+	log.Printf("Discord target %s: publishing item %s to %s channel %s",
+		d.name, item.Original.ID, d.channelType, d.channelID)
+
 	result := &core.PublishResult{
 		Success:   false,
 		Target:    d.name,
@@ -152,6 +159,7 @@ func (d *DiscordTarget) Publish(ctx context.Context, item *core.ProcessedItem) (
 	case "text":
 		return d.publishToChannel(ctx, message, result)
 	default:
+		log.Printf("Discord target %s: unknown channel type %s", d.name, d.channelType)
 		return nil, nil
 	}
 }
@@ -188,6 +196,9 @@ func (d *DiscordTarget) publishToChannel(ctx context.Context, message DiscordMes
 		var errorResp DiscordErrorResponse
 		if json.Unmarshal(body, &errorResp) == nil && errorResp.RetryAfter > 0 {
 			result.Metadata["retry_after"] = errorResp.RetryAfter
+			log.Printf("Discord target %s: rate limited, retry_after=%.2fs", d.name, errorResp.RetryAfter)
+		} else {
+			log.Printf("Discord target %s: rate limited (no retry_after)", d.name)
 		}
 		result.Error = fmt.Errorf("discord API rate limited, body: %s", string(body))
 		return result, result.Error
@@ -195,10 +206,12 @@ func (d *DiscordTarget) publishToChannel(ctx context.Context, message DiscordMes
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)
+		log.Printf("Discord target %s: API error %d: %s", d.name, resp.StatusCode, string(body))
 		result.Error = fmt.Errorf("discord API returned status code: %d, body: %s", resp.StatusCode, string(body))
 		return result, result.Error
 	}
 
+	log.Printf("Discord target %s: message posted successfully to channel %s", d.name, d.channelID)
 	result.Success = true
 	return result, nil
 }
@@ -211,6 +224,8 @@ func (d *DiscordTarget) publishToForum(ctx context.Context, item *core.Processed
 			threadName = threadName[:97] + "..."
 		}
 	}
+
+	log.Printf("Discord target %s: creating forum thread '%s'", d.name, threadName)
 
 	threadPayload := CreateThreadPayload{
 		Name:        threadName,
@@ -250,6 +265,9 @@ func (d *DiscordTarget) publishToForum(ctx context.Context, item *core.Processed
 		var errorResp DiscordErrorResponse
 		if json.Unmarshal(body, &errorResp) == nil && errorResp.RetryAfter > 0 {
 			result.Metadata["retry_after"] = errorResp.RetryAfter
+			log.Printf("Discord target %s: rate limited creating thread, retry_after=%.2fs", d.name, errorResp.RetryAfter)
+		} else {
+			log.Printf("Discord target %s: rate limited creating thread (no retry_after)", d.name)
 		}
 		result.Error = fmt.Errorf("discord API rate limited, body: %s", string(body))
 		return result, result.Error
@@ -257,10 +275,12 @@ func (d *DiscordTarget) publishToForum(ctx context.Context, item *core.Processed
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(resp.Body)
+		log.Printf("Discord target %s: API error creating thread %d: %s", d.name, resp.StatusCode, string(body))
 		result.Error = fmt.Errorf("discord API returned status code: %d, body: %s", resp.StatusCode, string(body))
 		return result, result.Error
 	}
 
+	log.Printf("Discord target %s: forum thread created successfully in channel %s", d.name, d.channelID)
 	result.Success = true
 	return result, nil
 }
@@ -327,9 +347,11 @@ func (d *DiscordTarget) buildMessage(item *core.ProcessedItem) DiscordMessage {
 }
 
 func (d *DiscordTarget) Shutdown(ctx context.Context) error {
+	log.Printf("Discord target %s: shutting down", d.name)
 	return nil
 }
 
 func (p *DiscordPlatform) Shutdown() {
+	log.Printf("Discord platform: closing idle connections")
 	p.httpClient.CloseIdleConnections()
 }

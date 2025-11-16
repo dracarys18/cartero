@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
 
@@ -53,6 +54,7 @@ func (h *HackerNewsSource) Name() string {
 }
 
 func (h *HackerNewsSource) Initialize(ctx context.Context) error {
+	log.Printf("HackerNews source %s: initializing (type=%s, max_items=%d)", h.name, h.storyType, h.maxItems)
 	return nil
 }
 
@@ -64,16 +66,22 @@ func (h *HackerNewsSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan
 		defer close(itemChan)
 		defer close(errChan)
 
+		log.Printf("HackerNews source %s: fetching story IDs", h.name)
 		storyIDs, err := h.fetchStoryIDs(ctx)
 		if err != nil {
+			log.Printf("HackerNews source %s: error fetching story IDs: %v", h.name, err)
 			errChan <- err
 			return
 		}
+
+		log.Printf("HackerNews source %s: retrieved %d story IDs", h.name, len(storyIDs))
 
 		limit := h.maxItems
 		if limit > len(storyIDs) {
 			limit = len(storyIDs)
 		}
+
+		log.Printf("HackerNews source %s: fetching %d stories", h.name, limit)
 
 		for i := 0; i < limit; i++ {
 			select {
@@ -83,6 +91,7 @@ func (h *HackerNewsSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan
 			default:
 				story, err := h.fetchStory(ctx, storyIDs[i])
 				if err != nil {
+					log.Printf("HackerNews source %s: error fetching story %d: %v", h.name, storyIDs[i], err)
 					continue
 				}
 
@@ -104,12 +113,16 @@ func (h *HackerNewsSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan
 
 				select {
 				case itemChan <- item:
+					log.Printf("HackerNews source %s: sent item %d/%d (id=%d, score=%d)",
+						h.name, i+1, limit, story.ID, story.Score)
 				case <-ctx.Done():
 					errChan <- ctx.Err()
 					return
 				}
 			}
 		}
+
+		log.Printf("HackerNews source %s: finished fetching all items", h.name)
 	}()
 
 	return itemChan, errChan
@@ -178,5 +191,6 @@ func (h *HackerNewsSource) fetchStory(ctx context.Context, id int64) (*HNStory, 
 }
 
 func (h *HackerNewsSource) Shutdown(ctx context.Context) error {
+	log.Printf("HackerNews source %s: shutting down", h.name)
 	return nil
 }

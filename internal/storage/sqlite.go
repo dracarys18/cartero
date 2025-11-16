@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"cartero/internal/core"
@@ -19,6 +20,7 @@ type SQLiteStorage struct {
 }
 
 func NewSQLiteStorage(path string) (*SQLiteStorage, error) {
+	log.Printf("SQLite storage: opening database at %s", path)
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
@@ -34,10 +36,12 @@ func NewSQLiteStorage(path string) (*SQLiteStorage, error) {
 		return nil, err
 	}
 
+	log.Printf("SQLite storage: database initialized successfully")
 	return storage, nil
 }
 
 func (s *SQLiteStorage) initialize() error {
+	log.Printf("SQLite storage: initializing schema")
 	schema := `
 	CREATE TABLE IF NOT EXISTS items (
 		id TEXT PRIMARY KEY,
@@ -62,6 +66,9 @@ func (s *SQLiteStorage) initialize() error {
 	`
 
 	_, err := s.db.Exec(schema)
+	if err != nil {
+		log.Printf("SQLite storage: error initializing schema: %v", err)
+	}
 	return err
 }
 
@@ -107,6 +114,7 @@ func (s *SQLiteStorage) MarkPublished(ctx context.Context, itemID, target string
 
 	_, err := s.db.ExecContext(ctx, query, itemID, target)
 	if err != nil {
+		log.Printf("SQLite storage: error marking item %s as published to %s: %v", itemID, target, err)
 		return fmt.Errorf("failed to mark as published: %w", err)
 	}
 
@@ -126,6 +134,7 @@ func (s *SQLiteStorage) IsPublished(ctx context.Context, itemID, target string) 
 }
 
 func (s *SQLiteStorage) Close() error {
+	log.Printf("SQLite storage: closing database connection")
 	return s.db.Close()
 }
 
@@ -133,9 +142,15 @@ func (s *SQLiteStorage) DeleteOlderThan(ctx context.Context, age time.Duration) 
 	cutoff := time.Now().Add(-age)
 	query := `DELETE FROM items WHERE timestamp < ?`
 
-	_, err := s.db.ExecContext(ctx, query, cutoff)
+	log.Printf("SQLite storage: deleting items older than %v (cutoff: %s)", age, cutoff.Format(time.RFC3339))
+	result, err := s.db.ExecContext(ctx, query, cutoff)
 	if err != nil {
+		log.Printf("SQLite storage: error deleting old items: %v", err)
 		return fmt.Errorf("failed to delete old items: %w", err)
+	}
+
+	if rows, err := result.RowsAffected(); err == nil {
+		log.Printf("SQLite storage: deleted %d old items", rows)
 	}
 
 	return nil
