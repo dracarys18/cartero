@@ -9,7 +9,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./config.toml:/app/config.toml:ro
-      - ./data:/app/data
+      - cartero-data:/app/data
     environment:
       - TZ=UTC
     command: ["-config", "/app/config.toml"]
@@ -19,3 +19,7 @@ services:
 networks:
   cartero-network:
     driver: bridge
+
+volumes:
+  cartero-data:
+    driver: local
