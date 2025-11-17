@@ -51,7 +51,7 @@ type = "filter_keyword"
 enabled = false
 order = 3
 [processors.keyword_filter.settings]
-keywords = ["AI", "Go", "Rust"]
+keywords = ["AI", "Go", "Rust", "Encryption", "Database"]
 mode = "include"
 
 [processors.rate_limiter]
