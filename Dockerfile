@@ -22,6 +22,8 @@ COPY --from=builder /build/cartero /app/cartero
 
 COPY config.sample.toml /app/config.sample.toml
 
+COPY templates /app/templates
+
 RUN chmod +x /app/cartero
 
 ENTRYPOINT ["/app/cartero"]
