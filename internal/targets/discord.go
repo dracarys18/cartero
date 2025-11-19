@@ -287,55 +287,18 @@ func (d *DiscordTarget) sendMessage(item *core.ProcessedItem) (string, error) {
 }
 
 func (d *DiscordTarget) buildMessage(item *core.ProcessedItem) DiscordMessage {
-	if str, ok := item.Data.(string); ok {
-		return DiscordMessage{
-			Content: str,
-		}
-	}
-
-	// Prepare data for template
-	data := make(map[string]interface{})
-	for k, v := range item.Original.Metadata {
-		data[k] = v
-	}
-	data["source"] = item.Original.Source
-	data["timestamp"] = item.Original.Timestamp.Format(time.RFC3339)
-
-	// Ensure description is not too long
-	if desc, ok := data["description"].(string); ok && len(desc) > 2048 {
-		data["description"] = desc[:2045] + "..."
-	}
-
-	// Execute template
+	// Execute template with item
 	var buf bytes.Buffer
-	if err := d.template.Execute(&buf, data); err != nil {
-		log.Printf("Discord target %s: template execution error: %v", d.name, err)
-		// Fallback to basic embed
-		return DiscordMessage{
-			Embeds: []DiscordEmbed{{
-				Title:       fmt.Sprintf("%v", data["title"]),
-				URL:         fmt.Sprintf("%v", data["url"]),
-				Description: fmt.Sprintf("%v", data["description"]),
-				Color:       3447003,
-			}},
-		}
+	if err := d.template.Execute(&buf, item.Original); err != nil {
+		panic(fmt.Sprintf("Discord target %s: template execution error: %v", d.name, err))
 	}
 
 	// Parse JSON output from template
 	var embed DiscordEmbed
 	output := strings.TrimSpace(buf.String())
 	if err := json.Unmarshal([]byte(output), &embed); err != nil {
-		log.Printf("Discord target %s: failed to parse template output as JSON: %v", d.name, err)
-		log.Printf("Template output: %s", output)
-		// Fallback to basic embed
-		return DiscordMessage{
-			Embeds: []DiscordEmbed{{
-				Title:       fmt.Sprintf("%v", data["title"]),
-				URL:         fmt.Sprintf("%v", data["url"]),
-				Description: fmt.Sprintf("%v", data["description"]),
-				Color:       3447003,
-			}},
-		}
+		log.Printf("Discord target %s: template output: %s", d.name, output)
+		panic(fmt.Sprintf("Discord target %s: failed to parse template output as JSON: %v", d.name, err))
 	}
 
 	return DiscordMessage{

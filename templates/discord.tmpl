@@ -1,33 +1,33 @@
 {
-  "title": {{ .title | json }},
-  "url": {{ .url | json }},
-  "description": {{ .description | json }},
+  "title": {{ index .Metadata "title" | json }},
+  "url": {{ index .Metadata "url" | json }},
+  "description": {{ index .Metadata "description" | json }},
   "color": 3447003,
-  "timestamp": {{ .timestamp | json }},
+  "timestamp": {{ .Timestamp.Format "2006-01-02T15:04:05Z07:00" | json }},
   "fields": [
-    {{- if .score }}
+    {{- if index .Metadata "score" }}
     {
       "name": "Score",
-      "value": "{{ .score }}",
+      "value": "{{ index .Metadata "score" }}",
       "inline": true
-    }{{ if or .author .comments }},{{ end }}
+    }{{ if or (index .Metadata "author") (index .Metadata "comments") }},{{ end }}
     {{- end }}
-    {{- if .author }}
+    {{- if index .Metadata "author" }}
     {
       "name": "Author",
-      "value": {{ .author | json }},
+      "value": {{ index .Metadata "author" | json }},
       "inline": true
-    }{{ if .comments }},{{ end }}
+    }{{ if index .Metadata "comments" }},{{ end }}
     {{- end }}
-    {{- if .comments }}
+    {{- if index .Metadata "comments" }}
     {
       "name": "Comments",
-      "value": {{ if .comment_count }}{{ printf "[Discussion (%d comments)](%s)" .comment_count .comments | json }}{{ else }}{{ printf "[Discussion](%s)" .comments | json }}{{ end }},
+      "value": {{ if index .Metadata "comment_count" }}{{ printf "[Discussion (%d comments)](%s)" (index .Metadata "comment_count") (index .Metadata "comments") | json }}{{ else }}{{ printf "[Discussion](%s)" (index .Metadata "comments") | json }}{{ end }},
       "inline": false
     }
     {{- end }}
   ],
   "footer": {
-    "text": {{ printf "Source: %s" .source | json }}
+    "text": {{ printf "Source: %s" .Source | json }}
   }
 }
