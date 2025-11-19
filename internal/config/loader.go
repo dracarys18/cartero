@@ -95,6 +95,14 @@ func (l *Loader) createSource(name string, cfg SourceConfig) (core.Source, error
 		excludeCategories := GetStringSlice(cfg.Settings, "exclude_categories")
 		return sources.NewLobstersSource(name, maxItems, sortBy, includeCategories, excludeCategories), nil
 
+	case "rss":
+		feedURL := GetString(cfg.Settings, "feed_url", "")
+		if feedURL == "" {
+			return nil, fmt.Errorf("feed_url is required for RSS source")
+		}
+		maxItems := GetInt(cfg.Settings, "max_items", 50)
+		return sources.NewRSSSource(name, feedURL, maxItems), nil
+
 	default:
 		return nil, fmt.Errorf("unsupported source type: %s", cfg.Type)
 	}

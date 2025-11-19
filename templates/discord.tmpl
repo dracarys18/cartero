@@ -1,0 +1,33 @@
+{
+  "title": {{ .title | json }},
+  "url": {{ .url | json }},
+  "description": {{ .description | json }},
+  "color": 3447003,
+  "timestamp": {{ .timestamp | json }},
+  "fields": [
+    {{- if .score }}
+    {
+      "name": "Score",
+      "value": "{{ .score }}",
+      "inline": true
+    }{{ if or .author .comments }},{{ end }}
+    {{- end }}
+    {{- if .author }}
+    {
+      "name": "Author",
+      "value": {{ .author | json }},
+      "inline": true
+    }{{ if .comments }},{{ end }}
+    {{- end }}
+    {{- if .comments }}
+    {
+      "name": "Comments",
+      "value": {{ if .comment_count }}{{ printf "[Discussion (%d comments)](%s)" .comment_count .comments | json }}{{ else }}{{ printf "[Discussion](%s)" .comments | json }}{{ end }},
+      "inline": false
+    }
+    {{- end }}
+  ],
+  "footer": {
+    "text": {{ printf "Source: %s" .source | json }}
+  }
+}

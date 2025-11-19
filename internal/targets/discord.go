@@ -8,9 +8,12 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
+	"text/template"
 	"time"
 
 	"cartero/internal/core"
+	"cartero/internal/utils"
 )
 
 type DiscordPlatform struct {
@@ -24,6 +27,7 @@ type DiscordTarget struct {
 	platform    *DiscordPlatform
 	channelID   string
 	channelType string
+	template    *template.Template
 }
 
 type DiscordConfig struct {
@@ -97,11 +101,24 @@ func NewDiscordPlatform(botToken string, timeout time.Duration, sleep time.Durat
 }
 
 func NewDiscordTarget(name string, config DiscordConfig) *DiscordTarget {
+	// Use platform name for template selection
+	templatePath := "templates/discord.tmpl"
+
+	// Load template from file
+	tmpl, err := utils.LoadTemplate(templatePath)
+	if err != nil {
+		log.Printf("Discord target %s: FATAL - %v", name, err)
+		panic(err.Error())
+	}
+
+	log.Printf("Discord target %s: loaded template from %s", name, templatePath)
+
 	return &DiscordTarget{
 		name:        name,
 		platform:    config.Platform,
 		channelID:   config.ChannelID,
 		channelType: config.ChannelType,
+		template:    tmpl,
 	}
 }
 
@@ -111,31 +128,7 @@ func (d *DiscordTarget) Name() string {
 
 func (d *DiscordTarget) Initialize(ctx context.Context) error {
 	log.Printf("Discord target %s: initializing (channel_id=%s, type=%s)", d.name, d.channelID, d.channelType)
-
-	if d.platform == nil {
-		return fmt.Errorf("platform is required")
-	}
-	if d.channelID == "" {
-		return fmt.Errorf("channel ID is required")
-	}
-
-	if d.channelType == "" {
-		d.channelType = "text"
-	}
-
 	log.Printf("Discord target %s: initialization complete", d.name)
-	return nil
-}
-
-func (d *DiscordTarget) Sleep(ctx context.Context) error {
-	if d.platform.sleep > 0 {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(d.platform.sleep):
-			return nil
-		}
-	}
 	return nil
 }
 
@@ -143,146 +136,154 @@ func (d *DiscordTarget) Publish(ctx context.Context, item *core.ProcessedItem) (
 	log.Printf("Discord target %s: publishing item %s to %s channel %s",
 		d.name, item.Original.ID, d.channelType, d.channelID)
 
-	result := &core.PublishResult{
-		Success:   false,
-		Target:    d.name,
-		ItemID:    item.Original.ID,
-		Timestamp: time.Now(),
-		Metadata:  make(map[string]interface{}),
-	}
-
-	message := d.buildMessage(item)
+	var messageID string
+	var err error
 
 	switch d.channelType {
 	case "forum":
-		return d.publishToForum(ctx, item, message, result)
+		messageID, err = d.createForumThread(item)
 	case "text":
-		return d.publishToChannel(ctx, message, result)
+		messageID, err = d.sendMessage(item)
 	default:
-		log.Printf("Discord target %s: unknown channel type %s", d.name, d.channelType)
-		return nil, nil
+		return nil, fmt.Errorf("unsupported channel type: %s", d.channelType)
 	}
+
+	if err != nil {
+		return &core.PublishResult{
+			Success:   false,
+			Target:    d.name,
+			ItemID:    item.Original.ID,
+			Timestamp: time.Now(),
+			Error:     err,
+		}, err
+	}
+
+	return &core.PublishResult{
+		Success:   true,
+		Target:    d.name,
+		ItemID:    item.Original.ID,
+		Timestamp: time.Now(),
+		Metadata: map[string]interface{}{
+			"message_id": messageID,
+			"channel_id": d.channelID,
+		},
+	}, nil
 }
 
-func (d *DiscordTarget) publishToChannel(ctx context.Context, message DiscordMessage, result *core.PublishResult) (*core.PublishResult, error) {
-	jsonData, err := json.Marshal(message)
-	if err != nil {
-		result.Error = fmt.Errorf("failed to marshal message: %w", err)
-		return result, result.Error
-	}
-
-	url := fmt.Sprintf("https://discord.com/api/v10/channels/%s/messages", d.channelID)
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		result.Error = fmt.Errorf("failed to create request: %w", err)
-		return result, result.Error
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bot %s", d.platform.botToken))
-
-	resp, err := d.platform.httpClient.Do(req)
-	if err != nil {
-		result.Error = fmt.Errorf("failed to send request: %w", err)
-		return result, result.Error
-	}
-	defer resp.Body.Close()
-
-	result.Metadata["status_code"] = resp.StatusCode
-	result.Metadata["channel_id"] = d.channelID
-
-	if resp.StatusCode == 429 {
-		body, _ := io.ReadAll(resp.Body)
-		var errorResp DiscordErrorResponse
-		if json.Unmarshal(body, &errorResp) == nil && errorResp.RetryAfter > 0 {
-			result.Metadata["retry_after"] = errorResp.RetryAfter
-			log.Printf("Discord target %s: rate limited, retry_after=%.2fs", d.name, errorResp.RetryAfter)
-		} else {
-			log.Printf("Discord target %s: rate limited (no retry_after)", d.name)
-		}
-		result.Error = fmt.Errorf("discord API rate limited, body: %s", string(body))
-		return result, result.Error
-	}
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
-		log.Printf("Discord target %s: API error %d: %s", d.name, resp.StatusCode, string(body))
-		result.Error = fmt.Errorf("discord API returned status code: %d, body: %s", resp.StatusCode, string(body))
-		return result, result.Error
-	}
-
-	log.Printf("Discord target %s: message posted successfully to channel %s", d.name, d.channelID)
-	result.Success = true
-	return result, nil
-}
-
-func (d *DiscordTarget) publishToForum(ctx context.Context, item *core.ProcessedItem, message DiscordMessage, result *core.PublishResult) (*core.PublishResult, error) {
-	threadName := "New Post"
-	if title, ok := item.Original.Metadata["title"].(string); ok {
-		threadName = title
-		if len(threadName) > 100 {
-			threadName = threadName[:97] + "..."
+func (d *DiscordTarget) createForumThread(item *core.ProcessedItem) (string, error) {
+	title := "Untitled"
+	if t, ok := item.Original.Metadata["title"].(string); ok {
+		title = t
+		if len(title) > 100 {
+			title = title[:97] + "..."
 		}
 	}
 
-	log.Printf("Discord target %s: creating forum thread '%s'", d.name, threadName)
+	log.Printf("Discord target %s: creating forum thread '%s'", d.name, title)
 
-	threadPayload := CreateThreadPayload{
-		Name:        threadName,
-		AutoArchive: 60,
+	message := d.buildMessage(item)
+
+	payload := CreateThreadPayload{
+		Name:        title,
+		AutoArchive: 1440,
 		Message:     message,
 	}
 
-	jsonData, err := json.Marshal(threadPayload)
+	body, err := json.Marshal(payload)
 	if err != nil {
-		result.Error = fmt.Errorf("failed to marshal thread payload: %w", err)
-		return result, result.Error
+		return "", fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
 	url := fmt.Sprintf("https://discord.com/api/v10/channels/%s/threads", d.channelID)
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
 	if err != nil {
-		result.Error = fmt.Errorf("failed to create request: %w", err)
-		return result, result.Error
+		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", fmt.Sprintf("Bot %s", d.platform.botToken))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "DiscordBot (cartero, 1.0)")
 
 	resp, err := d.platform.httpClient.Do(req)
 	if err != nil {
-		result.Error = fmt.Errorf("failed to send request: %w", err)
-		return result, result.Error
+		return "", fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	result.Metadata["status_code"] = resp.StatusCode
-	result.Metadata["channel_id"] = d.channelID
-	result.Metadata["is_forum"] = true
+	respBody, _ := io.ReadAll(resp.Body)
 
 	if resp.StatusCode == 429 {
-		body, _ := io.ReadAll(resp.Body)
 		var errorResp DiscordErrorResponse
-		if json.Unmarshal(body, &errorResp) == nil && errorResp.RetryAfter > 0 {
-			result.Metadata["retry_after"] = errorResp.RetryAfter
+		if err := json.Unmarshal(respBody, &errorResp); err == nil {
 			log.Printf("Discord target %s: rate limited creating thread, retry_after=%.2fs", d.name, errorResp.RetryAfter)
-		} else {
-			log.Printf("Discord target %s: rate limited creating thread (no retry_after)", d.name)
+			return "", fmt.Errorf("discord API rate limited, body: %s", string(respBody))
 		}
-		result.Error = fmt.Errorf("discord API rate limited, body: %s", string(body))
-		return result, result.Error
 	}
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		body, _ := io.ReadAll(resp.Body)
-		log.Printf("Discord target %s: API error creating thread %d: %s", d.name, resp.StatusCode, string(body))
-		result.Error = fmt.Errorf("discord API returned status code: %d, body: %s", resp.StatusCode, string(body))
-		return result, result.Error
+	if resp.StatusCode != http.StatusCreated {
+		return "", fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(respBody))
+	}
+
+	var thread DiscordThread
+	if err := json.Unmarshal(respBody, &thread); err != nil {
+		return "", fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
 	log.Printf("Discord target %s: forum thread created successfully in channel %s", d.name, d.channelID)
-	result.Success = true
-	return result, nil
+
+	time.Sleep(d.platform.sleep)
+
+	return thread.ID, nil
+}
+
+func (d *DiscordTarget) sendMessage(item *core.ProcessedItem) (string, error) {
+	message := d.buildMessage(item)
+
+	body, err := json.Marshal(message)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal message: %w", err)
+	}
+
+	url := fmt.Sprintf("https://discord.com/api/v10/channels/%s/messages", d.channelID)
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bot %s", d.platform.botToken))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "DiscordBot (cartero, 1.0)")
+
+	resp, err := d.platform.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode == 429 {
+		var errorResp DiscordErrorResponse
+		if err := json.Unmarshal(respBody, &errorResp); err == nil {
+			log.Printf("Discord target %s: rate limited, retry_after=%.2fs", d.name, errorResp.RetryAfter)
+			return "", fmt.Errorf("discord API rate limited, body: %s", string(respBody))
+		}
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(respBody))
+	}
+
+	var result struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		return "", fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	time.Sleep(d.platform.sleep)
+
+	return result.ID, nil
 }
 
 func (d *DiscordTarget) buildMessage(item *core.ProcessedItem) DiscordMessage {
@@ -292,52 +293,48 @@ func (d *DiscordTarget) buildMessage(item *core.ProcessedItem) DiscordMessage {
 		}
 	}
 
-	embed := DiscordEmbed{
-		Color:     3447003,
-		Timestamp: item.Original.Timestamp.Format(time.RFC3339),
-		Footer: &DiscordEmbedFooter{
-			Text: fmt.Sprintf("Source: %s", item.Original.Source),
-		},
+	// Prepare data for template
+	data := make(map[string]interface{})
+	for k, v := range item.Original.Metadata {
+		data[k] = v
+	}
+	data["source"] = item.Original.Source
+	data["timestamp"] = item.Original.Timestamp.Format(time.RFC3339)
+
+	// Ensure description is not too long
+	if desc, ok := data["description"].(string); ok && len(desc) > 2048 {
+		data["description"] = desc[:2045] + "..."
 	}
 
-	if title, ok := item.Original.Metadata["title"].(string); ok {
-		embed.Title = title
-	}
-
-	if url, ok := item.Original.Metadata["url"].(string); ok {
-		embed.URL = url
-	}
-
-	if description, ok := item.Original.Metadata["description"].(string); ok {
-		if len(description) > 2048 {
-			description = description[:2045] + "..."
+	// Execute template
+	var buf bytes.Buffer
+	if err := d.template.Execute(&buf, data); err != nil {
+		log.Printf("Discord target %s: template execution error: %v", d.name, err)
+		// Fallback to basic embed
+		return DiscordMessage{
+			Embeds: []DiscordEmbed{{
+				Title:       fmt.Sprintf("%v", data["title"]),
+				URL:         fmt.Sprintf("%v", data["url"]),
+				Description: fmt.Sprintf("%v", data["description"]),
+				Color:       3447003,
+			}},
 		}
-		embed.Description = description
 	}
 
-	if score, ok := item.Original.Metadata["score"].(int); ok {
-		embed.Fields = append(embed.Fields, DiscordEmbedField{
-			Name:   "Score",
-			Value:  fmt.Sprintf("%d", score),
-			Inline: true,
-		})
-	}
-
-	if author, ok := item.Original.Metadata["author"].(string); ok {
-		embed.Fields = append(embed.Fields, DiscordEmbedField{
-			Name:   "Author",
-			Value:  author,
-			Inline: true,
-		})
-	}
-
-	if comments, ok := item.Original.Metadata["comments"].(string); ok {
-		if comments != "" {
-			embed.Fields = append(embed.Fields, DiscordEmbedField{
-				Name:   "Comments",
-				Value:  fmt.Sprintf("[Discussion](%s)", comments),
-				Inline: false,
-			})
+	// Parse JSON output from template
+	var embed DiscordEmbed
+	output := strings.TrimSpace(buf.String())
+	if err := json.Unmarshal([]byte(output), &embed); err != nil {
+		log.Printf("Discord target %s: failed to parse template output as JSON: %v", d.name, err)
+		log.Printf("Template output: %s", output)
+		// Fallback to basic embed
+		return DiscordMessage{
+			Embeds: []DiscordEmbed{{
+				Title:       fmt.Sprintf("%v", data["title"]),
+				URL:         fmt.Sprintf("%v", data["url"]),
+				Description: fmt.Sprintf("%v", data["description"]),
+				Color:       3447003,
+			}},
 		}
 	}
 

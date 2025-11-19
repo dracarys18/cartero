@@ -101,13 +101,14 @@ func (h *HackerNewsSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan
 					Source:    h.name,
 					Timestamp: time.Unix(story.Time, 0),
 					Metadata: map[string]interface{}{
-						"score":      story.Score,
-						"author":     story.By,
-						"comments":   story.Descendants,
-						"story_type": h.storyType,
-						"hn_id":      story.ID,
-						"title":      story.Title,
-						"url":        story.URL,
+						"score":         story.Score,
+						"author":        story.By,
+						"comments":      fmt.Sprintf("https://news.ycombinator.com/item?id=%d", story.ID),
+						"comment_count": story.Descendants,
+						"story_type":    h.storyType,
+						"hn_id":         story.ID,
+						"title":         story.Title,
+						"url":           story.URL,
 					},
 				}
 

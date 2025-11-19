@@ -32,6 +32,14 @@ sort_by = "hot"
 include_categories = ["rust", "go", "programming"]
 exclude_categories = ["rant", "culture"]
 
+[sources.rss_example]
+type = "rss"
+enabled = false
+targets = ["discord_rss"]
+[sources.rss_example.settings]
+feed_url = "https://example.com/feed.xml"
+max_items = 20
+
 [processors.dedupe]
 type = "dedupe"
 enabled = true
@@ -77,3 +85,11 @@ platform = "discord"
 [targets.discord_lobsters.settings]
 channel_id = "YOUR_CHANNEL_ID_HERE"
 channel_type = "forum"
+
+[targets.discord_rss]
+type = "discord"
+enabled = false
+platform = "discord"
+[targets.discord_rss.settings]
+channel_id = "YOUR_CHANNEL_ID_HERE"
+channel_type = "text"
