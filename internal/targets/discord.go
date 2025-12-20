@@ -14,12 +14,14 @@ import (
 
 	"cartero/internal/core"
 	"cartero/internal/utils"
+
+	"github.com/bwmarrin/discordgo"
 )
 
 type DiscordPlatform struct {
-	botToken   string
-	httpClient *http.Client
-	sleep      time.Duration
+	botToken string
+	sleep    time.Duration
+	session  *discordgo.Session
 }
 
 type DiscordTarget struct {
@@ -91,13 +93,28 @@ func NewDiscordPlatform(botToken string, timeout time.Duration, sleep time.Durat
 		sleep = 1 * time.Second
 	}
 
-	return &DiscordPlatform{
+	platform := &DiscordPlatform{
 		botToken: botToken,
-		httpClient: &http.Client{
-			Timeout: timeout,
-		},
-		sleep: sleep,
+		sleep:    sleep,
 	}
+
+	// Create discordgo session to appear online
+	session, err := discordgo.New("Bot " + botToken)
+	if err != nil {
+		log.Printf("Discord platform: failed to create session: %v", err)
+		return platform
+	}
+
+	platform.session = session
+
+	// Open websocket connection
+	if err := session.Open(); err != nil {
+		log.Printf("Discord platform: failed to open session: %v", err)
+	} else {
+		log.Printf("Discord platform: bot is now ONLINE")
+	}
+
+	return platform
 }
 
 func NewDiscordTarget(name string, config DiscordConfig) *DiscordTarget {
@@ -181,12 +198,36 @@ func (d *DiscordTarget) createForumThread(item *core.ProcessedItem) (string, err
 
 	log.Printf("Discord target %s: creating forum thread '%s'", d.name, title)
 
-	message := d.buildMessage(item)
+	embed := d.buildEmbed(item)
+
+	// Convert discordgo embed back to our format for the API call
+	// (discordgo doesn't support forum thread creation yet)
+	dgEmbed := DiscordEmbed{
+		Title:       embed.Title,
+		Description: embed.Description,
+		URL:         embed.URL,
+		Color:       embed.Color,
+		Timestamp:   embed.Timestamp,
+	}
+
+	if embed.Footer != nil {
+		dgEmbed.Footer = &DiscordEmbedFooter{Text: embed.Footer.Text}
+	}
+
+	for _, f := range embed.Fields {
+		dgEmbed.Fields = append(dgEmbed.Fields, DiscordEmbedField{
+			Name:   f.Name,
+			Value:  f.Value,
+			Inline: f.Inline,
+		})
+	}
 
 	payload := CreateThreadPayload{
 		Name:        title,
 		AutoArchive: 1440,
-		Message:     message,
+		Message: DiscordMessage{
+			Embeds: []DiscordEmbed{dgEmbed},
+		},
 	}
 
 	body, err := json.Marshal(payload)
@@ -194,6 +235,7 @@ func (d *DiscordTarget) createForumThread(item *core.ProcessedItem) (string, err
 		return "", fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
+	// Use standard HTTP client for forum threads (not supported by discordgo)
 	url := fmt.Sprintf("https://discord.com/api/v10/channels/%s/threads", d.channelID)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
 	if err != nil {
@@ -204,20 +246,15 @@ func (d *DiscordTarget) createForumThread(item *core.ProcessedItem) (string, err
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "DiscordBot (cartero, 1.0)")
 
-	resp, err := d.platform.httpClient.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
-
-	if resp.StatusCode == 429 {
-		var errorResp DiscordErrorResponse
-		if err := json.Unmarshal(respBody, &errorResp); err == nil {
-			log.Printf("Discord target %s: rate limited creating thread, retry_after=%.2fs", d.name, errorResp.RetryAfter)
-			return "", fmt.Errorf("discord API rate limited, body: %s", string(respBody))
-		}
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusCreated {
@@ -237,53 +274,16 @@ func (d *DiscordTarget) createForumThread(item *core.ProcessedItem) (string, err
 }
 
 func (d *DiscordTarget) sendMessage(item *core.ProcessedItem) (string, error) {
-	message := d.buildMessage(item)
+	embed := d.buildEmbed(item)
 
-	body, err := json.Marshal(message)
+	msg, err := d.platform.session.ChannelMessageSendEmbed(d.channelID, embed)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal message: %w", err)
-	}
-
-	url := fmt.Sprintf("https://discord.com/api/v10/channels/%s/messages", d.channelID)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bot %s", d.platform.botToken))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "DiscordBot (cartero, 1.0)")
-
-	resp, err := d.platform.httpClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBody, _ := io.ReadAll(resp.Body)
-
-	if resp.StatusCode == 429 {
-		var errorResp DiscordErrorResponse
-		if err := json.Unmarshal(respBody, &errorResp); err == nil {
-			log.Printf("Discord target %s: rate limited, retry_after=%.2fs", d.name, errorResp.RetryAfter)
-			return "", fmt.Errorf("discord API rate limited, body: %s", string(respBody))
-		}
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(respBody))
-	}
-
-	var result struct {
-		ID string `json:"id"`
-	}
-	if err := json.Unmarshal(respBody, &result); err != nil {
-		return "", fmt.Errorf("failed to unmarshal response: %w", err)
+		return "", fmt.Errorf("failed to send message: %w", err)
 	}
 
 	time.Sleep(d.platform.sleep)
 
-	return result.ID, nil
+	return msg.ID, nil
 }
 
 func (d *DiscordTarget) buildMessage(item *core.ProcessedItem) DiscordMessage {
@@ -306,12 +306,59 @@ func (d *DiscordTarget) buildMessage(item *core.ProcessedItem) DiscordMessage {
 	}
 }
 
+func (d *DiscordTarget) buildEmbed(item *core.ProcessedItem) *discordgo.MessageEmbed {
+	// Execute template with item
+	var buf bytes.Buffer
+	if err := d.template.Execute(&buf, item.Original); err != nil {
+		panic(fmt.Sprintf("Discord target %s: template execution error: %v", d.name, err))
+	}
+
+	// Parse JSON output from template
+	var embed DiscordEmbed
+	output := strings.TrimSpace(buf.String())
+	if err := json.Unmarshal([]byte(output), &embed); err != nil {
+		log.Printf("Discord target %s: template output: %s", d.name, output)
+		panic(fmt.Sprintf("Discord target %s: failed to parse template output as JSON: %v", d.name, err))
+	}
+
+	// Convert to discordgo.MessageEmbed
+	dgEmbed := &discordgo.MessageEmbed{
+		Title:       embed.Title,
+		Description: embed.Description,
+		URL:         embed.URL,
+		Color:       embed.Color,
+		Timestamp:   embed.Timestamp,
+	}
+
+	// Convert fields
+	for _, field := range embed.Fields {
+		dgEmbed.Fields = append(dgEmbed.Fields, &discordgo.MessageEmbedField{
+			Name:   field.Name,
+			Value:  field.Value,
+			Inline: field.Inline,
+		})
+	}
+
+	// Convert footer
+	if embed.Footer != nil {
+		dgEmbed.Footer = &discordgo.MessageEmbedFooter{
+			Text: embed.Footer.Text,
+		}
+	}
+
+	return dgEmbed
+}
+
 func (d *DiscordTarget) Shutdown(ctx context.Context) error {
 	log.Printf("Discord target %s: shutting down", d.name)
 	return nil
 }
 
 func (p *DiscordPlatform) Shutdown() {
-	log.Printf("Discord platform: closing idle connections")
-	p.httpClient.CloseIdleConnections()
+	log.Printf("Discord platform: shutting down")
+
+	// Close discordgo session
+	if p.session != nil {
+		p.session.Close()
+	}
 }
