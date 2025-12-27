@@ -11,6 +11,7 @@ type Item struct {
 	Metadata  map[string]interface{}
 	Source    string
 	Timestamp time.Time
+	Skip      bool
 }
 
 type ProcessedItem struct {

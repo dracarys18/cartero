@@ -46,10 +46,11 @@ func (r *RateLimitProcessor) Process(ctx context.Context, item *core.Item) (*cor
 		Original: item,
 		Data:     item.Content,
 		Metadata: make(map[string]interface{}),
-		Skip:     false,
+		Skip:     item.Skip,
 	}
 
 	if r.counter >= r.limit {
+		item.Skip = true
 		processed.Skip = true
 		processed.Metadata["rate_limited"] = true
 		processed.Metadata["limit"] = r.limit

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"cartero/internal/core"
-	"cartero/internal/utils"
 )
 
 type LobstersSource struct {
@@ -118,11 +117,6 @@ func (l *LobstersSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan e
 						"tags":          post.Tags,
 						"category":      strings.Join(post.Tags, ","),
 					},
-				}
-
-				content, err := utils.GetArticleText(post.URL)
-				if err == nil {
-					item.Content = content
 				}
 
 				select {

@@ -3,6 +3,7 @@ package processors
 import (
 	"cartero/internal/core"
 	"cartero/internal/platforms"
+	"cartero/internal/utils"
 	"context"
 	"fmt"
 	"github.com/ollama/ollama/api"
@@ -33,13 +34,16 @@ func (d *SummaryProcessor) Name() string {
 }
 
 func (d *SummaryProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
-	processed := &core.ProcessedItem{
-		Original: item,
-		Data:     item.Content,
-		Metadata: item.Metadata,
-		Skip:     false,
-	}
-	prompt := fmt.Sprintf(`<|im_start|>system
+	if !item.Skip {
+		content, err := utils.GetArticleText(item.Metadata["url"].(string))
+		if err != nil {
+			processed := &core.ProcessedItem{
+				Original: item,
+				Data:     item.Content,
+				Metadata: item.Metadata,
+				Skip:     false,
+			}
+			prompt := fmt.Sprintf(`<|im_start|>system
 You are a professional news editor. Provide a single, information-dense sentence that summarizes the main event. Avoid fluff like "This article is about."<|im_end|>
 <|im_start|>user
 Article Content:
@@ -48,24 +52,28 @@ Article Content:
 """
 
 Short Summary:<|im_end|>
-<|im_start|>assistant`, item.Content)
-	req := &api.GenerateRequest{
-		Model:  "qwen2.5:0.5b",
-		Prompt: prompt,
-		Stream: new(bool),
-	}
+<|im_start|>assistant`, content)
+			req := &api.GenerateRequest{
+				Model:  "qwen2.5:0.5b",
+				Prompt: prompt,
+				Stream: new(bool),
+			}
 
-	respFunc := func(resp api.GenerateResponse) error {
-		if resp.Done {
-			processed.Metadata["summary"] = resp.Response
+			respFunc := func(resp api.GenerateResponse) error {
+				if resp.Done {
+					processed.Metadata["summary"] = resp.Response
+				}
+				return nil
+			}
+
+			err := d.ollamaClient.Client().Generate(ctx, req, respFunc)
+			if err != nil {
+				log.Printf("SummaryProcessor %s: error generating summary: %v", d.name, err)
+				return nil, err
+			}
+			return processed, nil
 		}
-		return nil
+		return nil, fmt.Errorf("unable to fetch article content for summarization: %v", err)
 	}
-
-	err := d.ollamaClient.Client().Generate(ctx, req, respFunc)
-	if err != nil {
-		log.Printf("SummaryProcessor %s: error generating summary: %v", d.name, err)
-		return nil, err
-	}
-	return processed, nil
+	return nil, nil
 }

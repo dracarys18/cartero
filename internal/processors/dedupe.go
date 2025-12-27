@@ -53,6 +53,7 @@ func (d *DedupeProcessor) Process(ctx context.Context, item *core.Item) (*core.P
 	d.mu.Lock()
 	if lastSeen, exists := d.seen[hash]; exists {
 		d.mu.Unlock()
+		item.Skip = true
 		processed.Skip = true
 		processed.Metadata["duplicate"] = true
 		processed.Metadata["first_seen"] = lastSeen
@@ -145,6 +146,7 @@ func (c *ContentDedupeProcessor) Process(ctx context.Context, item *core.Item) (
 	c.mu.Lock()
 	if c.seen[hash] {
 		c.mu.Unlock()
+		item.Skip = true
 		processed.Skip = true
 		processed.Metadata["duplicate"] = true
 		processed.Metadata["content_hash"] = hash

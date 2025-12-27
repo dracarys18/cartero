@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"cartero/internal/core"
-	"cartero/internal/utils"
 )
 
 type HackerNewsSource struct {
@@ -111,10 +110,6 @@ func (h *HackerNewsSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan
 						"title":         story.Title,
 						"url":           story.URL,
 					},
-				}
-				content, err := utils.GetArticleText(story.URL)
-				if err == nil {
-					item.Content = content
 				}
 
 				select {
