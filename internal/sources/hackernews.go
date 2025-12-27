@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"cartero/internal/core"
+	"cartero/internal/utils"
 )
 
 type HackerNewsSource struct {
@@ -97,9 +98,9 @@ func (h *HackerNewsSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan
 
 				item := &core.Item{
 					ID:        fmt.Sprintf("hn_%d", story.ID),
-					Content:   story,
 					Source:    h.name,
 					Timestamp: time.Unix(story.Time, 0),
+					Content:   story,
 					Metadata: map[string]interface{}{
 						"score":         story.Score,
 						"author":        story.By,
@@ -110,6 +111,10 @@ func (h *HackerNewsSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan
 						"title":         story.Title,
 						"url":           story.URL,
 					},
+				}
+				content, err := utils.GetArticleText(story.URL)
+				if err != nil {
+					item.Content = content
 				}
 
 				select {
