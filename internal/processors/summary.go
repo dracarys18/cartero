@@ -39,10 +39,19 @@ func (d *SummaryProcessor) Process(ctx context.Context, item *core.Item) (*core.
 		Metadata: item.Metadata,
 		Skip:     false,
 	}
+	prompt := fmt.Sprintf(`<|im_start|>system
+You are a professional news editor. Provide a single, information-dense sentence that summarizes the main event. Avoid fluff like "This article is about."<|im_end|>
+<|im_start|>user
+Article Content:
+"""
+%s
+"""
 
+Short Summary:<|im_end|>
+<|im_start|>assistant`, item.Content)
 	req := &api.GenerateRequest{
 		Model:  "qwen2.5:0.5b",
-		Prompt: fmt.Sprintf("Summarize this in one short sentence: %s", item.Content),
+		Prompt: prompt,
 		Stream: new(bool),
 	}
 
