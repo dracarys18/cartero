@@ -113,7 +113,7 @@ func (h *HackerNewsSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan
 					},
 				}
 				content, err := utils.GetArticleText(story.URL)
-				if err != nil {
+				if err == nil {
 					item.Content = content
 				}
 
