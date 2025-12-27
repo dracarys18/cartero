@@ -12,6 +12,9 @@ services:
       - cartero-data:/app/data
     environment:
       - TZ=UTC
+      - OLLAMA_HOST=http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: ["-config", "/app/config.toml"]
     networks:
       - cartero-network
