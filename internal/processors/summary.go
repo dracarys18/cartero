@@ -41,7 +41,7 @@ func (d *SummaryProcessor) Process(ctx context.Context, item *core.Item) (*core.
 	}
 
 	req := &api.GenerateRequest{
-		Model: "smollm2:135m",
+		Model:  "qwen2.5:0.5b",
 		Prompt: fmt.Sprintf("Summarize this in one short sentence: %s", item.Content),
 		Stream: new(bool),
 	}
