@@ -34,15 +34,15 @@ func (d *SummaryProcessor) Name() string {
 }
 
 func (d *SummaryProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
+	processed := &core.ProcessedItem{
+		Original: item,
+		Data:     item.Content,
+		Metadata: item.Metadata,
+		Skip:     false,
+	}
 	if !item.Skip {
 		content, err := utils.GetArticleText(item.Metadata["url"].(string))
 		if err != nil {
-			processed := &core.ProcessedItem{
-				Original: item,
-				Data:     item.Content,
-				Metadata: item.Metadata,
-				Skip:     false,
-			}
 			prompt := fmt.Sprintf(`<|im_start|>system
 You are a professional news editor. Provide a single, information-dense sentence that summarizes the main event. Avoid fluff like "This article is about."<|im_end|>
 <|im_start|>user
@@ -73,7 +73,7 @@ Short Summary:<|im_end|>
 			}
 			return processed, nil
 		}
-		return nil, nil
+		return processed, nil
 	}
-	return nil, nil
+	return processed, nil
 }
