@@ -73,7 +73,7 @@ Short Summary:<|im_end|>
 			}
 			return processed, nil
 		}
-		return nil, fmt.Errorf("unable to fetch article content for summarization: %v", err)
+		return nil, nil
 	}
 	return nil, nil
 }
