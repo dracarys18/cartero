@@ -25,6 +25,14 @@
       "value": {{ if index .Metadata "comment_count" }}{{ printf "[Discussion (%d comments)](%s)" (index .Metadata "comment_count") (index .Metadata "comments") | json }}{{ else }}{{ printf "[Discussion](%s)" (index .Metadata "comments") | json }}{{ end }},
       "inline": false
     }
+    {{- if index .Metadata "summary" -}},{{- end -}}
+    {{- end }}
+    {{- if index .Metadata "summary" }}
+    {
+      "name": "Summary",
+      "value": {{ index .Metadata "summary" | json }},
+      "inline": false
+    }
     {{- end }}
   ],
   "footer": {

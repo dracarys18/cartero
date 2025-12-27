@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"cartero/internal/core"
+	"cartero/internal/platforms"
 	"cartero/internal/processors"
 	"cartero/internal/sources"
 	"cartero/internal/storage"
@@ -158,6 +159,10 @@ func (l *Loader) createProcessor(name string, cfg ProcessorConfig) (core.Process
 	case "dedupe":
 		ttl := GetDuration(cfg.Settings, "ttl", 24*time.Hour)
 		return processors.NewDedupeProcessor(name, ttl), nil
+
+	case "summary":
+		ollamaClient := platforms.NewOllamaPlatform()
+		return processors.NewSummaryProcessor(name, ollamaClient), nil
 
 	case "dedupe_content":
 		fieldName := GetString(cfg.Settings, "field", "")
