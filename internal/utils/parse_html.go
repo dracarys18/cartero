@@ -34,8 +34,8 @@ func GetArticleText(u string) (string, error) {
 		return "", fmt.Errorf("failed to extract content: %v", err)
 	}
 
-	if len(article.TextContent) > 10000 {
-		article.TextContent = article.TextContent[:10000] + "..."
+	if len(article.TextContent) > 5000{
+		article.TextContent = article.TextContent[:5000] + "..."
 	}
 	return article.TextContent, nil
 }
