@@ -53,16 +53,13 @@ func (d *SummaryProcessor) Process(ctx context.Context, item *core.Item) (*core.
 		return processed, nil
 	}
 
-	prompt := fmt.Sprintf(`<|im_start|>system
-You are a professional news editor. Provide a single, information-dense sentence that summarizes the main event. Avoid fluff like "This article is about."<|im_end|>
-<|im_start|>user
-Article Content:
-"""
-%s
-"""
+	log.Printf("SummaryProcessor %s: fetched article content for item %s (%d chars)", d.name, item.ID, len(content))
 
-Short Summary:<|im_end|>
-<|im_start|>assistant`, content)
+	prompt := fmt.Sprintf(`Summarize the following article in one clear, factual sentence. Focus only on the main point.
+Article:
+%s
+
+Summary:`, content)
 
 	req := &api.GenerateRequest{
 		Model:  "qwen2.5:0.5b",
@@ -70,10 +67,9 @@ Short Summary:<|im_end|>
 		Stream: new(bool),
 	}
 
+	var summary string
 	respFunc := func(resp api.GenerateResponse) error {
-		if resp.Done {
-			processed.Metadata["summary"] = resp.Response
-		}
+		summary += resp.Response
 		return nil
 	}
 
@@ -82,6 +78,15 @@ Short Summary:<|im_end|>
 		log.Printf("SummaryProcessor %s: warning - couldn't generate summary, publishing without summary: %v", d.name, err)
 		return processed, nil
 	}
+
+	summary = fmt.Sprintf("%s", summary)
+	if len(summary) == 0 {
+		log.Printf("SummaryProcessor %s: warning - generated empty summary for item %s, publishing without summary", d.name, item.ID)
+		return processed, nil
+	}
+
+	processed.Metadata["summary"] = summary
+	log.Printf("SummaryProcessor %s: generated summary for item %s: %s", d.name, item.ID, summary)
 
 	return processed, nil
 }
