@@ -1,6 +1,7 @@
 package core
 
 import (
+	"cartero/internal/utils"
 	"context"
 	"fmt"
 	"log"
@@ -178,6 +179,26 @@ func (p *Pipeline) processItem(ctx context.Context, item *Item, route SourceRout
 		Metadata: make(map[string]interface{}),
 	}
 
+	// Filter out targets where the item has already been published
+	filterFunc := func(target Target) bool {
+		published, err := p.storage.IsPublished(ctx, processed.Original.ID, target.Name())
+		if err != nil {
+			log.Printf("Error checking if item %s published to %s: %v", processed.Original.ID, target.Name(), err)
+			return false
+		}
+		if published {
+			log.Printf("Item %s already published to target %s, skipping", processed.Original.ID, target.Name())
+			return false
+		}
+		return true
+	}
+	route.Targets = utils.FilterArray(route.Targets, filterFunc)
+
+	if len(route.Targets) == 0 {
+		log.Printf("item %s: no targets to publish to after filtering published targets", item.ID)
+		return nil
+	}
+
 	for _, processor := range p.processors {
 		log.Printf("Item %s: Running processor '%s'", item.ID, processor.Name())
 		result, err := processor.Process(ctx, item)
@@ -188,7 +209,6 @@ func (p *Pipeline) processItem(ctx context.Context, item *Item, route SourceRout
 		log.Printf("Item %s: Completed processor '%s'", item.ID, processor.Name())
 	}
 
-	// Phase 3: Publish to targets
 	log.Printf("Item %s: All processors completed! Publishing to %d targets", item.ID, len(route.Targets))
 	return p.publishToTargets(ctx, processed, route)
 }
@@ -198,18 +218,6 @@ func (p *Pipeline) publishToTargets(ctx context.Context, item *ProcessedItem, ro
 	errChan := make(chan error, len(route.Targets))
 
 	for i, target := range route.Targets {
-		if p.storage != nil {
-			published, err := p.storage.IsPublished(ctx, item.Original.ID, target.Name())
-			if err != nil {
-				log.Printf("Error checking if item %s published to %s: %v", item.Original.ID, target.Name(), err)
-				return err
-			}
-			if published {
-				log.Printf("Item %s already published to target %s, skipping", item.Original.ID, target.Name())
-				continue
-			}
-		}
-
 		log.Printf("Queuing item %s for target %s", item.Original.ID, target.Name())
 		wg.Add(1)
 		go func(t Target, idx int) {
