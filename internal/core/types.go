@@ -11,14 +11,12 @@ type Item struct {
 	Metadata  map[string]interface{}
 	Source    string
 	Timestamp time.Time
-	Skip      bool
 }
 
 type ProcessedItem struct {
 	Original *Item
 	Data     interface{}
 	Metadata map[string]interface{}
-	Skip     bool
 }
 
 type PublishResult struct {
@@ -35,6 +33,11 @@ type Source interface {
 	Initialize(ctx context.Context) error
 	Fetch(ctx context.Context) (<-chan *Item, <-chan error)
 	Shutdown(ctx context.Context) error
+}
+
+type Filter interface {
+	Name() string
+	ShouldProcess(ctx context.Context, item *Item) (bool, error)
 }
 
 type Processor interface {

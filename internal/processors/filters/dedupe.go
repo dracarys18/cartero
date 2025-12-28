@@ -1,4 +1,4 @@
-package processors
+package filters
 
 import (
 	"context"
@@ -40,34 +40,22 @@ func (d *DedupeProcessor) Name() string {
 	return d.name
 }
 
-func (d *DedupeProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
-	processed := &core.ProcessedItem{
-		Original: item,
-		Data:     item.Content,
-		Metadata: make(map[string]interface{}),
-		Skip:     false,
-	}
-
+// ShouldProcess implements the Filter interface
+func (d *DedupeProcessor) ShouldProcess(ctx context.Context, item *core.Item) (bool, error) {
 	hash := d.hashItem(item)
 
 	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	if lastSeen, exists := d.seen[hash]; exists {
-		d.mu.Unlock()
-		item.Skip = true
-		processed.Skip = true
-		processed.Metadata["duplicate"] = true
-		processed.Metadata["first_seen"] = lastSeen
-		processed.Metadata["hash"] = hash
-		return processed, nil
+		// Item is a duplicate, should not process
+		fmt.Printf("DedupeProcessor %s: duplicate item %s (first seen: %v)\n", d.name, item.ID, lastSeen)
+		return false, nil
 	}
 
+	// Item is unique, mark as seen and allow processing
 	d.seen[hash] = time.Now()
-	d.mu.Unlock()
-
-	processed.Metadata["dedupe_hash"] = hash
-	processed.Metadata["unique"] = true
-
-	return processed, nil
+	return true, nil
 }
 
 func (d *DedupeProcessor) hashItem(item *core.Item) string {
@@ -123,14 +111,8 @@ func (c *ContentDedupeProcessor) Name() string {
 	return c.name
 }
 
-func (c *ContentDedupeProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
-	processed := &core.ProcessedItem{
-		Original: item,
-		Data:     item.Content,
-		Metadata: make(map[string]interface{}),
-		Skip:     false,
-	}
-
+// ShouldProcess implements the Filter interface
+func (c *ContentDedupeProcessor) ShouldProcess(ctx context.Context, item *core.Item) (bool, error) {
 	var content string
 	if c.fieldName != "" {
 		if val, ok := item.Metadata[c.fieldName]; ok {
@@ -144,22 +126,16 @@ func (c *ContentDedupeProcessor) Process(ctx context.Context, item *core.Item) (
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(content)))
 
 	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if c.seen[hash] {
-		c.mu.Unlock()
-		item.Skip = true
-		processed.Skip = true
-		processed.Metadata["duplicate"] = true
-		processed.Metadata["content_hash"] = hash
-		return processed, nil
+		// Content is a duplicate, should not process
+		return false, nil
 	}
 
+	// Content is unique, mark as seen and allow processing
 	c.seen[hash] = true
-	c.mu.Unlock()
-
-	processed.Metadata["content_hash"] = hash
-	processed.Metadata["unique"] = true
-
-	return processed, nil
+	return true, nil
 }
 
 func (c *ContentDedupeProcessor) Reset() {

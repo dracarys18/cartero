@@ -16,6 +16,7 @@ type SourceRoute struct {
 
 type Pipeline struct {
 	routes     []SourceRoute
+	filters    []Filter
 	processors []Processor
 	storage    Storage
 	mu         sync.RWMutex
@@ -25,6 +26,7 @@ type Pipeline struct {
 func NewPipeline(storage Storage) *Pipeline {
 	return &Pipeline{
 		routes:     make([]SourceRoute, 0),
+		filters:    make([]Filter, 0),
 		processors: make([]Processor, 0),
 		storage:    storage,
 		running:    false,
@@ -35,6 +37,14 @@ func (p *Pipeline) AddRoute(route SourceRoute) *Pipeline {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.routes = append(p.routes, route)
+	return p
+}
+
+func (p *Pipeline) AddFilter(filter Filter) *Pipeline {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.filters = append(p.filters, filter)
+	log.Printf("Pipeline: Added filter '%s' (total filters: %d)", filter.Name(), len(p.filters))
 	return p
 }
 
@@ -148,28 +158,38 @@ func (p *Pipeline) processSource(ctx context.Context, route SourceRoute) error {
 }
 
 func (p *Pipeline) processItem(ctx context.Context, item *Item, route SourceRoute) error {
+	log.Printf("Item %s: Running %d filters", item.ID, len(p.filters))
+	for _, filter := range p.filters {
+		shouldProcess, err := filter.ShouldProcess(ctx, item)
+		if err != nil {
+			return fmt.Errorf("filter %s error: %w", filter.Name(), err)
+		}
+		if !shouldProcess {
+			log.Printf("Item %s: FILTERED OUT by filter '%s'", item.ID, filter.Name())
+			return nil
+		}
+		log.Printf("Item %s: PASSED filter '%s'", item.ID, filter.Name())
+	}
+
+	log.Printf("Item %s: All filters passed! Running %d processors", item.ID, len(p.processors))
 	processed := &ProcessedItem{
 		Original: item,
 		Data:     item.Content,
 		Metadata: make(map[string]interface{}),
-		Skip:     false,
 	}
 
 	for _, processor := range p.processors {
+		log.Printf("Item %s: Running processor '%s'", item.ID, processor.Name())
 		result, err := processor.Process(ctx, item)
 		if err != nil {
 			return fmt.Errorf("processor %s error: %w", processor.Name(), err)
 		}
-		if result.Skip {
-			return nil
-		}
 		processed = result
+		log.Printf("Item %s: Completed processor '%s'", item.ID, processor.Name())
 	}
 
-	if processed.Skip {
-		return nil
-	}
-
+	// Phase 3: Publish to targets
+	log.Printf("Item %s: All processors completed! Publishing to %d targets", item.ID, len(route.Targets))
 	return p.publishToTargets(ctx, processed, route)
 }
 

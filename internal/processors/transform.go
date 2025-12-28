@@ -31,7 +31,6 @@ func (t *TransformProcessor) Process(ctx context.Context, item *core.Item) (*cor
 		Original: item,
 		Data:     item.Content,
 		Metadata: make(map[string]interface{}),
-		Skip:     false,
 	}
 
 	if t.transformFn != nil {
@@ -143,7 +142,6 @@ func (c *ChainTransformProcessor) Process(ctx context.Context, item *core.Item) 
 		Original: item,
 		Data:     item.Content,
 		Metadata: make(map[string]interface{}),
-		Skip:     false,
 	}
 
 	currentData := item.Content

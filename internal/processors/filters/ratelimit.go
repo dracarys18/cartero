@@ -1,4 +1,4 @@
-package processors
+package filters
 
 import (
 	"context"
@@ -31,7 +31,7 @@ func (r *RateLimitProcessor) Name() string {
 	return r.name
 }
 
-func (r *RateLimitProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
+func (r *RateLimitProcessor) ShouldProcess(ctx context.Context, item *core.Item) (bool, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -42,27 +42,13 @@ func (r *RateLimitProcessor) Process(ctx context.Context, item *core.Item) (*cor
 		r.windowStart = now
 	}
 
-	processed := &core.ProcessedItem{
-		Original: item,
-		Data:     item.Content,
-		Metadata: make(map[string]interface{}),
-		Skip:     item.Skip,
-	}
-
 	if r.counter >= r.limit {
-		item.Skip = true
-		processed.Skip = true
-		processed.Metadata["rate_limited"] = true
-		processed.Metadata["limit"] = r.limit
-		processed.Metadata["window"] = r.window.String()
-		return processed, nil
+		// Rate limit exceeded, should not process
+		return false, nil
 	}
 
 	r.counter++
-	processed.Metadata["rate_limit_count"] = r.counter
-	processed.Metadata["rate_limit_remaining"] = r.limit - r.counter
-
-	return processed, nil
+	return true, nil
 }
 
 type TokenBucketProcessor struct {
@@ -88,7 +74,7 @@ func (t *TokenBucketProcessor) Name() string {
 	return t.name
 }
 
-func (t *TokenBucketProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
+func (t *TokenBucketProcessor) ShouldProcess(ctx context.Context, item *core.Item) (bool, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -101,25 +87,13 @@ func (t *TokenBucketProcessor) Process(ctx context.Context, item *core.Item) (*c
 		t.lastRefill = now
 	}
 
-	processed := &core.ProcessedItem{
-		Original: item,
-		Data:     item.Content,
-		Metadata: make(map[string]interface{}),
-		Skip:     false,
-	}
-
 	if t.tokens <= 0 {
-		processed.Skip = true
-		processed.Metadata["rate_limited"] = true
-		processed.Metadata["bucket_empty"] = true
-		return processed, nil
+		// No tokens available, should not process
+		return false, nil
 	}
 
 	t.tokens--
-	processed.Metadata["tokens_remaining"] = t.tokens
-	processed.Metadata["bucket_capacity"] = t.capacity
-
-	return processed, nil
+	return true, nil
 }
 
 func min(a, b int) int {
