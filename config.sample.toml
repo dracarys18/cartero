@@ -40,6 +40,13 @@ targets = ["discord_rss"]
 feed_url = "https://example.com/feed.xml"
 max_items = 20
 
+[sources.lesswrong]
+type = "lesswrong"
+enabled = false
+targets = ["discord_lw"]
+[sources.lesswrong.settings]
+max_items = 20
+
 [processors.dedupe]
 type = "dedupe"
 enabled = true

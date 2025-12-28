@@ -97,6 +97,10 @@ func (l *Loader) createSource(name string, cfg SourceConfig) (core.Source, error
 		excludeCategories := GetStringSlice(cfg.Settings, "exclude_categories")
 		return sources.NewLobstersSource(name, maxItems, sortBy, includeCategories, excludeCategories), nil
 
+	case "lesswrong":
+		maxItems := GetInt(cfg.Settings, "max_items", 20)
+		return sources.NewLessWrongSource(name, maxItems), nil
+
 	case "rss":
 		feedURL := GetString(cfg.Settings, "feed_url", "")
 		if feedURL == "" {
