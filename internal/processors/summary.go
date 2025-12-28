@@ -62,7 +62,7 @@ Article:
 Summary:`, content)
 
 	req := &api.GenerateRequest{
-		Model:  "qwen2.5:0.5b",
+		Model:  "qwen2.5:1.5b",
 		Prompt: prompt,
 		Stream: new(bool),
 	}
