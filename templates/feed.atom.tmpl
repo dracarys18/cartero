@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>{{ .Title }}</title>
+  <subtitle>{{ .Subtitle }}</subtitle>
+  <updated>{{ .Updated }}</updated>
+  <link href="{{ .Link }}" rel="alternate" />
+  <id>{{ .ID }}</id>
+  <author>
+    <name>{{ .Author }}</name>
+  </author>
+  {{- range .Items }}
+  <entry>
+    <title>{{ .Title }}</title>
+    <id>urn:uuid:{{ .ID }}</id>
+    <published>{{ .Published }}</published>
+    <updated>{{ .Updated }}</updated>
+    {{- if .Author }}
+    <author>
+      <name>{{ .Author }}</name>
+    </author>
+    {{- end }}
+    {{- if .Link }}
+    <link href="{{ .Link }}" rel="alternate" />
+    {{- end }}
+    {{- if .Summary }}
+    <summary>{{ .Summary }}</summary>
+    {{- end }}
+    {{- if .Content }}
+    <content type="html"><![CDATA[{{ .Content }}]]></content>
+    {{- end }}
+    {{- if .Source }}
+    <source>
+      <title>{{ .Source }}</title>
+    </source>
+    {{- end }}
+  </entry>
+  {{- end }}
+</feed>

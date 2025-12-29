@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Cartero Feed</title>
+    <link>http://localhost/</link>
+    <description>Content aggregation feed from Cartero</description>
+    <language>en-us</language>
+    <lastBuildDate>{{ .LastBuildDate }}</lastBuildDate>
+    {{- range .Items }}
+    <item>
+      <title>{{ .Title }}</title>
+      <link>{{ .Link }}</link>
+      <guid isPermaLink="false">{{ .ID }}</guid>
+      <pubDate>{{ .PubDate }}</pubDate>
+      {{- if .Author }}
+      <author>{{ .Author }}</author>
+      {{- end }}
+      <source>{{ .Source }}</source>
+      {{- if .Description }}
+      <description>{{ .Description }}</description>
+      {{- end }}
+      {{- if .Content }}
+      <content:encoded><![CDATA[{{ .Content }}]]></content:encoded>
+      {{- end }}
+    </item>
+    {{- end }}
+  </channel>
+</rss>

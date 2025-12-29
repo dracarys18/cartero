@@ -302,6 +302,17 @@ func (l *Loader) createTarget(name string, cfg TargetConfig) (core.Target, error
 			ChannelType: channelType,
 		}), nil
 
+	case "feed":
+		port := GetString(cfg.Settings, "port", "8080")
+		feedSize := GetInt(cfg.Settings, "feed_size", 100)
+		maxItems := GetInt(cfg.Settings, "max_items", 50)
+
+		return targets.NewFeedTarget(name, targets.FeedConfig{
+			Port:     port,
+			FeedSize: feedSize,
+			MaxItems: maxItems,
+		}), nil
+
 	default:
 		return nil, fmt.Errorf("unsupported target type: %s", cfg.Type)
 	}

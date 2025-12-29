@@ -100,3 +100,11 @@ platform = "discord"
 [targets.discord_rss.settings]
 channel_id = "YOUR_CHANNEL_ID_HERE"
 channel_type = "text"
+
+[targets.feed_target]
+type = "feed"
+enabled = true
+[targets.feed_target.settings]
+port = "8080"
+feed_size = 100
+max_items = 50
