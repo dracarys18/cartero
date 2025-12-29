@@ -330,11 +330,15 @@ func (d *DiscordTarget) buildEmbed(item *core.ProcessedItem) *discordgo.MessageE
 		Timestamp:   embed.Timestamp,
 	}
 
-	// Convert fields
 	for _, field := range embed.Fields {
+		value := field.Value
+		if field.Name == "Summary" && len(value) > 1024 {
+			value = value[:1021] + "..."
+			log.Printf("Discord target %s: truncated summary from %d to 1024 chars", d.name, len(field.Value))
+		}
 		dgEmbed.Fields = append(dgEmbed.Fields, &discordgo.MessageEmbedField{
 			Name:   field.Name,
-			Value:  field.Value,
+			Value:  value,
 			Inline: field.Inline,
 		})
 	}
