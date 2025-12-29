@@ -20,12 +20,14 @@ type Platforms struct {
 type Loader struct {
 	config    *Config
 	platforms *Platforms
+	targets   map[string]core.Target
 }
 
 func NewLoader(config *Config) *Loader {
 	return &Loader{
 		config:    config,
 		platforms: &Platforms{},
+		targets:   make(map[string]core.Target),
 	}
 }
 
@@ -187,6 +189,10 @@ func (l *Loader) createProcessor(name string, cfg ProcessorConfig) (core.Process
 }
 
 func (l *Loader) CreateTarget(name string) (core.Target, error) {
+	if target, exists := l.targets[name]; exists {
+		return target, nil
+	}
+
 	cfg, exists := l.config.Targets[name]
 	if !exists {
 		return nil, fmt.Errorf("target %s not found in config", name)
@@ -196,7 +202,13 @@ func (l *Loader) CreateTarget(name string) (core.Target, error) {
 		return nil, fmt.Errorf("target %s is not enabled", name)
 	}
 
-	return l.createTarget(name, cfg)
+	target, err := l.createTarget(name, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	l.targets[name] = target
+	return target, nil
 }
 
 func (l *Loader) createTarget(name string, cfg TargetConfig) (core.Target, error) {
@@ -323,6 +335,10 @@ func (l *Loader) BuildBot() (*core.Bot, error) {
 	})
 
 	return bot, nil
+}
+
+func (l *Loader) Shutdown() error {
+	return nil
 }
 
 func LoadAndBuild(configPath string) (*core.Bot, error) {

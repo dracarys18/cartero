@@ -16,23 +16,25 @@ type SourceRoute struct {
 }
 
 type Pipeline struct {
-	routes            []SourceRoute
-	processors        []Processor
-	processorConfigs  map[string]ProcessorConfig
-	processorExecutor *ProcessorExecutor
-	storage           Storage
-	mu                sync.RWMutex
-	running           bool
+	routes             []SourceRoute
+	processors         []Processor
+	processorConfigs   map[string]ProcessorConfig
+	processorExecutor  *ProcessorExecutor
+	storage            Storage
+	initializedTargets map[string]bool
+	mu                 sync.RWMutex
+	running            bool
 }
 
 func NewPipeline(storage Storage) *Pipeline {
 	return &Pipeline{
-		routes:            make([]SourceRoute, 0),
-		processors:        make([]Processor, 0),
-		processorConfigs:  make(map[string]ProcessorConfig),
-		processorExecutor: NewProcessorExecutor(),
-		storage:           storage,
-		running:           false,
+		routes:             make([]SourceRoute, 0),
+		processors:         make([]Processor, 0),
+		processorConfigs:   make(map[string]ProcessorConfig),
+		processorExecutor:  NewProcessorExecutor(),
+		storage:            storage,
+		initializedTargets: make(map[string]bool),
+		running:            false,
 	}
 }
 
@@ -76,10 +78,16 @@ func (p *Pipeline) Initialize(ctx context.Context) error {
 		}
 
 		for _, target := range route.Targets {
+			if p.initializedTargets[target.Name()] {
+				continue
+			}
+
 			log.Printf("Initializing target: %s for source: %s", target.Name(), route.Source.Name())
 			if err := target.Initialize(ctx); err != nil {
 				return fmt.Errorf("failed to initialize target %s: %w", target.Name(), err)
 			}
+
+			p.initializedTargets[target.Name()] = true
 		}
 	}
 
