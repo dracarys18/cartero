@@ -127,7 +127,6 @@ func (l *Loader) CreateFilters() ([]core.Filter, error) {
 			continue
 		}
 
-		// Only create filters for filter types
 		if !isFilterType(cfg.Type) {
 			continue
 		}
@@ -138,7 +137,7 @@ func (l *Loader) CreateFilters() ([]core.Filter, error) {
 		}
 
 		ordered = append(ordered, orderedFilter{
-			order:  cfg.Order,
+			order:  0,
 			filter: filter,
 		})
 	}
@@ -155,20 +154,14 @@ func (l *Loader) CreateFilters() ([]core.Filter, error) {
 	return filters, nil
 }
 
-func (l *Loader) CreateProcessors() ([]core.Processor, error) {
-	type orderedProcessor struct {
-		order     int
-		processor core.Processor
-	}
-
-	var ordered []orderedProcessor
+func (l *Loader) CreateProcessors() (map[string]core.Processor, error) {
+	processors := make(map[string]core.Processor)
 
 	for name, cfg := range l.config.Processors {
 		if !cfg.Enabled {
 			continue
 		}
 
-		// Skip filter types - they go in CreateFilters
 		if isFilterType(cfg.Type) {
 			continue
 		}
@@ -178,19 +171,7 @@ func (l *Loader) CreateProcessors() ([]core.Processor, error) {
 			return nil, fmt.Errorf("failed to create processor %s: %w", name, err)
 		}
 
-		ordered = append(ordered, orderedProcessor{
-			order:     cfg.Order,
-			processor: processor,
-		})
-	}
-
-	sort.Slice(ordered, func(i, j int) bool {
-		return ordered[i].order < ordered[j].order
-	})
-
-	processors := make([]core.Processor, len(ordered))
-	for i, op := range ordered {
-		processors[i] = op.processor
+		processors[name] = processor
 	}
 
 	return processors, nil
@@ -330,28 +311,34 @@ func (l *Loader) BuildPipeline() (*core.Pipeline, error) {
 
 	pipeline := core.NewPipeline(store)
 
-	// Add filters first
 	log.Printf("BuildPipeline: Creating filters...")
 	filters, err := l.CreateFilters()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create filters: %w", err)
 	}
 	log.Printf("BuildPipeline: Created %d filters", len(filters))
+	pipeline.AddFilters(filters)
 
-	for _, filter := range filters {
-		pipeline.AddFilter(filter)
-	}
-
-	// Then add processors
 	log.Printf("BuildPipeline: Creating processors...")
-	processors, err := l.CreateProcessors()
+	processorsMap, err := l.CreateProcessors()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create processors: %w", err)
 	}
-	log.Printf("BuildPipeline: Created %d processors", len(processors))
+	log.Printf("BuildPipeline: Created %d processors", len(processorsMap))
 
-	for _, processor := range processors {
-		pipeline.AddProcessor(processor)
+	for name, processor := range processorsMap {
+		cfg, exists := l.config.Processors[name]
+		if !exists {
+			continue
+		}
+
+		processorConfig := core.ProcessorConfig{
+			Name:      name,
+			Type:      cfg.Type,
+			Enabled:   cfg.Enabled,
+			DependsOn: cfg.DependsOn,
+		}
+		pipeline.AddProcessorWithConfig(processor, processorConfig)
 	}
 
 	for sourceName, sourceCfg := range l.config.Sources {

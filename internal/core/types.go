@@ -45,6 +45,13 @@ type Processor interface {
 	Process(ctx context.Context, item *Item) (*ProcessedItem, error)
 }
 
+type ProcessorConfig struct {
+	Name      string
+	Type      string
+	Enabled   bool
+	DependsOn []string
+}
+
 type Target interface {
 	Name() string
 	Initialize(ctx context.Context) error

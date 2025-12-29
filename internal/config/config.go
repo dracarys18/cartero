@@ -43,10 +43,10 @@ type SourceConfig struct {
 }
 
 type ProcessorConfig struct {
-	Type     string                 `toml:"type"`
-	Enabled  bool                   `toml:"enabled"`
-	Order    int                    `toml:"order"`
-	Settings map[string]interface{} `toml:"settings"`
+	Type      string                 `toml:"type"`
+	Enabled   bool                   `toml:"enabled"`
+	DependsOn []string               `toml:"depends_on"`
+	Settings  map[string]interface{} `toml:"settings"`
 }
 
 type TargetConfig struct {

@@ -16,21 +16,25 @@ type SourceRoute struct {
 }
 
 type Pipeline struct {
-	routes     []SourceRoute
-	filters    []Filter
-	processors []Processor
-	storage    Storage
-	mu         sync.RWMutex
-	running    bool
+	routes            []SourceRoute
+	filters           []Filter
+	processors        []Processor
+	processorConfigs  map[string]ProcessorConfig
+	processorExecutor *ProcessorExecutor
+	storage           Storage
+	mu                sync.RWMutex
+	running           bool
 }
 
 func NewPipeline(storage Storage) *Pipeline {
 	return &Pipeline{
-		routes:     make([]SourceRoute, 0),
-		filters:    make([]Filter, 0),
-		processors: make([]Processor, 0),
-		storage:    storage,
-		running:    false,
+		routes:            make([]SourceRoute, 0),
+		filters:           make([]Filter, 0),
+		processors:        make([]Processor, 0),
+		processorConfigs:  make(map[string]ProcessorConfig),
+		processorExecutor: NewProcessorExecutor(),
+		storage:           storage,
+		running:           false,
 	}
 }
 
@@ -41,11 +45,10 @@ func (p *Pipeline) AddRoute(route SourceRoute) *Pipeline {
 	return p
 }
 
-func (p *Pipeline) AddFilter(filter Filter) *Pipeline {
+func (p *Pipeline) AddFilters(filters []Filter) *Pipeline {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.filters = append(p.filters, filter)
-	log.Printf("Pipeline: Added filter '%s' (total filters: %d)", filter.Name(), len(p.filters))
+	p.filters = filters
 	return p
 }
 
@@ -56,8 +59,21 @@ func (p *Pipeline) AddProcessor(processor Processor) *Pipeline {
 	return p
 }
 
+func (p *Pipeline) AddProcessorWithConfig(processor Processor, config ProcessorConfig) *Pipeline {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.processors = append(p.processors, processor)
+	p.processorConfigs[config.Name] = config
+	p.processorExecutor.AddProcessor(config.Name, processor, config.DependsOn)
+	return p
+}
+
 func (p *Pipeline) Initialize(ctx context.Context) error {
 	log.Printf("Initializing pipeline with %d routes", len(p.routes))
+
+	if err := p.processorExecutor.Initialize(); err != nil {
+		return fmt.Errorf("failed to initialize processor executor: %w", err)
+	}
 
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -179,7 +195,6 @@ func (p *Pipeline) processItem(ctx context.Context, item *Item, route SourceRout
 		Metadata: make(map[string]interface{}),
 	}
 
-	// Filter out targets where the item has already been published
 	filterFunc := func(target Target) bool {
 		published, err := p.storage.IsPublished(ctx, processed.Original.ID, target.Name())
 		if err != nil {
@@ -199,15 +214,13 @@ func (p *Pipeline) processItem(ctx context.Context, item *Item, route SourceRout
 		return nil
 	}
 
-	for _, processor := range p.processors {
-		log.Printf("Item %s: Running processor '%s'", item.ID, processor.Name())
-		result, err := processor.Process(ctx, item)
-		if err != nil {
-			return fmt.Errorf("processor %s error: %w", processor.Name(), err)
-		}
-		processed = result
-		log.Printf("Item %s: Completed processor '%s'", item.ID, processor.Name())
+	log.Printf("Item %s: All filters passed! Running %d processors", item.ID, len(p.processors))
+
+	result, err := p.processorExecutor.ExecuteProcessors(ctx, item)
+	if err != nil {
+		return fmt.Errorf("processor execution error: %w", err)
 	}
+	processed = result
 
 	log.Printf("Item %s: All processors completed! Publishing to %d targets", item.ID, len(route.Targets))
 	return p.publishToTargets(ctx, processed, route)
