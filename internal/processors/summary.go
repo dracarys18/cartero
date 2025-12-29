@@ -62,10 +62,6 @@ func (d *SummaryProcessor) Process(ctx context.Context, item *core.Item) (*core.
 	req := &api.GenerateRequest{
 		Prompt: prompt,
 		Stream: new(bool),
-		Options: map[string]any{
-			"temperature":    0.0,
-			"repeat_penalty": 1.2,
-		},
 	}
 
 	var summary string
