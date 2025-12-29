@@ -62,9 +62,12 @@ Article:
 Summary:`, content)
 
 	req := &api.GenerateRequest{
-		Model:  "qwen2.5:1.5b",
 		Prompt: prompt,
 		Stream: new(bool),
+		Options: map[string]any{
+			"temperature":    0.0,
+			"repeat_penalty": 1.2,
+		},
 	}
 
 	var summary string
@@ -73,7 +76,7 @@ Summary:`, content)
 		return nil
 	}
 
-	err = d.ollamaClient.Client().Generate(ctx, req, respFunc)
+	err = d.ollamaClient.Generate(ctx, req, respFunc)
 	if err != nil {
 		log.Printf("SummaryProcessor %s: warning - couldn't generate summary, publishing without summary: %v", d.name, err)
 		return processed, nil

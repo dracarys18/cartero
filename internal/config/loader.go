@@ -242,7 +242,8 @@ func (l *Loader) createFilter(name string, cfg ProcessorConfig) (core.Filter, er
 func (l *Loader) createProcessor(name string, cfg ProcessorConfig) (core.Processor, error) {
 	switch cfg.Type {
 	case "summary":
-		ollamaClient := platforms.NewOllamaPlatform()
+		model := GetString(cfg.Settings, "model", "")
+		ollamaClient := platforms.NewOllamaPlatform(model)
 		return processors.NewSummaryProcessor(name, ollamaClient), nil
 
 	case "extract_fields":
