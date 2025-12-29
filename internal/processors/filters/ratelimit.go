@@ -31,7 +31,7 @@ func (r *RateLimitProcessor) Name() string {
 	return r.name
 }
 
-func (r *RateLimitProcessor) ShouldProcess(ctx context.Context, item *core.Item) (bool, error) {
+func (r *RateLimitProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -43,12 +43,16 @@ func (r *RateLimitProcessor) ShouldProcess(ctx context.Context, item *core.Item)
 	}
 
 	if r.counter >= r.limit {
-		// Rate limit exceeded, should not process
-		return false, nil
+		// Rate limit exceeded, filter it out
+		return nil, nil
 	}
 
 	r.counter++
-	return true, nil
+	return &core.ProcessedItem{
+		Original: item,
+		Data:     item.Content,
+		Metadata: item.Metadata,
+	}, nil
 }
 
 type TokenBucketProcessor struct {
@@ -74,7 +78,7 @@ func (t *TokenBucketProcessor) Name() string {
 	return t.name
 }
 
-func (t *TokenBucketProcessor) ShouldProcess(ctx context.Context, item *core.Item) (bool, error) {
+func (t *TokenBucketProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -88,12 +92,16 @@ func (t *TokenBucketProcessor) ShouldProcess(ctx context.Context, item *core.Ite
 	}
 
 	if t.tokens <= 0 {
-		// No tokens available, should not process
-		return false, nil
+		// No tokens available, filter it out
+		return nil, nil
 	}
 
 	t.tokens--
-	return true, nil
+	return &core.ProcessedItem{
+		Original: item,
+		Data:     item.Content,
+		Metadata: item.Metadata,
+	}, nil
 }
 
 func min(a, b int) int {

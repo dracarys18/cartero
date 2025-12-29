@@ -40,22 +40,26 @@ func (d *DedupeProcessor) Name() string {
 	return d.name
 }
 
-// ShouldProcess implements the Filter interface
-func (d *DedupeProcessor) ShouldProcess(ctx context.Context, item *core.Item) (bool, error) {
+// Process implements the Processor interface
+func (d *DedupeProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
 	hash := d.hashItem(item)
 
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	if lastSeen, exists := d.seen[hash]; exists {
-		// Item is a duplicate, should not process
+		// Item is a duplicate, filter it out
 		fmt.Printf("DedupeProcessor %s: duplicate item %s (first seen: %v)\n", d.name, item.ID, lastSeen)
-		return false, nil
+		return nil, nil
 	}
 
 	// Item is unique, mark as seen and allow processing
 	d.seen[hash] = time.Now()
-	return true, nil
+	return &core.ProcessedItem{
+		Original: item,
+		Data:     item.Content,
+		Metadata: item.Metadata,
+	}, nil
 }
 
 func (d *DedupeProcessor) hashItem(item *core.Item) string {
@@ -111,8 +115,8 @@ func (c *ContentDedupeProcessor) Name() string {
 	return c.name
 }
 
-// ShouldProcess implements the Filter interface
-func (c *ContentDedupeProcessor) ShouldProcess(ctx context.Context, item *core.Item) (bool, error) {
+// Process implements the Processor interface
+func (c *ContentDedupeProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
 	var content string
 	if c.fieldName != "" {
 		if val, ok := item.Metadata[c.fieldName]; ok {
@@ -129,13 +133,17 @@ func (c *ContentDedupeProcessor) ShouldProcess(ctx context.Context, item *core.I
 	defer c.mu.Unlock()
 
 	if c.seen[hash] {
-		// Content is a duplicate, should not process
-		return false, nil
+		// Content is a duplicate, filter it out
+		return nil, nil
 	}
 
 	// Content is unique, mark as seen and allow processing
 	c.seen[hash] = true
-	return true, nil
+	return &core.ProcessedItem{
+		Original: item,
+		Data:     item.Content,
+		Metadata: item.Metadata,
+	}, nil
 }
 
 func (c *ContentDedupeProcessor) Reset() {

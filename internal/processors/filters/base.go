@@ -24,9 +24,17 @@ func (f *FilterProcessor) Name() string {
 	return f.name
 }
 
-func (f *FilterProcessor) ShouldProcess(ctx context.Context, item *core.Item) (bool, error) {
+func (f *FilterProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
 	if f.filterFn != nil {
-		return f.filterFn(item), nil
+		if !f.filterFn(item) {
+			// Filter rejected the item - return nil to signal filtering
+			return nil, nil
+		}
 	}
-	return true, nil
+	// Filter accepted the item - return it unchanged
+	return &core.ProcessedItem{
+		Original: item,
+		Data:     item.Content,
+		Metadata: item.Metadata,
+	}, nil
 }

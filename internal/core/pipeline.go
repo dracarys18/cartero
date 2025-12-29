@@ -17,7 +17,6 @@ type SourceRoute struct {
 
 type Pipeline struct {
 	routes            []SourceRoute
-	filters           []Filter
 	processors        []Processor
 	processorConfigs  map[string]ProcessorConfig
 	processorExecutor *ProcessorExecutor
@@ -29,7 +28,6 @@ type Pipeline struct {
 func NewPipeline(storage Storage) *Pipeline {
 	return &Pipeline{
 		routes:            make([]SourceRoute, 0),
-		filters:           make([]Filter, 0),
 		processors:        make([]Processor, 0),
 		processorConfigs:  make(map[string]ProcessorConfig),
 		processorExecutor: NewProcessorExecutor(),
@@ -42,13 +40,6 @@ func (p *Pipeline) AddRoute(route SourceRoute) *Pipeline {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.routes = append(p.routes, route)
-	return p
-}
-
-func (p *Pipeline) AddFilters(filters []Filter) *Pipeline {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.filters = filters
 	return p
 }
 
@@ -175,20 +166,6 @@ func (p *Pipeline) processSource(ctx context.Context, route SourceRoute) error {
 }
 
 func (p *Pipeline) processItem(ctx context.Context, item *Item, route SourceRoute) error {
-	log.Printf("Item %s: Running %d filters", item.ID, len(p.filters))
-	for _, filter := range p.filters {
-		shouldProcess, err := filter.ShouldProcess(ctx, item)
-		if err != nil {
-			return fmt.Errorf("filter %s error: %w", filter.Name(), err)
-		}
-		if !shouldProcess {
-			log.Printf("Item %s: FILTERED OUT by filter '%s'", item.ID, filter.Name())
-			return nil
-		}
-		log.Printf("Item %s: PASSED filter '%s'", item.ID, filter.Name())
-	}
-
-	log.Printf("Item %s: All filters passed! Running %d processors", item.ID, len(p.processors))
 	processed := &ProcessedItem{
 		Original: item,
 		Data:     item.Content,
@@ -214,12 +191,19 @@ func (p *Pipeline) processItem(ctx context.Context, item *Item, route SourceRout
 		return nil
 	}
 
-	log.Printf("Item %s: All filters passed! Running %d processors", item.ID, len(p.processors))
+	log.Printf("Item %s: Running %d processors", item.ID, len(p.processors))
 
 	result, err := p.processorExecutor.ExecuteProcessors(ctx, item)
 	if err != nil {
 		return fmt.Errorf("processor execution error: %w", err)
 	}
+
+	// If result is nil, item was filtered out during processing
+	if result == nil {
+		log.Printf("Item %s: filtered out during processing", item.ID)
+		return nil
+	}
+
 	processed = result
 
 	log.Printf("Item %s: All processors completed! Publishing to %d targets", item.ID, len(route.Targets))

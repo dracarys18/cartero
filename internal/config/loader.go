@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"log"
-	"sort"
 	"time"
 
 	"cartero/internal/core"
@@ -114,55 +113,11 @@ func (l *Loader) createSource(name string, cfg SourceConfig) (core.Source, error
 	}
 }
 
-func (l *Loader) CreateFilters() ([]core.Filter, error) {
-	type orderedFilter struct {
-		order  int
-		filter core.Filter
-	}
-
-	var ordered []orderedFilter
-
-	for name, cfg := range l.config.Processors {
-		if !cfg.Enabled {
-			continue
-		}
-
-		if !isFilterType(cfg.Type) {
-			continue
-		}
-
-		filter, err := l.createFilter(name, cfg)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create filter %s: %w", name, err)
-		}
-
-		ordered = append(ordered, orderedFilter{
-			order:  0,
-			filter: filter,
-		})
-	}
-
-	sort.Slice(ordered, func(i, j int) bool {
-		return ordered[i].order < ordered[j].order
-	})
-
-	filters := make([]core.Filter, len(ordered))
-	for i, of := range ordered {
-		filters[i] = of.filter
-	}
-
-	return filters, nil
-}
-
 func (l *Loader) CreateProcessors() (map[string]core.Processor, error) {
-	processors := make(map[string]core.Processor)
+	processorsMap := make(map[string]core.Processor)
 
 	for name, cfg := range l.config.Processors {
 		if !cfg.Enabled {
-			continue
-		}
-
-		if isFilterType(cfg.Type) {
 			continue
 		}
 
@@ -171,23 +126,34 @@ func (l *Loader) CreateProcessors() (map[string]core.Processor, error) {
 			return nil, fmt.Errorf("failed to create processor %s: %w", name, err)
 		}
 
-		processors[name] = processor
+		processorsMap[name] = processor
 	}
 
-	return processors, nil
+	return processorsMap, nil
 }
 
-func isFilterType(processorType string) bool {
-	switch processorType {
-	case "filter_score", "filter_keyword", "dedupe", "dedupe_content", "rate_limit", "token_bucket":
-		return true
-	default:
-		return false
-	}
-}
-
-func (l *Loader) createFilter(name string, cfg ProcessorConfig) (core.Filter, error) {
+func (l *Loader) createProcessor(name string, cfg ProcessorConfig) (core.Processor, error) {
 	switch cfg.Type {
+	case "summary":
+		model := GetString(cfg.Settings, "model", "")
+		ollamaClient := platforms.NewOllamaPlatform(model)
+		return processors.NewSummaryProcessor(name, ollamaClient), nil
+
+	case "extract_fields":
+		fields := GetStringSlice(cfg.Settings, "fields")
+		return processors.FieldExtractor(name, fields), nil
+
+	case "template":
+		template := GetString(cfg.Settings, "template", "")
+		if template == "" {
+			return nil, fmt.Errorf("template is required for template processor")
+		}
+		return processors.TemplateTransformer(name, template), nil
+
+	case "enrich":
+		enrichments := cfg.Settings
+		return processors.EnrichTransformer(name, enrichments), nil
+
 	case "filter_score":
 		minScore := GetInt(cfg.Settings, "min_score", 0)
 		return processors.MinScoreFilter(name, minScore), nil
@@ -214,33 +180,6 @@ func (l *Loader) createFilter(name string, cfg ProcessorConfig) (core.Filter, er
 		capacity := GetInt(cfg.Settings, "capacity", 10)
 		refillRate := GetDuration(cfg.Settings, "refill_rate", 1*time.Second)
 		return processors.NewTokenBucketProcessor(name, capacity, refillRate), nil
-
-	default:
-		return nil, fmt.Errorf("unsupported filter type: %s", cfg.Type)
-	}
-}
-
-func (l *Loader) createProcessor(name string, cfg ProcessorConfig) (core.Processor, error) {
-	switch cfg.Type {
-	case "summary":
-		model := GetString(cfg.Settings, "model", "")
-		ollamaClient := platforms.NewOllamaPlatform(model)
-		return processors.NewSummaryProcessor(name, ollamaClient), nil
-
-	case "extract_fields":
-		fields := GetStringSlice(cfg.Settings, "fields")
-		return processors.FieldExtractor(name, fields), nil
-
-	case "template":
-		template := GetString(cfg.Settings, "template", "")
-		if template == "" {
-			return nil, fmt.Errorf("template is required for template processor")
-		}
-		return processors.TemplateTransformer(name, template), nil
-
-	case "enrich":
-		enrichments := cfg.Settings
-		return processors.EnrichTransformer(name, enrichments), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported processor type: %s", cfg.Type)
@@ -311,14 +250,7 @@ func (l *Loader) BuildPipeline() (*core.Pipeline, error) {
 
 	pipeline := core.NewPipeline(store)
 
-	log.Printf("BuildPipeline: Creating filters...")
-	filters, err := l.CreateFilters()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create filters: %w", err)
-	}
-	log.Printf("BuildPipeline: Created %d filters", len(filters))
-	pipeline.AddFilters(filters)
-
+	// Create and add all processors (unified handling - no separate filters)
 	log.Printf("BuildPipeline: Creating processors...")
 	processorsMap, err := l.CreateProcessors()
 	if err != nil {

@@ -84,10 +84,14 @@ func (pe *ProcessorExecutor) ExecuteProcessors(ctx context.Context, item *Item) 
 			return nil, fmt.Errorf("processor %s error: %w", node.Name, err)
 		}
 
-		if result != nil {
-			processed = result
-			log.Printf("Processor %s completed successfully", node.Name)
+		if result == nil {
+			// Item was filtered out by this processor
+			log.Printf("Processor %s filtered out item %s", node.Name, item.ID)
+			return nil, nil
 		}
+
+		processed = result
+		log.Printf("Processor %s completed successfully", node.Name)
 	}
 
 	return processed, nil

@@ -35,11 +35,6 @@ type Source interface {
 	Shutdown(ctx context.Context) error
 }
 
-type Filter interface {
-	Name() string
-	ShouldProcess(ctx context.Context, item *Item) (bool, error)
-}
-
 type Processor interface {
 	Name() string
 	Process(ctx context.Context, item *Item) (*ProcessedItem, error)
