@@ -12,6 +12,8 @@ import (
 	"github.com/ollama/ollama/api"
 )
 
+const Prompt = "Summarise this text into bullet points focus on high impact information than jargons."
+
 type SummaryProcessor struct {
 	name         string
 	ollamaClient *platforms.OllamaPlatform
@@ -55,11 +57,7 @@ func (d *SummaryProcessor) Process(ctx context.Context, item *core.Item) (*core.
 
 	log.Printf("SummaryProcessor %s: fetched article content for item %s (%d chars)", d.name, item.ID, len(content))
 
-	prompt := fmt.Sprintf(`Summarize the following article in one clear, factual sentence. Focus only on the main point.
-Article:
-%s
-
-Summary:`, content)
+	prompt := fmt.Sprintf("%s\n%s", content, Prompt)
 
 	req := &api.GenerateRequest{
 		Prompt: prompt,

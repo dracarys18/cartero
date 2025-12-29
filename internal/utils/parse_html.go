@@ -65,5 +65,6 @@ func GetArticleText(u string) (string, error) {
 		return "", fmt.Errorf("failed to extract content: %v", err)
 	}
 
+	log.Printf("GetArticleText: successfully extracted with char characters length %d", len(article.TextContent))
 	return article.TextContent, nil
 }
