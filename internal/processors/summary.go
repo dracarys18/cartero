@@ -12,7 +12,7 @@ import (
 	"github.com/ollama/ollama/api"
 )
 
-const Prompt = "Summarise this text into bullet points focus on high impact information than jargons."
+const Prompt = "Summarise this text into bullet points focus on high impact information than jargons. Keep it brief"
 
 type SummaryProcessor struct {
 	name         string
