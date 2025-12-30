@@ -16,16 +16,15 @@ import (
 )
 
 type Loader struct {
-	config       *Config
-	storageComp  *components.StorageComponent
-	platformComp *components.PlatformComponent
-	serverComp   *components.ServerComponent
-	pipeline     *core.Pipeline
+	config   *Config
+	registry *components.Registry
+	pipeline *core.Pipeline
 }
 
 func NewLoader(cfg *Config) *Loader {
 	return &Loader{
-		config: cfg,
+		config:   cfg,
+		registry: components.NewRegistry(),
 	}
 }
 
@@ -63,30 +62,24 @@ func (l *Loader) Initialize(ctx context.Context) (*core.Bot, error) {
 func (l *Loader) initializeComponents(ctx context.Context) error {
 	log.Printf("[Loader] Initializing all components")
 
-	storage := components.NewStorageComponent(l.config.Storage.Path)
-
-	if err := storage.Validate(); err != nil {
-		return fmt.Errorf("storage component validation failed: %w", err)
+	storageComp := components.NewStorageComponent(l.config.Storage.Path)
+	if err := l.registry.Register(storageComp); err != nil {
+		return fmt.Errorf("failed to register storage component: %w", err)
 	}
 
-	if err := storage.Initialize(ctx); err != nil {
-		return fmt.Errorf("storage component initialization failed: %w", err)
+	platformComp := l.buildPlatformComponent()
+	if err := l.registry.Register(platformComp); err != nil {
+		return fmt.Errorf("failed to register platform component: %w", err)
 	}
 
-	l.storageComp = storage
-	platform := l.buildPlatformComponent()
+	l.validateRegistry()
 
-	if err := platform.Validate(); err != nil {
-		return fmt.Errorf("platform component validation failed: %w", err)
+	if err := l.registry.InitializeAll(ctx); err != nil {
+		return fmt.Errorf("component initialization failed: %w", err)
 	}
 
-	if err := platform.Initialize(ctx); err != nil {
-		return fmt.Errorf("platform component initialization failed: %w", err)
-	}
-
-	l.platformComp = platform
-	store := l.storageComp.Store()
-	l.serverComp = components.NewServerComponent(store.Feed())
+	store := l.registry.Get(components.StorageComponentName).(*components.StorageComponent).Store()
+	serverComp := components.NewServerComponent(store.Feed())
 
 	for name, targetCfg := range l.config.Targets {
 		if targetCfg.Type != "feed" {
@@ -97,7 +90,7 @@ func (l *Loader) initializeComponents(ctx context.Context) error {
 		feedSize := GetInt(targetCfg.Settings, "feed_size", 100)
 		maxItems := GetInt(targetCfg.Settings, "max_items", 50)
 
-		l.serverComp.Register(components.ServerConfig{
+		serverComp.Register(components.ServerConfig{
 			Name:     name,
 			Port:     port,
 			FeedSize: feedSize,
@@ -105,11 +98,11 @@ func (l *Loader) initializeComponents(ctx context.Context) error {
 		})
 	}
 
-	if err := l.serverComp.Validate(); err != nil {
+	if err := serverComp.Validate(); err != nil {
 		return fmt.Errorf("server component validation failed: %w", err)
 	}
 
-	if err := l.serverComp.Initialize(ctx); err != nil {
+	if err := serverComp.Initialize(ctx); err != nil {
 		return fmt.Errorf("server component initialization failed: %w", err)
 	}
 
@@ -133,8 +126,14 @@ func (l *Loader) buildPlatformComponent() *components.PlatformComponent {
 	return components.NewPlatformComponent(platformsConfig)
 }
 
+func (l *Loader) validateRegistry() {
+	_ = l.registry.Get(components.StorageComponentName)
+	_ = l.registry.Get(components.PlatformComponentName)
+}
+
 func (l *Loader) buildPipeline(ctx context.Context) error {
-	store := l.storageComp.Store()
+	storageComp := l.registry.Get(components.StorageComponentName).(*components.StorageComponent)
+	store := storageComp.Store()
 	l.pipeline = core.NewPipeline(store.Items())
 
 	if err := l.addProcessors(l.pipeline); err != nil {
@@ -172,7 +171,7 @@ func (l *Loader) addProcessors(pipeline *core.Pipeline) error {
 }
 
 func (l *Loader) addSourceRoutes(pipeline *core.Pipeline) error {
-	store := l.storageComp.Store()
+	store := l.registry.Get(components.StorageComponentName).(*components.StorageComponent).Store()
 
 	for sourceName, sourceCfg := range l.config.Sources {
 		if !sourceCfg.Enabled {
@@ -253,8 +252,9 @@ func (l *Loader) createSource(name string, cfg SourceConfig) (core.Source, error
 func (l *Loader) createProcessor(name string, cfg ProcessorConfig) (core.Processor, error) {
 	switch cfg.Type {
 	case "summary":
+		platformComponent := l.registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
 		model := GetString(cfg.Settings, "model", "")
-		ollamaClient := l.platformComp.OllamaPlatform(model)
+		ollamaClient := platformComponent.OllamaPlatform(model)
 		return processors.NewSummaryProcessor(name, ollamaClient), nil
 
 	case "extract_fields":
@@ -286,18 +286,13 @@ func (l *Loader) createProcessor(name string, cfg ProcessorConfig) (core.Process
 		return processors.NewDedupeProcessor(name, ttl), nil
 
 	case "dedupe_content":
-		fieldName := GetString(cfg.Settings, "field", "")
-		return processors.NewContentDedupeProcessor(name, fieldName), nil
+		return processors.NewContentDedupeProcessor(name, GetString(cfg.Settings, "field", "")), nil
 
 	case "rate_limit":
-		limit := GetInt(cfg.Settings, "limit", 10)
-		window := GetDuration(cfg.Settings, "window", 1*time.Minute)
-		return processors.NewRateLimitProcessor(name, limit, window), nil
+		return processors.NewRateLimitProcessor(name, GetInt(cfg.Settings, "limit", 10), GetDuration(cfg.Settings, "window", 1*time.Minute)), nil
 
 	case "token_bucket":
-		capacity := GetInt(cfg.Settings, "capacity", 10)
-		refillRate := GetDuration(cfg.Settings, "refill_rate", 1*time.Second)
-		return processors.NewTokenBucketProcessor(name, capacity, refillRate), nil
+		return processors.NewTokenBucketProcessor(name, GetInt(cfg.Settings, "capacity", 10), GetDuration(cfg.Settings, "refill_rate", 1*time.Second)), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported processor type: %s", cfg.Type)
@@ -311,7 +306,8 @@ func (l *Loader) createTarget(name string, cfg TargetConfig, store *storage.Stor
 			return nil, fmt.Errorf("platform is required for discord target")
 		}
 
-		discordPlatform := l.platformComp.Discord()
+		platformComponent := l.registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
+		discordPlatform := platformComponent.Discord()
 		if discordPlatform == nil {
 			return nil, fmt.Errorf("discord platform not initialized")
 		}
@@ -337,25 +333,7 @@ func (l *Loader) createTarget(name string, cfg TargetConfig, store *storage.Stor
 }
 
 func (l *Loader) Shutdown(ctx context.Context) error {
-	if l.serverComp != nil {
-		if err := l.serverComp.Close(ctx); err != nil {
-			log.Printf("[Loader] Error closing server component: %v", err)
-		}
-	}
-
-	if l.platformComp != nil {
-		if err := l.platformComp.Close(ctx); err != nil {
-			log.Printf("[Loader] Error closing platform component: %v", err)
-		}
-	}
-
-	if l.storageComp != nil {
-		if err := l.storageComp.Close(ctx); err != nil {
-			log.Printf("[Loader] Error closing storage component: %v", err)
-		}
-	}
-
-	return nil
+	return l.registry.CloseAll(ctx)
 }
 
 func LoadAndBuild(ctx context.Context, configPath string) (*core.Bot, error) {
@@ -368,14 +346,6 @@ func LoadAndBuild(ctx context.Context, configPath string) (*core.Bot, error) {
 	return loader.Initialize(ctx)
 }
 
-func (l *Loader) GetStorageComponent() *components.StorageComponent {
-	return l.storageComp
-}
-
-func (l *Loader) GetPlatformComponent() *components.PlatformComponent {
-	return l.platformComp
-}
-
-func (l *Loader) GetServerComponent() *components.ServerComponent {
-	return l.serverComp
+func (l *Loader) GetComponent(name string) components.IComponent {
+	return l.registry.Get(name)
 }

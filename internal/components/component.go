@@ -34,12 +34,12 @@ func (r *Registry) Register(component IComponent) error {
 	return nil
 }
 
-func (r *Registry) Get(name string) (IComponent, error) {
+func (r *Registry) Get(name string) IComponent {
 	comp, exists := r.components[name]
 	if !exists {
-		return nil, fmt.Errorf("component %s not found", name)
+		panic(fmt.Sprintf("component %s not found", name))
 	}
-	return comp, nil
+	return comp
 }
 
 func (r *Registry) InitializeAll(ctx context.Context) error {

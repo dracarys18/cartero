@@ -19,7 +19,7 @@ func NewStorageComponent(dbPath string) *StorageComponent {
 }
 
 func (c *StorageComponent) Name() string {
-	return "storage"
+	return StorageComponentName
 }
 
 func (c *StorageComponent) Validate() error {

@@ -8,7 +8,6 @@ import (
 	"sort"
 	"time"
 
-	"cartero/internal/cache"
 	"cartero/internal/storage"
 
 	"github.com/gorilla/feeds"
@@ -25,7 +24,6 @@ type Server struct {
 	config    Config
 	feedStore storage.FeedStore
 	server    *http.Server
-	cache     *cache.Cache[CacheKey, string]
 }
 
 func New(name string, config Config, feedStore storage.FeedStore) *Server {
@@ -43,7 +41,6 @@ func New(name string, config Config, feedStore storage.FeedStore) *Server {
 		name:      name,
 		config:    config,
 		feedStore: feedStore,
-		cache:     NewCache(cache.CacheConfig{TTL: 1 * time.Hour}),
 	}
 }
 
@@ -83,14 +80,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 }
 
 func (s *Server) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
-	key := NewCacheKey(s.name, TypeRSS)
-	if cached, found := s.cache.Get(key); found {
-		w.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
-		w.Header().Set("Cache-Control", "public, max-age=3600")
-		fmt.Fprint(w, cached)
-		return
-	}
-
 	entries, err := s.feedStore.ListRecentEntries(r.Context(), s.config.FeedSize)
 	if err != nil {
 		log.Printf("Feed server %s: failed to list entries: %v", s.name, err)
@@ -107,21 +96,12 @@ func (s *Server) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.cache.Set(key, rss)
 	w.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	fmt.Fprint(w, rss)
 }
 
 func (s *Server) handleAtomFeed(w http.ResponseWriter, r *http.Request) {
-	key := NewCacheKey(s.name, TypeAtom)
-	if cached, found := s.cache.Get(key); found {
-		w.Header().Set("Content-Type", "application/atom+xml; charset=utf-8")
-		w.Header().Set("Cache-Control", "public, max-age=3600")
-		fmt.Fprint(w, cached)
-		return
-	}
-
 	entries, err := s.feedStore.ListRecentEntries(r.Context(), s.config.FeedSize)
 	if err != nil {
 		log.Printf("Feed server %s: failed to list entries: %v", s.name, err)
@@ -138,21 +118,12 @@ func (s *Server) handleAtomFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.cache.Set(key, atom)
 	w.Header().Set("Content-Type", "application/atom+xml; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	fmt.Fprint(w, atom)
 }
 
 func (s *Server) handleJSONFeed(w http.ResponseWriter, r *http.Request) {
-	key := NewCacheKey(s.name, TypeJSON)
-	if cached, found := s.cache.Get(key); found {
-		w.Header().Set("Content-Type", "application/feed+json; charset=utf-8")
-		w.Header().Set("Cache-Control", "public, max-age=3600")
-		fmt.Fprint(w, cached)
-		return
-	}
-
 	entries, err := s.feedStore.ListRecentEntries(r.Context(), s.config.FeedSize)
 	if err != nil {
 		log.Printf("Feed server %s: failed to list entries: %v", s.name, err)
@@ -169,7 +140,6 @@ func (s *Server) handleJSONFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.cache.Set(key, jsonStr)
 	w.Header().Set("Content-Type", "application/feed+json; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	fmt.Fprint(w, jsonStr)

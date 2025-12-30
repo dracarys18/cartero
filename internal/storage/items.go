@@ -1,8 +1,8 @@
 package storage
 
 import (
+	"cartero/internal/utils"
 	"context"
-	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -102,6 +102,5 @@ func computeHash(item Item) string {
 	}
 
 	jsonData, _ := json.Marshal(data)
-	hash := sha256.Sum256(jsonData)
-	return fmt.Sprintf("%x", hash)
+	return utils.ComputeHash(jsonData)
 }

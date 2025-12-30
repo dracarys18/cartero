@@ -31,7 +31,7 @@ func NewServerComponent(feedStore storage.FeedStore) *ServerComponent {
 }
 
 func (c *ServerComponent) Name() string {
-	return "servers"
+	return ServerComponentName
 }
 
 func (c *ServerComponent) Register(cfg ServerConfig) {

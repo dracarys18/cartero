@@ -28,7 +28,7 @@ func NewPlatformComponent(config map[string]PlatformConfig) *PlatformComponent {
 }
 
 func (c *PlatformComponent) Name() string {
-	return "platforms"
+	return PlatformComponentName
 }
 
 func (c *PlatformComponent) Validate() error {
