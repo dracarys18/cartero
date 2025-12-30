@@ -5,6 +5,7 @@ go 1.24.1
 require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/mattn/go-sqlite3 v1.14.24
+	github.com/pressly/goose/v3 v3.14.0
 )
 
 require (

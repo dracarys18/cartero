@@ -13,6 +13,22 @@ type Item struct {
 	Timestamp time.Time
 }
 
+func (i *Item) GetID() string {
+	return i.ID
+}
+
+func (i *Item) GetSource() string {
+	return i.Source
+}
+
+func (i *Item) GetContent() interface{} {
+	return i.Content
+}
+
+func (i *Item) GetTimestamp() time.Time {
+	return i.Timestamp
+}
+
 type ProcessedItem struct {
 	Original *Item
 	Data     interface{}

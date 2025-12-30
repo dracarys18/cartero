@@ -6,11 +6,11 @@ import (
 	"log"
 	"net/http"
 	"sort"
-	"sync"
 	"time"
 
 	"cartero/internal/cache"
 	"cartero/internal/core"
+	"cartero/internal/storage"
 
 	"github.com/gorilla/feeds"
 )
@@ -22,16 +22,15 @@ type Config struct {
 }
 
 type Target struct {
-	name   string
-	config Config
-	items  []*feeds.Item
-	mu     sync.RWMutex
-	server *http.Server
-	stopCh chan struct{}
-	cache  *cache.Cache[CacheKey, string]
+	name      string
+	config    Config
+	server    *http.Server
+	stopCh    chan struct{}
+	cache     *cache.Cache[CacheKey, string]
+	feedStore storage.FeedStore
 }
 
-func NewTarget(name string, config Config) *Target {
+func NewTarget(name string, config Config, feedStore storage.FeedStore) *Target {
 	if config.Port == "" {
 		config.Port = "8080"
 	}
@@ -43,11 +42,11 @@ func NewTarget(name string, config Config) *Target {
 	}
 
 	return &Target{
-		name:   name,
-		config: config,
-		items:  make([]*feeds.Item, 0, config.FeedSize),
-		stopCh: make(chan struct{}),
-		cache:  NewCache(cache.CacheConfig{TTL: 1 * time.Hour}),
+		name:      name,
+		config:    config,
+		stopCh:    make(chan struct{}),
+		cache:     NewCache(cache.CacheConfig{TTL: 1 * time.Hour}),
+		feedStore: feedStore,
 	}
 }
 
@@ -80,45 +79,6 @@ func (f *Target) Initialize(ctx context.Context) error {
 }
 
 func (f *Target) Publish(ctx context.Context, item *core.ProcessedItem) (*core.PublishResult, error) {
-	feedItem := f.convertToFeedItem(item)
-
-	f.mu.Lock()
-	f.items = append(f.items, feedItem)
-	currentCount := len(f.items)
-	if len(f.items) > f.config.FeedSize {
-		f.items = f.items[len(f.items)-f.config.FeedSize:]
-	}
-	f.mu.Unlock()
-
-	log.Printf("Feed target %s: added item %s (title=%s, link=%s). Total items in feed: %d",
-		f.name, feedItem.Id, feedItem.Title, feedItem.Link.Href, currentCount)
-
-	f.cache.InvalidatePattern(f.name + ":")
-
-	return &core.PublishResult{
-		Success:   true,
-		Target:    f.name,
-		ItemID:    item.Original.ID,
-		Timestamp: time.Now(),
-		Metadata: map[string]interface{}{
-			"feed_type": "rss/atom/json",
-		},
-	}, nil
-}
-
-func (f *Target) Shutdown(ctx context.Context) error {
-	if f.server != nil {
-		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
-		if err := f.server.Shutdown(shutdownCtx); err != nil {
-			log.Printf("Feed target %s: server shutdown error: %v", f.name, err)
-		}
-	}
-	close(f.stopCh)
-	return nil
-}
-
-func (f *Target) convertToFeedItem(item *core.ProcessedItem) *feeds.Item {
 	title := "Untitled"
 	if t, ok := item.Original.Metadata["title"].(string); ok {
 		title = t
@@ -146,20 +106,76 @@ func (f *Target) convertToFeedItem(item *core.ProcessedItem) *feeds.Item {
 		content = s
 	}
 
-	feedItem := &feeds.Item{
-		Id:          item.Original.ID,
-		Title:       title,
-		Link:        &feeds.Link{Href: link},
-		Description: description,
-		Content:     content,
-		Author:      &feeds.Author{Name: author},
-		Created:     item.Original.Timestamp,
+	err := f.feedStore.InsertEntry(ctx, item.Original.ID, title, link, description, content, author, item.Original.Source, item.Original.Timestamp)
+	if err != nil {
+		log.Printf("Feed target %s: failed to insert entry %s: %v", f.name, item.Original.ID, err)
+		return nil, err
 	}
 
-	log.Printf("Feed target %s: converted item to feed.Item: id=%s, title=%s, link=%s, pubDate=%s",
-		f.name, feedItem.Id, feedItem.Title, link, feedItem.Created.Format(time.RFC3339))
+	log.Printf("Feed target %s: added entry %s (title=%s)", f.name, item.Original.ID, title)
 
-	return feedItem
+	f.cache.InvalidatePattern(f.name + ":")
+
+	return &core.PublishResult{
+		Success:   true,
+		Target:    f.name,
+		ItemID:    item.Original.ID,
+		Timestamp: time.Now(),
+		Metadata: map[string]interface{}{
+			"feed_type": "rss/atom/json",
+		},
+	}, nil
+}
+
+func (f *Target) Shutdown(ctx context.Context) error {
+	if f.server != nil {
+		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		if err := f.server.Shutdown(shutdownCtx); err != nil {
+			log.Printf("Feed target %s: server shutdown error: %v", f.name, err)
+		}
+	}
+	close(f.stopCh)
+	return nil
+}
+
+func (f *Target) entriesToFeedItems(entries []storage.FeedEntry) []*feeds.Item {
+	items := make([]*feeds.Item, 0, len(entries))
+
+	for _, entry := range entries {
+		item := &feeds.Item{
+			Id:          entry.ID,
+			Title:       entry.Title,
+			Link:        &feeds.Link{Href: entry.Link},
+			Description: entry.Description,
+			Content:     entry.Content,
+			Author:      &feeds.Author{Name: entry.Author},
+			Created:     entry.PublishedAt,
+		}
+		items = append(items, item)
+	}
+
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].Created.After(items[j].Created)
+	})
+
+	if len(items) > f.config.MaxItems {
+		items = items[:f.config.MaxItems]
+	}
+
+	return items
+}
+
+func (f *Target) buildFeed(entries []storage.FeedEntry) *feeds.Feed {
+	items := f.entriesToFeedItems(entries)
+	return &feeds.Feed{
+		Title:       fmt.Sprintf("Cartero Feed (%s)", f.name),
+		Link:        &feeds.Link{Href: "http://localhost/"},
+		Description: "Content aggregation feed from Cartero",
+		Author:      &feeds.Author{Name: "Cartero"},
+		Created:     time.Now().UTC(),
+		Items:       items,
+	}
 }
 
 func (f *Target) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
@@ -172,33 +188,15 @@ func (f *Target) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f.mu.RLock()
-	items := make([]*feeds.Item, len(f.items))
-	copy(items, f.items)
-	totalItems := len(f.items)
-	f.mu.RUnlock()
-
-	log.Printf("Feed target %s: handleRSSFeed called. Total items in memory: %d", f.name, totalItems)
-
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].Created.After(items[j].Created)
-	})
-
-	if len(items) > f.config.MaxItems {
-		items = items[:f.config.MaxItems]
+	entries, err := f.feedStore.ListRecentEntries(r.Context(), f.config.FeedSize)
+	if err != nil {
+		log.Printf("Feed target %s: failed to list entries: %v", f.name, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Error generating RSS feed: %v", err)
+		return
 	}
 
-	log.Printf("Feed target %s: serving %d items in RSS feed (max_items=%d)", f.name, len(items), f.config.MaxItems)
-
-	feed := &feeds.Feed{
-		Title:       fmt.Sprintf("Cartero Feed (%s)", f.name),
-		Link:        &feeds.Link{Href: "http://localhost/"},
-		Description: "Content aggregation feed from Cartero",
-		Author:      &feeds.Author{Name: "Cartero"},
-		Created:     time.Now().UTC(),
-		Items:       items,
-	}
-
+	feed := f.buildFeed(entries)
 	rss, err := feed.ToRss()
 	if err != nil {
 		log.Printf("Feed target %s: failed to generate RSS: %v", f.name, err)
@@ -212,7 +210,7 @@ func (f *Target) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
-	log.Printf("Feed target %s: RSS feed generated and cached (%d bytes)", f.name, len(rss))
+	log.Printf("Feed target %s: RSS feed cached (%d bytes)", f.name, len(rss))
 	fmt.Fprint(w, rss)
 }
 
@@ -226,33 +224,15 @@ func (f *Target) handleAtomFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f.mu.RLock()
-	items := make([]*feeds.Item, len(f.items))
-	copy(items, f.items)
-	totalItems := len(f.items)
-	f.mu.RUnlock()
-
-	log.Printf("Feed target %s: handleAtomFeed called. Total items in memory: %d", f.name, totalItems)
-
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].Created.After(items[j].Created)
-	})
-
-	if len(items) > f.config.MaxItems {
-		items = items[:f.config.MaxItems]
+	entries, err := f.feedStore.ListRecentEntries(r.Context(), f.config.FeedSize)
+	if err != nil {
+		log.Printf("Feed target %s: failed to list entries: %v", f.name, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Error generating Atom feed: %v", err)
+		return
 	}
 
-	log.Printf("Feed target %s: serving %d items in Atom feed (max_items=%d)", f.name, len(items), f.config.MaxItems)
-
-	feed := &feeds.Feed{
-		Title:       fmt.Sprintf("Cartero Feed (%s)", f.name),
-		Link:        &feeds.Link{Href: "http://localhost/"},
-		Description: "Content aggregation feed from Cartero",
-		Author:      &feeds.Author{Name: "Cartero"},
-		Created:     time.Now().UTC(),
-		Items:       items,
-	}
-
+	feed := f.buildFeed(entries)
 	atom, err := feed.ToAtom()
 	if err != nil {
 		log.Printf("Feed target %s: failed to generate Atom: %v", f.name, err)
@@ -266,7 +246,7 @@ func (f *Target) handleAtomFeed(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/atom+xml; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
-	log.Printf("Feed target %s: Atom feed generated and cached (%d bytes)", f.name, len(atom))
+	log.Printf("Feed target %s: Atom feed cached (%d bytes)", f.name, len(atom))
 	fmt.Fprint(w, atom)
 }
 
@@ -280,33 +260,15 @@ func (f *Target) handleJSONFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f.mu.RLock()
-	items := make([]*feeds.Item, len(f.items))
-	copy(items, f.items)
-	totalItems := len(f.items)
-	f.mu.RUnlock()
-
-	log.Printf("Feed target %s: handleJSONFeed called. Total items in memory: %d", f.name, totalItems)
-
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].Created.After(items[j].Created)
-	})
-
-	if len(items) > f.config.MaxItems {
-		items = items[:f.config.MaxItems]
+	entries, err := f.feedStore.ListRecentEntries(r.Context(), f.config.FeedSize)
+	if err != nil {
+		log.Printf("Feed target %s: failed to list entries: %v", f.name, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Error generating JSON feed: %v", err)
+		return
 	}
 
-	log.Printf("Feed target %s: serving %d items in JSON feed (max_items=%d)", f.name, len(items), f.config.MaxItems)
-
-	feed := &feeds.Feed{
-		Title:       fmt.Sprintf("Cartero Feed (%s)", f.name),
-		Link:        &feeds.Link{Href: "http://localhost/"},
-		Description: "Content aggregation feed from Cartero",
-		Author:      &feeds.Author{Name: "Cartero"},
-		Created:     time.Now().UTC(),
-		Items:       items,
-	}
-
+	feed := f.buildFeed(entries)
 	jsonStr, err := feed.ToJSON()
 	if err != nil {
 		log.Printf("Feed target %s: failed to generate JSON: %v", f.name, err)
@@ -320,16 +282,12 @@ func (f *Target) handleJSONFeed(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/feed+json; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
-	log.Printf("Feed target %s: JSON feed generated and cached (%d bytes)", f.name, len(jsonStr))
+	log.Printf("Feed target %s: JSON feed cached (%d bytes)", f.name, len(jsonStr))
 	fmt.Fprint(w, jsonStr)
 }
 
 func (f *Target) handleHealth(w http.ResponseWriter, r *http.Request) {
-	f.mu.RLock()
-	itemCount := len(f.items)
-	f.mu.RUnlock()
-
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, `{"status":"ok","name":"%s","items":%d,"time":"%s"}`,
-		f.name, itemCount, time.Now().UTC().Format(time.RFC3339))
+	fmt.Fprintf(w, `{"status":"ok","name":"%s","time":"%s"}`,
+		f.name, time.Now().UTC().Format(time.RFC3339))
 }

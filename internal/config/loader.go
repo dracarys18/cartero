@@ -21,6 +21,7 @@ type Loader struct {
 	config    *Config
 	platforms *Platforms
 	targets   map[string]core.Target
+	store     *storage.Store
 }
 
 func NewLoader(config *Config) *Loader {
@@ -29,6 +30,32 @@ func NewLoader(config *Config) *Loader {
 		platforms: &Platforms{},
 		targets:   make(map[string]core.Target),
 	}
+}
+
+func (l *Loader) initializeFeedServers() error {
+	for name, cfg := range l.config.Targets {
+		if cfg.Type != "feed" {
+			continue
+		}
+
+		if _, exists := l.targets[name]; exists {
+			continue
+		}
+
+		port := GetString(cfg.Settings, "port", "8080")
+		feedSize := GetInt(cfg.Settings, "feed_size", 100)
+		maxItems := GetInt(cfg.Settings, "max_items", 50)
+
+		target := targets.NewFeedTarget(name, targets.FeedConfig{
+			Port:     port,
+			FeedSize: feedSize,
+			MaxItems: maxItems,
+		}, l.store.Feed())
+
+		l.targets[name] = target
+	}
+
+	return nil
 }
 
 func (l *Loader) InitializePlatforms() error {
@@ -55,15 +82,6 @@ func (l *Loader) InitializePlatforms() error {
 		}
 	}
 	return nil
-}
-
-func (l *Loader) CreateStorage() (core.Storage, error) {
-	switch l.config.Storage.Type {
-	case "sqlite":
-		return storage.NewSQLiteStorage(l.config.Storage.Path)
-	default:
-		return nil, fmt.Errorf("unsupported storage type: %s", l.config.Storage.Type)
-	}
 }
 
 func (l *Loader) CreateSources() ([]core.Source, error) {
@@ -198,10 +216,6 @@ func (l *Loader) CreateTarget(name string) (core.Target, error) {
 		return nil, fmt.Errorf("target %s not found in config", name)
 	}
 
-	if !cfg.Enabled {
-		return nil, fmt.Errorf("target %s is not enabled", name)
-	}
-
 	target, err := l.createTarget(name, cfg)
 	if err != nil {
 		return nil, err
@@ -243,7 +257,7 @@ func (l *Loader) createTarget(name string, cfg TargetConfig) (core.Target, error
 			Port:     port,
 			FeedSize: feedSize,
 			MaxItems: maxItems,
-		}), nil
+		}, l.store.Feed()), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported target type: %s", cfg.Type)
@@ -255,12 +269,17 @@ func (l *Loader) BuildPipeline() (*core.Pipeline, error) {
 		return nil, fmt.Errorf("failed to initialize platforms: %w", err)
 	}
 
-	store, err := l.CreateStorage()
+	var err error
+	l.store, err = storage.New(l.config.Storage.Path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create storage: %w", err)
+		return nil, fmt.Errorf("failed to initialize storage: %w", err)
 	}
 
-	pipeline := core.NewPipeline(store)
+	if err := l.initializeFeedServers(); err != nil {
+		return nil, fmt.Errorf("failed to initialize feed servers: %w", err)
+	}
+
+	pipeline := core.NewPipeline(l.store.Items())
 
 	// Create and add all processors (unified handling - no separate filters)
 	log.Printf("BuildPipeline: Creating processors...")
@@ -301,6 +320,14 @@ func (l *Loader) BuildPipeline() (*core.Pipeline, error) {
 		}
 
 		for _, targetName := range sourceCfg.Targets {
+			cfg, exists := l.config.Targets[targetName]
+			if !exists {
+				return nil, fmt.Errorf("target %s not found in config for source %s", targetName, sourceName)
+			}
+			if !cfg.Enabled {
+				continue
+			}
+
 			target, err := l.CreateTarget(targetName)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create target %s for source %s: %w", targetName, sourceName, err)

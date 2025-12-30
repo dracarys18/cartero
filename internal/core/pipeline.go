@@ -1,6 +1,7 @@
 package core
 
 import (
+	"cartero/internal/storage"
 	"cartero/internal/utils"
 	"context"
 	"fmt"
@@ -20,19 +21,19 @@ type Pipeline struct {
 	processors         []Processor
 	processorConfigs   map[string]ProcessorConfig
 	processorExecutor  *ProcessorExecutor
-	storage            Storage
+	itemStore          storage.ItemStore
 	initializedTargets map[string]bool
 	mu                 sync.RWMutex
 	running            bool
 }
 
-func NewPipeline(storage Storage) *Pipeline {
+func NewPipeline(itemStore storage.ItemStore) *Pipeline {
 	return &Pipeline{
 		routes:             make([]SourceRoute, 0),
 		processors:         make([]Processor, 0),
 		processorConfigs:   make(map[string]ProcessorConfig),
 		processorExecutor:  NewProcessorExecutor(),
-		storage:            storage,
+		itemStore:          itemStore,
 		initializedTargets: make(map[string]bool),
 		running:            false,
 	}
@@ -152,18 +153,16 @@ func (p *Pipeline) processSource(ctx context.Context, route SourceRoute) error {
 			}
 
 			itemCount++
-			if p.storage != nil {
-				exists, err := p.storage.Exists(ctx, item.ID)
-				if err != nil {
+			exists, err := p.itemStore.Exists(ctx, item.ID)
+			if err != nil {
+				return err
+			}
+			if !exists {
+				if err := p.itemStore.Store(ctx, item); err != nil {
+					log.Printf("Source %s: error storing item %s: %v", route.Source.Name(), item.ID, err)
 					return err
 				}
-				if !exists {
-					if err := p.storage.Store(ctx, item); err != nil {
-						log.Printf("Source %s: error storing item %s: %v", route.Source.Name(), item.ID, err)
-						return err
-					}
-					log.Printf("Source %s: stored new item %s", route.Source.Name(), item.ID)
-				}
+				log.Printf("Source %s: stored new item %s", route.Source.Name(), item.ID)
 			}
 
 			if err := p.processItem(ctx, item, route); err != nil {
@@ -181,7 +180,7 @@ func (p *Pipeline) processItem(ctx context.Context, item *Item, route SourceRout
 	}
 
 	filterFunc := func(target Target) bool {
-		published, err := p.storage.IsPublished(ctx, processed.Original.ID, target.Name())
+		published, err := p.itemStore.IsPublished(ctx, processed.Original.ID, target.Name())
 		if err != nil {
 			log.Printf("Error checking if item %s published to %s: %v", processed.Original.ID, target.Name(), err)
 			return false
@@ -244,11 +243,9 @@ func (p *Pipeline) publishToTargets(ctx context.Context, item *ProcessedItem, ro
 
 			log.Printf("Successfully published item %s to target %s", item.Original.ID, t.Name())
 
-			if p.storage != nil {
-				if err := p.storage.MarkPublished(ctx, item.Original.ID, t.Name()); err != nil {
-					log.Printf("Error marking item %s as published to %s: %v", item.Original.ID, t.Name(), err)
-					errChan <- err
-				}
+			if err := p.itemStore.MarkPublished(ctx, item.Original.ID, t.Name()); err != nil {
+				log.Printf("Error marking item %s as published to %s: %v", item.Original.ID, t.Name(), err)
+				errChan <- err
 			}
 		}(target, i)
 	}
@@ -335,14 +332,6 @@ func (p *Pipeline) Shutdown(ctx context.Context) error {
 				log.Printf("Error shutting down target %s: %v", target.Name(), err)
 				errs = append(errs, fmt.Errorf("target %s shutdown error: %w", target.Name(), err))
 			}
-		}
-	}
-
-	if p.storage != nil {
-		log.Printf("Closing storage")
-		if err := p.storage.Close(); err != nil {
-			log.Printf("Error closing storage: %v", err)
-			errs = append(errs, fmt.Errorf("storage close error: %w", err))
 		}
 	}
 
