@@ -24,6 +24,8 @@ COPY config.sample.toml /app/config.sample.toml
 
 COPY templates /app/templates
 
+COPY db/migrations /app/db/migrations
+
 RUN chmod +x /app/cartero
 
 ENTRYPOINT ["/app/cartero"]
