@@ -7,19 +7,19 @@ import (
 )
 
 type CacheKey struct {
-	TargetName string
-	FeedType   string
+	Name string
+	Type string
 }
 
-func NewCacheKey(targetName, feedType string) CacheKey {
+func NewCacheKey(name, feedType string) CacheKey {
 	return CacheKey{
-		TargetName: targetName,
-		FeedType:   feedType,
+		Name: name,
+		Type: feedType,
 	}
 }
 
 func (k CacheKey) ToString() string {
-	return fmt.Sprintf("%s:%s", k.TargetName, k.FeedType)
+	return fmt.Sprintf("%s:%s", k.Name, k.Type)
 }
 
 func NewCache(config cache.CacheConfig) *cache.Cache[CacheKey, string] {

@@ -1,4 +1,4 @@
-package targets
+package platforms
 
 import (
 	"bytes"
@@ -85,43 +85,58 @@ type DiscordErrorResponse struct {
 	Global     bool    `json:"global"`
 }
 
-func NewDiscordPlatform(botToken string, timeout time.Duration, sleep time.Duration) *DiscordPlatform {
-	if timeout == 0 {
-		timeout = 60 * time.Second
-	}
-	if sleep == 0 {
-		sleep = 1 * time.Second
+func NewDiscordPlatform(config map[string]interface{}) (*DiscordPlatform, error) {
+	botToken, ok := config["bot_token"].(string)
+	if !ok || botToken == "" {
+		return nil, fmt.Errorf("discord platform: bot_token is required")
 	}
 
-	platform := &DiscordPlatform{
+	sleep := 1 * time.Second
+	if s, ok := config["sleep"].(time.Duration); ok {
+		sleep = s
+	}
+
+	return &DiscordPlatform{
 		botToken: botToken,
 		sleep:    sleep,
+	}, nil
+}
+
+func (p *DiscordPlatform) Validate() error {
+	return nil
+}
+
+func (p *DiscordPlatform) Initialize(ctx context.Context) error {
+	if p.botToken == "" {
+		return nil
 	}
 
-	// Create discordgo session to appear online
-	session, err := discordgo.New("Bot " + botToken)
+	session, err := discordgo.New("Bot " + p.botToken)
 	if err != nil {
-		log.Printf("Discord platform: failed to create session: %v", err)
-		return platform
+		return fmt.Errorf("failed to create discord session: %w", err)
 	}
 
-	platform.session = session
+	p.session = session
 
-	// Open websocket connection
 	if err := session.Open(); err != nil {
-		log.Printf("Discord platform: failed to open session: %v", err)
-	} else {
-		log.Printf("Discord platform: bot is now ONLINE")
+		return fmt.Errorf("failed to open discord session: %w", err)
 	}
 
-	return platform
+	log.Printf("Discord platform: bot is now ONLINE")
+	return nil
+}
+
+func (p *DiscordPlatform) Close(ctx context.Context) error {
+	if p.session != nil {
+		p.session.Close()
+	}
+	log.Printf("Discord platform: shutting down")
+	return nil
 }
 
 func NewDiscordTarget(name string, config DiscordConfig) *DiscordTarget {
-	// Use platform name for template selection
 	templatePath := "templates/discord.tmpl"
 
-	// Load template from file
 	tmpl, err := utils.LoadTemplate(templatePath)
 	if err != nil {
 		log.Printf("Discord target %s: FATAL - %v", name, err)
@@ -200,8 +215,6 @@ func (d *DiscordTarget) createForumThread(item *core.ProcessedItem) (string, err
 
 	embed := d.buildEmbed(item)
 
-	// Convert discordgo embed back to our format for the API call
-	// (discordgo doesn't support forum thread creation yet)
 	dgEmbed := DiscordEmbed{
 		Title:       embed.Title,
 		Description: embed.Description,
@@ -235,7 +248,6 @@ func (d *DiscordTarget) createForumThread(item *core.ProcessedItem) (string, err
 		return "", fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
-	// Use standard HTTP client for forum threads (not supported by discordgo)
 	url := fmt.Sprintf("https://discord.com/api/v10/channels/%s/threads", d.channelID)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
 	if err != nil {
@@ -287,13 +299,11 @@ func (d *DiscordTarget) sendMessage(item *core.ProcessedItem) (string, error) {
 }
 
 func (d *DiscordTarget) buildMessage(item *core.ProcessedItem) DiscordMessage {
-	// Execute template with item
 	var buf bytes.Buffer
 	if err := d.template.Execute(&buf, item.Original); err != nil {
 		panic(fmt.Sprintf("Discord target %s: template execution error: %v", d.name, err))
 	}
 
-	// Parse JSON output from template
 	var embed DiscordEmbed
 	output := strings.TrimSpace(buf.String())
 	if err := json.Unmarshal([]byte(output), &embed); err != nil {
@@ -307,13 +317,11 @@ func (d *DiscordTarget) buildMessage(item *core.ProcessedItem) DiscordMessage {
 }
 
 func (d *DiscordTarget) buildEmbed(item *core.ProcessedItem) *discordgo.MessageEmbed {
-	// Execute template with item
 	var buf bytes.Buffer
 	if err := d.template.Execute(&buf, item.Original); err != nil {
 		panic(fmt.Sprintf("Discord target %s: template execution error: %v", d.name, err))
 	}
 
-	// Parse JSON output from template
 	var embed DiscordEmbed
 	output := strings.TrimSpace(buf.String())
 	if err := json.Unmarshal([]byte(output), &embed); err != nil {
@@ -321,7 +329,6 @@ func (d *DiscordTarget) buildEmbed(item *core.ProcessedItem) *discordgo.MessageE
 		panic(fmt.Sprintf("Discord target %s: failed to parse template output as JSON: %v", d.name, err))
 	}
 
-	// Convert to discordgo.MessageEmbed
 	dgEmbed := &discordgo.MessageEmbed{
 		Title:       embed.Title,
 		Description: embed.Description,
@@ -343,7 +350,6 @@ func (d *DiscordTarget) buildEmbed(item *core.ProcessedItem) *discordgo.MessageE
 		})
 	}
 
-	// Convert footer
 	if embed.Footer != nil {
 		dgEmbed.Footer = &discordgo.MessageEmbedFooter{
 			Text: embed.Footer.Text,
@@ -356,13 +362,4 @@ func (d *DiscordTarget) buildEmbed(item *core.ProcessedItem) *discordgo.MessageE
 func (d *DiscordTarget) Shutdown(ctx context.Context) error {
 	log.Printf("Discord target %s: shutting down", d.name)
 	return nil
-}
-
-func (p *DiscordPlatform) Shutdown() {
-	log.Printf("Discord platform: shutting down")
-
-	// Close discordgo session
-	if p.session != nil {
-		p.session.Close()
-	}
 }

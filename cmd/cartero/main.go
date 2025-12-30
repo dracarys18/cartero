@@ -41,7 +41,7 @@ func main() {
 func run(ctx context.Context) error {
 	fmt.Printf("Loading configuration from: %s\n", *configPath)
 
-	bot, err := config.LoadAndBuild(*configPath)
+	bot, err := config.LoadAndBuild(ctx, *configPath)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}

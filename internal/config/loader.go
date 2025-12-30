@@ -1,10 +1,12 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"time"
 
+	"cartero/internal/components"
 	"cartero/internal/core"
 	"cartero/internal/platforms"
 	"cartero/internal/processors"
@@ -13,93 +15,208 @@ import (
 	"cartero/internal/targets"
 )
 
-type Platforms struct {
-	Discord *targets.DiscordPlatform
-}
-
 type Loader struct {
-	config    *Config
-	platforms *Platforms
-	targets   map[string]core.Target
-	store     *storage.Store
+	config       *Config
+	storageComp  *components.StorageComponent
+	platformComp *components.PlatformComponent
+	serverComp   *components.ServerComponent
+	pipeline     *core.Pipeline
 }
 
-func NewLoader(config *Config) *Loader {
+func NewLoader(cfg *Config) *Loader {
 	return &Loader{
-		config:    config,
-		platforms: &Platforms{},
-		targets:   make(map[string]core.Target),
+		config: cfg,
 	}
 }
 
-func (l *Loader) initializeFeedServers() error {
-	for name, cfg := range l.config.Targets {
-		if cfg.Type != "feed" {
+func (l *Loader) Initialize(ctx context.Context) (*core.Bot, error) {
+	if err := l.initializeComponents(ctx); err != nil {
+		return nil, fmt.Errorf("failed to initialize components: %w", err)
+	}
+
+	if l.pipeline == nil {
+		return nil, fmt.Errorf("pipeline not initialized")
+	}
+
+	interval, err := time.ParseDuration(l.config.Bot.Interval)
+	if err != nil {
+		return nil, fmt.Errorf("invalid bot interval: %w", err)
+	}
+
+	shutdownFn := func() error {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		return l.Shutdown(shutdownCtx)
+	}
+
+	bot := core.NewBot(core.BotConfig{
+		Name:       l.config.Bot.Name,
+		Pipeline:   l.pipeline,
+		Interval:   interval,
+		RunOnce:    l.config.Bot.RunOnce,
+		ShutdownFn: shutdownFn,
+	})
+
+	return bot, nil
+}
+
+func (l *Loader) initializeComponents(ctx context.Context) error {
+	log.Printf("[Loader] Initializing all components")
+
+	storage := components.NewStorageComponent(l.config.Storage.Path)
+
+	if err := storage.Validate(); err != nil {
+		return fmt.Errorf("storage component validation failed: %w", err)
+	}
+
+	if err := storage.Initialize(ctx); err != nil {
+		return fmt.Errorf("storage component initialization failed: %w", err)
+	}
+
+	l.storageComp = storage
+	platform := l.buildPlatformComponent()
+
+	if err := platform.Validate(); err != nil {
+		return fmt.Errorf("platform component validation failed: %w", err)
+	}
+
+	if err := platform.Initialize(ctx); err != nil {
+		return fmt.Errorf("platform component initialization failed: %w", err)
+	}
+
+	l.platformComp = platform
+	store := l.storageComp.Store()
+	l.serverComp = components.NewServerComponent(store.Feed())
+
+	for name, targetCfg := range l.config.Targets {
+		if targetCfg.Type != "feed" {
 			continue
 		}
 
-		if _, exists := l.targets[name]; exists {
-			continue
-		}
+		port := GetString(targetCfg.Settings, "port", "8080")
+		feedSize := GetInt(targetCfg.Settings, "feed_size", 100)
+		maxItems := GetInt(targetCfg.Settings, "max_items", 50)
 
-		port := GetString(cfg.Settings, "port", "8080")
-		feedSize := GetInt(cfg.Settings, "feed_size", 100)
-		maxItems := GetInt(cfg.Settings, "max_items", 50)
-
-		target := targets.NewFeedTarget(name, targets.FeedConfig{
+		l.serverComp.Register(components.ServerConfig{
+			Name:     name,
 			Port:     port,
 			FeedSize: feedSize,
 			MaxItems: maxItems,
-		}, l.store.Feed())
-
-		l.targets[name] = target
+		})
 	}
 
+	if err := l.serverComp.Validate(); err != nil {
+		return fmt.Errorf("server component validation failed: %w", err)
+	}
+
+	if err := l.serverComp.Initialize(ctx); err != nil {
+		return fmt.Errorf("server component initialization failed: %w", err)
+	}
+
+	if err := l.buildPipeline(ctx); err != nil {
+		return fmt.Errorf("failed to build pipeline: %w", err)
+	}
+
+	log.Printf("[Loader] All components initialized successfully")
 	return nil
 }
 
-func (l *Loader) InitializePlatforms() error {
-	for name, platformCfg := range l.config.Platforms {
-		switch platformCfg.Type {
-		case "discord":
-			if l.platforms.Discord != nil {
-				return fmt.Errorf("discord platform already initialized")
-			}
-			botToken := GetString(platformCfg.Settings, "bot_token", "")
-			if botToken == "" {
-				return fmt.Errorf("bot_token is required for discord platform %s", name)
-			}
-			timeout := GetDuration(platformCfg.Settings, "timeout", 60*time.Second)
-			sleep := 1 * time.Second
-			if platformCfg.Sleep != "" {
-				if parsed, err := time.ParseDuration(platformCfg.Sleep); err == nil {
-					sleep = parsed
-				}
-			}
-			l.platforms.Discord = targets.NewDiscordPlatform(botToken, timeout, sleep)
-		default:
-			return fmt.Errorf("unsupported platform type: %s", platformCfg.Type)
+func (l *Loader) buildPlatformComponent() *components.PlatformComponent {
+	platformsConfig := make(map[string]components.PlatformConfig)
+	for name, cfg := range l.config.Platforms {
+		platformsConfig[name] = components.PlatformConfig{
+			Type:     cfg.Type,
+			Sleep:    cfg.Sleep,
+			Settings: cfg.Settings,
 		}
 	}
+	return components.NewPlatformComponent(platformsConfig)
+}
+
+func (l *Loader) buildPipeline(ctx context.Context) error {
+	store := l.storageComp.Store()
+	l.pipeline = core.NewPipeline(store.Items())
+
+	if err := l.addProcessors(l.pipeline); err != nil {
+		return fmt.Errorf("failed to add processors: %w", err)
+	}
+
+	if err := l.addSourceRoutes(l.pipeline); err != nil {
+		return fmt.Errorf("failed to add source routes: %w", err)
+	}
+
 	return nil
 }
 
-func (l *Loader) CreateSources() ([]core.Source, error) {
-	var sources []core.Source
-
-	for name, cfg := range l.config.Sources {
-		if !cfg.Enabled {
+func (l *Loader) addProcessors(pipeline *core.Pipeline) error {
+	for name, processorCfg := range l.config.Processors {
+		if !processorCfg.Enabled {
 			continue
 		}
 
-		source, err := l.createSource(name, cfg)
+		processor, err := l.createProcessor(name, processorCfg)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create source %s: %w", name, err)
+			return fmt.Errorf("failed to create processor %s: %w", name, err)
 		}
-		sources = append(sources, source)
+
+		pipelineConfig := core.ProcessorConfig{
+			Name:      name,
+			Type:      processorCfg.Type,
+			Enabled:   processorCfg.Enabled,
+			DependsOn: processorCfg.DependsOn,
+		}
+		pipeline.AddProcessorWithConfig(processor, pipelineConfig)
 	}
 
-	return sources, nil
+	return nil
+}
+
+func (l *Loader) addSourceRoutes(pipeline *core.Pipeline) error {
+	store := l.storageComp.Store()
+
+	for sourceName, sourceCfg := range l.config.Sources {
+		if !sourceCfg.Enabled {
+			continue
+		}
+
+		source, err := l.createSource(sourceName, sourceCfg)
+		if err != nil {
+			return fmt.Errorf("failed to create source %s: %w", sourceName, err)
+		}
+
+		var routeTargets []core.Target
+		if len(sourceCfg.Targets) == 0 {
+			return fmt.Errorf("source %s has no targets configured", sourceName)
+		}
+
+		for _, targetName := range sourceCfg.Targets {
+			targetCfg, exists := l.config.Targets[targetName]
+			if !exists {
+				return fmt.Errorf("target %s not found in config for source %s", targetName, sourceName)
+			}
+			if !targetCfg.Enabled {
+				continue
+			}
+
+			target, err := l.createTarget(targetName, targetCfg, store)
+			if err != nil {
+				return fmt.Errorf("failed to create target %s for source %s: %w", targetName, sourceName, err)
+			}
+			routeTargets = append(routeTargets, target)
+		}
+
+		if len(routeTargets) == 0 {
+			return fmt.Errorf("source %s has no enabled targets", sourceName)
+		}
+
+		route := core.SourceRoute{
+			Source:  source,
+			Targets: routeTargets,
+		}
+		pipeline.AddRoute(route)
+	}
+
+	return nil
 }
 
 func (l *Loader) createSource(name string, cfg SourceConfig) (core.Source, error) {
@@ -133,30 +250,11 @@ func (l *Loader) createSource(name string, cfg SourceConfig) (core.Source, error
 	}
 }
 
-func (l *Loader) CreateProcessors() (map[string]core.Processor, error) {
-	processorsMap := make(map[string]core.Processor)
-
-	for name, cfg := range l.config.Processors {
-		if !cfg.Enabled {
-			continue
-		}
-
-		processor, err := l.createProcessor(name, cfg)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create processor %s: %w", name, err)
-		}
-
-		processorsMap[name] = processor
-	}
-
-	return processorsMap, nil
-}
-
 func (l *Loader) createProcessor(name string, cfg ProcessorConfig) (core.Processor, error) {
 	switch cfg.Type {
 	case "summary":
 		model := GetString(cfg.Settings, "model", "")
-		ollamaClient := platforms.NewOllamaPlatform(model)
+		ollamaClient := l.platformComp.OllamaPlatform(model)
 		return processors.NewSummaryProcessor(name, ollamaClient), nil
 
 	case "extract_fields":
@@ -206,33 +304,15 @@ func (l *Loader) createProcessor(name string, cfg ProcessorConfig) (core.Process
 	}
 }
 
-func (l *Loader) CreateTarget(name string) (core.Target, error) {
-	if target, exists := l.targets[name]; exists {
-		return target, nil
-	}
-
-	cfg, exists := l.config.Targets[name]
-	if !exists {
-		return nil, fmt.Errorf("target %s not found in config", name)
-	}
-
-	target, err := l.createTarget(name, cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	l.targets[name] = target
-	return target, nil
-}
-
-func (l *Loader) createTarget(name string, cfg TargetConfig) (core.Target, error) {
+func (l *Loader) createTarget(name string, cfg TargetConfig, store *storage.Store) (core.Target, error) {
 	switch cfg.Type {
 	case "discord":
 		if cfg.Platform == "" {
 			return nil, fmt.Errorf("platform is required for discord target")
 		}
 
-		if l.platforms.Discord == nil {
+		discordPlatform := l.platformComp.Discord()
+		if discordPlatform == nil {
 			return nil, fmt.Errorf("discord platform not initialized")
 		}
 
@@ -242,138 +322,60 @@ func (l *Loader) createTarget(name string, cfg TargetConfig) (core.Target, error
 		}
 		channelType := GetString(cfg.Settings, "channel_type", "text")
 
-		return targets.NewDiscordTarget(name, targets.DiscordConfig{
-			Platform:    l.platforms.Discord,
+		return platforms.NewDiscordTarget(name, platforms.DiscordConfig{
+			Platform:    discordPlatform,
 			ChannelID:   channelID,
 			ChannelType: channelType,
 		}), nil
 
 	case "feed":
-		port := GetString(cfg.Settings, "port", "8080")
-		feedSize := GetInt(cfg.Settings, "feed_size", 100)
-		maxItems := GetInt(cfg.Settings, "max_items", 50)
-
-		return targets.NewFeedTarget(name, targets.FeedConfig{
-			Port:     port,
-			FeedSize: feedSize,
-			MaxItems: maxItems,
-		}, l.store.Feed()), nil
+		return targets.NewFeedTarget(name, store.Feed()), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported target type: %s", cfg.Type)
 	}
 }
 
-func (l *Loader) BuildPipeline() (*core.Pipeline, error) {
-	if err := l.InitializePlatforms(); err != nil {
-		return nil, fmt.Errorf("failed to initialize platforms: %w", err)
+func (l *Loader) Shutdown(ctx context.Context) error {
+	if l.serverComp != nil {
+		if err := l.serverComp.Close(ctx); err != nil {
+			log.Printf("[Loader] Error closing server component: %v", err)
+		}
 	}
 
-	var err error
-	l.store, err = storage.New(l.config.Storage.Path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize storage: %w", err)
+	if l.platformComp != nil {
+		if err := l.platformComp.Close(ctx); err != nil {
+			log.Printf("[Loader] Error closing platform component: %v", err)
+		}
 	}
 
-	if err := l.initializeFeedServers(); err != nil {
-		return nil, fmt.Errorf("failed to initialize feed servers: %w", err)
+	if l.storageComp != nil {
+		if err := l.storageComp.Close(ctx); err != nil {
+			log.Printf("[Loader] Error closing storage component: %v", err)
+		}
 	}
 
-	pipeline := core.NewPipeline(l.store.Items())
-
-	// Create and add all processors (unified handling - no separate filters)
-	log.Printf("BuildPipeline: Creating processors...")
-	processorsMap, err := l.CreateProcessors()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create processors: %w", err)
-	}
-	log.Printf("BuildPipeline: Created %d processors", len(processorsMap))
-
-	for name, processor := range processorsMap {
-		cfg, exists := l.config.Processors[name]
-		if !exists {
-			continue
-		}
-
-		processorConfig := core.ProcessorConfig{
-			Name:      name,
-			Type:      cfg.Type,
-			Enabled:   cfg.Enabled,
-			DependsOn: cfg.DependsOn,
-		}
-		pipeline.AddProcessorWithConfig(processor, processorConfig)
-	}
-
-	for sourceName, sourceCfg := range l.config.Sources {
-		if !sourceCfg.Enabled {
-			continue
-		}
-
-		source, err := l.createSource(sourceName, sourceCfg)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create source %s: %w", sourceName, err)
-		}
-
-		var routeTargets []core.Target
-		if len(sourceCfg.Targets) == 0 {
-			return nil, fmt.Errorf("source %s has no targets configured", sourceName)
-		}
-
-		for _, targetName := range sourceCfg.Targets {
-			cfg, exists := l.config.Targets[targetName]
-			if !exists {
-				return nil, fmt.Errorf("target %s not found in config for source %s", targetName, sourceName)
-			}
-			if !cfg.Enabled {
-				continue
-			}
-
-			target, err := l.CreateTarget(targetName)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create target %s for source %s: %w", targetName, sourceName, err)
-			}
-			routeTargets = append(routeTargets, target)
-		}
-
-		route := core.SourceRoute{
-			Source:  source,
-			Targets: routeTargets,
-		}
-
-		pipeline.AddRoute(route)
-	}
-
-	return pipeline, nil
-}
-
-func (l *Loader) BuildBot() (*core.Bot, error) {
-	pipeline, err := l.BuildPipeline()
-	if err != nil {
-		return nil, err
-	}
-
-	interval, _ := time.ParseDuration(l.config.Bot.Interval)
-
-	bot := core.NewBot(core.BotConfig{
-		Name:     l.config.Bot.Name,
-		Pipeline: pipeline,
-		Interval: interval,
-		RunOnce:  l.config.Bot.RunOnce,
-	})
-
-	return bot, nil
-}
-
-func (l *Loader) Shutdown() error {
 	return nil
 }
 
-func LoadAndBuild(configPath string) (*core.Bot, error) {
-	config, err := Load(configPath)
+func LoadAndBuild(ctx context.Context, configPath string) (*core.Bot, error) {
+	cfg, err := Load(configPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	loader := NewLoader(config)
-	return loader.BuildBot()
+	loader := NewLoader(cfg)
+	return loader.Initialize(ctx)
+}
+
+func (l *Loader) GetStorageComponent() *components.StorageComponent {
+	return l.storageComp
+}
+
+func (l *Loader) GetPlatformComponent() *components.PlatformComponent {
+	return l.platformComp
+}
+
+func (l *Loader) GetServerComponent() *components.ServerComponent {
+	return l.serverComp
 }
