@@ -72,15 +72,7 @@ func (l *Loader) initializeComponents(ctx context.Context) error {
 		return fmt.Errorf("failed to register platform component: %w", err)
 	}
 
-	l.validateRegistry()
-
-	if err := l.registry.InitializeAll(ctx); err != nil {
-		return fmt.Errorf("component initialization failed: %w", err)
-	}
-
-	store := l.registry.Get(components.StorageComponentName).(*components.StorageComponent).Store()
-	serverComp := components.NewServerComponent(store.Feed())
-
+	serverComp := components.NewServerComponent(l.registry)
 	for name, targetCfg := range l.config.Targets {
 		if targetCfg.Type != "feed" {
 			continue
@@ -98,12 +90,12 @@ func (l *Loader) initializeComponents(ctx context.Context) error {
 		})
 	}
 
-	if err := serverComp.Validate(); err != nil {
-		return fmt.Errorf("server component validation failed: %w", err)
+	if err := l.registry.Register(serverComp); err != nil {
+		return fmt.Errorf("failed to register server component: %w", err)
 	}
 
-	if err := serverComp.Initialize(ctx); err != nil {
-		return fmt.Errorf("server component initialization failed: %w", err)
+	if err := l.registry.InitializeAll(ctx); err != nil {
+		return fmt.Errorf("component initialization failed: %w", err)
 	}
 
 	if err := l.buildPipeline(ctx); err != nil {
@@ -126,14 +118,8 @@ func (l *Loader) buildPlatformComponent() *components.PlatformComponent {
 	return components.NewPlatformComponent(platformsConfig)
 }
 
-func (l *Loader) validateRegistry() {
-	_ = l.registry.Get(components.StorageComponentName)
-	_ = l.registry.Get(components.PlatformComponentName)
-}
-
 func (l *Loader) buildPipeline(ctx context.Context) error {
-	storageComp := l.registry.Get(components.StorageComponentName).(*components.StorageComponent)
-	store := storageComp.Store()
+	store := l.registry.Get(components.StorageComponentName).(*components.StorageComponent).Store()
 	l.pipeline = core.NewPipeline(store.Items())
 
 	if err := l.addProcessors(l.pipeline); err != nil {

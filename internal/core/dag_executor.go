@@ -6,12 +6,22 @@ import (
 	"log"
 	"maps"
 	"sync"
+
+	"cartero/internal/graph"
 )
 
 type ProcessorNode struct {
 	Name      string
 	Processor Processor
 	DependsOn []string
+}
+
+func (pn *ProcessorNode) GetName() string {
+	return pn.Name
+}
+
+func (pn *ProcessorNode) GetDependencies() []string {
+	return pn.DependsOn
 }
 
 type ProcessorExecutor struct {
@@ -46,11 +56,16 @@ func (pe *ProcessorExecutor) Initialize() error {
 		return nil
 	}
 
-	if err := pe.validateGraph(pe.nodes); err != nil {
+	nodes := make(map[string]graph.Node)
+	for name, node := range pe.nodes {
+		nodes[name] = node
+	}
+
+	if err := graph.ValidateGraph(nodes); err != nil {
 		return err
 	}
 
-	order, err := pe.TopologicalSort(pe.nodes)
+	order, err := graph.TopologicalSort(nodes)
 	if err != nil {
 		return err
 	}
@@ -85,7 +100,6 @@ func (pe *ProcessorExecutor) ExecuteProcessors(ctx context.Context, item *Item) 
 		}
 
 		if result == nil {
-			// Item was filtered out by this processor
 			log.Printf("Processor %s filtered out item %s", node.Name, item.ID)
 			return nil, nil
 		}
@@ -95,56 +109,4 @@ func (pe *ProcessorExecutor) ExecuteProcessors(ctx context.Context, item *Item) 
 	}
 
 	return processed, nil
-}
-
-func (pe *ProcessorExecutor) validateGraph(nodes map[string]*ProcessorNode) error {
-	for name, node := range nodes {
-		for _, dep := range node.DependsOn {
-			if _, exists := nodes[dep]; !exists {
-				return fmt.Errorf("processor %s depends on %s which does not exist", name, dep)
-			}
-		}
-	}
-	return nil
-}
-
-func (pe *ProcessorExecutor) TopologicalSort(nodes map[string]*ProcessorNode) ([]string, error) {
-	visited := make(map[string]bool)
-	visiting := make(map[string]bool)
-	result := make([]string, 0, len(nodes))
-
-	for name := range nodes {
-		if !visited[name] {
-			if err := pe.visit(name, nodes, visited, visiting, &result); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	return result, nil
-}
-
-func (pe *ProcessorExecutor) visit(name string, nodes map[string]*ProcessorNode, visited, visiting map[string]bool, result *[]string) error {
-	if visiting[name] {
-		return fmt.Errorf("cycle detected in processor dependencies involving %s", name)
-	}
-
-	if visited[name] {
-		return nil
-	}
-
-	visiting[name] = true
-
-	node := nodes[name]
-	for _, dep := range node.DependsOn {
-		if err := pe.visit(dep, nodes, visited, visiting, result); err != nil {
-			return err
-		}
-	}
-
-	visiting[name] = false
-	visited[name] = true
-	*result = append(*result, name)
-
-	return nil
 }

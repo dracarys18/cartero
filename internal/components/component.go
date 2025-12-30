@@ -3,10 +3,13 @@ package components
 import (
 	"context"
 	"fmt"
+
+	"cartero/internal/graph"
 )
 
 type IComponent interface {
 	Name() string
+	Dependencies() []string
 	Validate() error
 	Initialize(ctx context.Context) error
 	Close(ctx context.Context) error
@@ -30,7 +33,6 @@ func (r *Registry) Register(component IComponent) error {
 		return fmt.Errorf("component %s already registered", name)
 	}
 	r.components[name] = component
-	r.order = append(r.order, name)
 	return nil
 }
 
@@ -43,21 +45,44 @@ func (r *Registry) Get(name string) IComponent {
 }
 
 func (r *Registry) InitializeAll(ctx context.Context) error {
-	for _, name := range r.order {
+	nodes := make(map[string]graph.Node)
+	for name, comp := range r.components {
+		nodes[name] = &componentNode{comp: comp}
+	}
+
+	order, err := graph.TopologicalSort(nodes)
+	if err != nil {
+		return err
+	}
+
+	for _, name := range order {
 		comp := r.components[name]
 		if err := comp.Validate(); err != nil {
 			return fmt.Errorf("component %s validation failed: %w", name, err)
 		}
 	}
 
-	for _, name := range r.order {
+	for _, name := range order {
 		comp := r.components[name]
 		if err := comp.Initialize(ctx); err != nil {
 			return fmt.Errorf("component %s initialization failed: %w", name, err)
 		}
 	}
 
+	r.order = order
 	return nil
+}
+
+type componentNode struct {
+	comp IComponent
+}
+
+func (cn *componentNode) GetName() string {
+	return cn.comp.Name()
+}
+
+func (cn *componentNode) GetDependencies() []string {
+	return cn.comp.Dependencies()
 }
 
 func (r *Registry) CloseAll(ctx context.Context) error {

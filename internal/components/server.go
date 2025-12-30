@@ -17,21 +17,25 @@ type ServerConfig struct {
 }
 
 type ServerComponent struct {
-	feedStore storage.FeedStore
-	configs   []ServerConfig
-	servers   map[string]*feed.Server
+	registry *Registry
+	configs  []ServerConfig
+	servers  map[string]*feed.Server
 }
 
-func NewServerComponent(feedStore storage.FeedStore) *ServerComponent {
+func NewServerComponent(registry *Registry) *ServerComponent {
 	return &ServerComponent{
-		feedStore: feedStore,
-		configs:   make([]ServerConfig, 0),
-		servers:   make(map[string]*feed.Server),
+		registry: registry,
+		configs:  make([]ServerConfig, 0),
+		servers:  make(map[string]*feed.Server),
 	}
 }
 
 func (c *ServerComponent) Name() string {
 	return ServerComponentName
+}
+
+func (c *ServerComponent) Dependencies() []string {
+	return []string{StorageComponentName}
 }
 
 func (c *ServerComponent) Register(cfg ServerConfig) {
@@ -43,15 +47,18 @@ func (c *ServerComponent) Validate() error {
 }
 
 func (c *ServerComponent) Initialize(ctx context.Context) error {
+	storageComp := c.registry.Get(StorageComponentName).(*StorageComponent)
+	feedStore := storageComp.Store().Feed()
+
 	for _, cfg := range c.configs {
-		if err := c.startServer(ctx, cfg); err != nil {
+		if err := c.startServer(ctx, cfg, feedStore); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (c *ServerComponent) startServer(ctx context.Context, cfg ServerConfig) error {
+func (c *ServerComponent) startServer(ctx context.Context, cfg ServerConfig, feedStore storage.FeedStore) error {
 	if _, exists := c.servers[cfg.Name]; exists {
 		return nil
 	}
@@ -70,7 +77,7 @@ func (c *ServerComponent) startServer(ctx context.Context, cfg ServerConfig) err
 		Port:     cfg.Port,
 		FeedSize: cfg.FeedSize,
 		MaxItems: cfg.MaxItems,
-	}, c.feedStore)
+	}, feedStore)
 
 	if err := server.Start(ctx); err != nil {
 		return fmt.Errorf("servers: failed to start feed server %s: %w", cfg.Name, err)

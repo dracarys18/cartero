@@ -31,6 +31,10 @@ func (c *PlatformComponent) Name() string {
 	return PlatformComponentName
 }
 
+func (c *PlatformComponent) Dependencies() []string {
+	return []string{}
+}
+
 func (c *PlatformComponent) Validate() error {
 	return nil
 }

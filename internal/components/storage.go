@@ -22,6 +22,10 @@ func (c *StorageComponent) Name() string {
 	return StorageComponentName
 }
 
+func (c *StorageComponent) Dependencies() []string {
+	return []string{}
+}
+
 func (c *StorageComponent) Validate() error {
 	if c.dbPath == "" {
 		return fmt.Errorf("storage: database path is required")
