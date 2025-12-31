@@ -3,6 +3,7 @@ package processors
 import (
 	"cartero/internal/core"
 	"cartero/internal/platforms"
+	"cartero/internal/state"
 	"cartero/internal/utils"
 	"context"
 	"fmt"
@@ -16,19 +17,25 @@ const Prompt = "You are a professional content summarizer. Please read the follo
 
 type SummaryProcessor struct {
 	name         string
+	model        string
 	ollamaClient *platforms.OllamaPlatform
 	mu           sync.RWMutex
 }
 
-func NewSummaryProcessor(name string, ollamaClient *platforms.OllamaPlatform) *SummaryProcessor {
-	if ollamaClient == nil {
-		panic("ollamaClient cannot be nil")
-	}
-
+func NewSummaryProcessor(name string, model string) *SummaryProcessor {
 	return &SummaryProcessor{
-		name:         name,
-		mu:           sync.RWMutex{},
-		ollamaClient: ollamaClient,
+		name:  name,
+		model: model,
+		mu:    sync.RWMutex{},
+	}
+}
+
+func (d *SummaryProcessor) SetState(appState *state.State) {
+	d.ollamaClient = appState.Platforms.OllamaPlatform(d.model)
+	if d.ollamaClient == nil {
+		// Log warning or panic? Original code panicked.
+		// Since this is initialization phase (late), panic is acceptable if strictly required.
+		log.Printf("SummaryProcessor %s: Warning - Ollama platform not found for model %s", d.name, d.model)
 	}
 }
 

@@ -30,30 +30,138 @@ type StorageConfig struct {
 }
 
 type PlatformConfig struct {
-	Type     string                 `toml:"type"`
-	Sleep    string                 `toml:"sleep"`
-	Settings map[string]interface{} `toml:"settings"`
+	Type     string           `toml:"type"`
+	Enabled  bool             `toml:"enabled"`
+	Sleep    string           `toml:"sleep"`
+	Settings PlatformSettings `toml:"settings"`
+}
+
+type PlatformSettings struct {
+	DiscordPlatformSettings
+	OllamaPlatformSettings
+}
+
+type DiscordPlatformSettings struct {
+	BotToken string `toml:"bot_token"`
+	Timeout  string `toml:"timeout"`
+}
+
+type OllamaPlatformSettings struct {
+	Model string `toml:"model"`
 }
 
 type SourceConfig struct {
-	Type     string                 `toml:"type"`
-	Enabled  bool                   `toml:"enabled"`
-	Targets  []string               `toml:"targets"`
-	Settings map[string]interface{} `toml:"settings"`
+	Type     string         `toml:"type"`
+	Enabled  bool           `toml:"enabled"`
+	Targets  []string       `toml:"targets"`
+	Settings SourceSettings `toml:"settings"`
+}
+
+type SourceSettings struct {
+	MaxItems int `toml:"max_items"`
+
+	HackerNewsSettings
+	RSSSettings
+	LobstersSettings
+	LessWrongSettings
+}
+
+type HackerNewsSettings struct {
+	StoryType string `toml:"story_type"`
+}
+
+type RSSSettings struct {
+	FeedURL string `toml:"feed_url"`
+}
+
+type LobstersSettings struct {
+	SortBy            string   `toml:"sort_by"`
+	IncludeCategories []string `toml:"include_categories"`
+	ExcludeCategories []string `toml:"exclude_categories"`
+}
+
+type LessWrongSettings struct {
 }
 
 type ProcessorConfig struct {
-	Type      string                 `toml:"type"`
-	Enabled   bool                   `toml:"enabled"`
-	DependsOn []string               `toml:"depends_on"`
-	Settings  map[string]interface{} `toml:"settings"`
+	Type      string            `toml:"type"`
+	Enabled   bool              `toml:"enabled"`
+	DependsOn []string          `toml:"depends_on"`
+	Settings  ProcessorSettings `toml:"settings"`
+}
+
+type ProcessorSettings struct {
+	DedupeSettings
+	ScoreFilterSettings
+	KeywordFilterSettings
+	RateLimitSettings
+	TokenBucketSettings
+	SummarySettings
+	ExtractFieldsSettings
+	TemplateSettings
+	ContentDedupeSettings
+}
+
+type DedupeSettings struct {
+	TTL string `toml:"ttl"`
+}
+
+type ContentDedupeSettings struct {
+	Field string `toml:"field"`
+}
+
+type ScoreFilterSettings struct {
+	MinScore int `toml:"min_score"`
+}
+
+type KeywordFilterSettings struct {
+	Keywords []string `toml:"keywords"`
+	Mode     string   `toml:"mode"`
+}
+
+type RateLimitSettings struct {
+	Limit  int    `toml:"limit"`
+	Window string `toml:"window"`
+}
+
+type TokenBucketSettings struct {
+	Capacity   int    `toml:"capacity"`
+	RefillRate string `toml:"refill_rate"`
+}
+
+type SummarySettings struct {
+	Model string `toml:"model"`
+}
+
+type ExtractFieldsSettings struct {
+	Fields []string `toml:"fields"`
+}
+
+type TemplateSettings struct {
+	Template string `toml:"template"`
 }
 
 type TargetConfig struct {
-	Type     string                 `toml:"type"`
-	Enabled  bool                   `toml:"enabled"`
-	Platform string                 `toml:"platform"`
-	Settings map[string]interface{} `toml:"settings"`
+	Type     string         `toml:"type"`
+	Enabled  bool           `toml:"enabled"`
+	Platform string         `toml:"platform"`
+	Settings TargetSettings `toml:"settings"`
+}
+
+type TargetSettings struct {
+	DiscordTargetSettings
+	FeedTargetSettings
+}
+
+type DiscordTargetSettings struct {
+	ChannelID   string `toml:"channel_id"`
+	ChannelType string `toml:"channel_type"`
+}
+
+type FeedTargetSettings struct {
+	Port     string `toml:"port"`
+	FeedSize int    `toml:"feed_size"`
+	MaxItems int    `toml:"max_items"`
 }
 
 func Load(path string) (*Config, error) {
@@ -103,96 +211,17 @@ func validateConfig(config *Config) error {
 		config.Storage.Path = "./cartero.db"
 	}
 
-	enabledSources := 0
-	for _, src := range config.Sources {
-		if src.Enabled {
-			enabledSources++
-		}
-	}
-	if enabledSources == 0 {
-		return fmt.Errorf("at least one source must be enabled")
-	}
-
-	enabledTargets := 0
-	for _, tgt := range config.Targets {
-		if tgt.Enabled {
-			enabledTargets++
-		}
-	}
-	if enabledTargets == 0 {
-		return fmt.Errorf("at least one target must be enabled")
-	}
-
 	return nil
 }
 
-func GetString(settings map[string]interface{}, key string, defaultValue string) string {
-	if val, ok := settings[key]; ok {
-		if str, ok := val.(string); ok {
-			return str
-		}
-	}
-	return defaultValue
-}
+// Helpers
 
-func GetInt(settings map[string]interface{}, key string, defaultValue int) int {
-	if val, ok := settings[key]; ok {
-		if i, ok := val.(int64); ok {
-			return int(i)
-		}
-		if i, ok := val.(int); ok {
-			return i
-		}
+func ParseDuration(d string, def time.Duration) time.Duration {
+	if d == "" {
+		return def
 	}
-	return defaultValue
-}
-
-func GetBool(settings map[string]interface{}, key string, defaultValue bool) bool {
-	if val, ok := settings[key]; ok {
-		if b, ok := val.(bool); ok {
-			return b
-		}
+	if parsed, err := time.ParseDuration(d); err == nil {
+		return parsed
 	}
-	return defaultValue
-}
-
-func GetStringSlice(settings map[string]interface{}, key string) []string {
-	if val, ok := settings[key]; ok {
-		if arr, ok := val.([]interface{}); ok {
-			result := make([]string, 0, len(arr))
-			for _, item := range arr {
-				if str, ok := item.(string); ok {
-					result = append(result, str)
-				}
-			}
-			return result
-		}
-	}
-	return []string{}
-}
-
-func GetStringMap(settings map[string]interface{}, key string) map[string]string {
-	if val, ok := settings[key]; ok {
-		if m, ok := val.(map[string]interface{}); ok {
-			result := make(map[string]string)
-			for k, v := range m {
-				if str, ok := v.(string); ok {
-					result[k] = str
-				}
-			}
-			return result
-		}
-	}
-	return map[string]string{}
-}
-
-func GetDuration(settings map[string]interface{}, key string, defaultValue time.Duration) time.Duration {
-	if val, ok := settings[key]; ok {
-		if str, ok := val.(string); ok {
-			if d, err := time.ParseDuration(str); err == nil {
-				return d
-			}
-		}
-	}
-	return defaultValue
+	return def
 }

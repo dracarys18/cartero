@@ -10,7 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"cartero/internal/config"
+	"cartero/internal/core"
+	"cartero/internal/loader"
 )
 
 var (
@@ -41,10 +42,29 @@ func main() {
 func run(ctx context.Context) error {
 	fmt.Printf("Loading configuration from: %s\n", *configPath)
 
-	bot, err := config.LoadAndBuild(ctx, *configPath)
+	state, err := loader.LoadAndBuild(ctx, *configPath)
 	if err != nil {
 		return fmt.Errorf("failed to load configuration: %w", err)
 	}
+
+	interval, err := time.ParseDuration(state.Config.Bot.Interval)
+	if err != nil {
+		return fmt.Errorf("invalid bot interval: %w", err)
+	}
+
+	shutdownFn := func() error {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		return state.Registry.CloseAll(shutdownCtx)
+	}
+
+	bot := core.NewBot(core.BotConfig{
+		Name:       state.Config.Bot.Name,
+		Pipeline:   state.Pipeline,
+		Interval:   interval,
+		RunOnce:    state.Config.Bot.RunOnce,
+		ShutdownFn: shutdownFn,
+	})
 
 	fmt.Printf("Starting bot: %s\n", bot.Name())
 

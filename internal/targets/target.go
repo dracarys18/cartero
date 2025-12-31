@@ -2,10 +2,14 @@ package targets
 
 import (
 	"cartero/internal/core"
-	"cartero/internal/storage"
+	discordpkg "cartero/internal/targets/discord"
 	feedpkg "cartero/internal/targets/feed"
 )
 
-func NewFeedTarget(name string, feedStore storage.FeedStore) core.Target {
-	return feedpkg.New(name, feedStore)
+func NewFeedTarget(name string) core.Target {
+	return feedpkg.New(name)
+}
+
+func NewDiscordTarget(name string, channelID, channelType string) core.Target {
+	return discordpkg.New(name, channelID, channelType)
 }

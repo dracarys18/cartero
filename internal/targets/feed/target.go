@@ -5,7 +5,9 @@ import (
 	"log"
 	"time"
 
+	"cartero/internal/components"
 	"cartero/internal/core"
+	"cartero/internal/state"
 	"cartero/internal/storage"
 )
 
@@ -14,11 +16,15 @@ type Target struct {
 	feedStore storage.FeedStore
 }
 
-func New(name string, feedStore storage.FeedStore) *Target {
+func New(name string) *Target {
 	return &Target{
-		name:      name,
-		feedStore: feedStore,
+		name: name,
 	}
+}
+
+func (t *Target) SetState(appState *state.State) {
+	store := appState.Registry.Get(components.StorageComponentName).(*components.StorageComponent).Store()
+	t.feedStore = store.Feed()
 }
 
 func (t *Target) Name() string {

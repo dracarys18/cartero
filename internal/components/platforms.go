@@ -1,26 +1,19 @@
 package components
 
 import (
+	"cartero/internal/config"
+	"cartero/internal/platforms"
 	"context"
 	"fmt"
-	"time"
-
-	"cartero/internal/platforms"
 )
 
-type PlatformConfig struct {
-	Type     string                 `toml:"type"`
-	Sleep    string                 `toml:"sleep"`
-	Settings map[string]interface{} `toml:"settings"`
-}
-
 type PlatformComponent struct {
-	config          map[string]PlatformConfig
+	config          map[string]config.PlatformConfig
 	discordPlatform *platforms.DiscordPlatform
 	ollamaPlatforms map[string]*platforms.OllamaPlatform
 }
 
-func NewPlatformComponent(config map[string]PlatformConfig) *PlatformComponent {
+func NewPlatformComponent(config map[string]config.PlatformConfig) *PlatformComponent {
 	return &PlatformComponent{
 		config:          config,
 		ollamaPlatforms: make(map[string]*platforms.OllamaPlatform),
@@ -40,15 +33,8 @@ func (c *PlatformComponent) Validate() error {
 }
 
 func (c *PlatformComponent) Initialize(ctx context.Context) error {
-	if discordCfg, exists := c.config["discord"]; exists {
-		settings := discordCfg.Settings
-		if discordCfg.Sleep != "" {
-			if parsed, err := time.ParseDuration(discordCfg.Sleep); err == nil {
-				settings["sleep"] = parsed
-			}
-		}
-
-		discord, err := platforms.NewDiscordPlatform(settings)
+	if discordCfg, exists := c.config["discord"]; exists && discordCfg.Enabled {
+		discord, err := platforms.NewDiscordPlatform(&discordCfg.Settings.DiscordPlatformSettings, discordCfg.Sleep)
 		if err != nil {
 			return fmt.Errorf("failed to create discord platform: %w", err)
 		}
