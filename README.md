@@ -1,33 +1,33 @@
 # Cartero
 
+<div align="center">
+  <img src="docs/assets/postman.png" alt="Cartero Postman" width="200">
+</div>
+
 Cartero (Spanish for "postman") is a content aggregation and distribution bot written in Go.
 
-## What it does
+## The Problem
+I am someone who likes read tech news on HackerNews, Lobsters or 100's of RSS feed that I have curated over the years. But a lof of the time they have too much content and some of them are not any of my interests. So I built Cartero a personal curator of mine which gets the content from different sources filters it based on my interests, quality of content and pushes it into one single feed of any kind
 
-Cartero fetches content from multiple sources like HackerNews and Lobsters, processes it through customizable filters and transformations, and posts it to Discord channels or forums.
+> **Getting started?** Head over to the [Setup Guide](docs/SETUP.md) for step-by-step instructions.
 
-## Features
+## Sources
 
-- Fetch from multiple sources simultaneously
-- Filter content by score, keywords, or categories
-- Deduplicate posts automatically
-- Post to Discord text channels or forum threads
-- Configure everything via TOML files
-- SQLite-based tracking to prevent duplicate posts
+Cartero can pull content from multiple platforms. Here are the available sources:
 
-## Usage
+| Source | Description | Key Settings |
+|--------|-----------|--------------|
+| **HackerNews** | Top stories and best posts from HackerNews | `story_type`: topstories, bestories, newstories |
+| **Lobsters** | Tech-focused community news aggregator | `sort_by`: hot, recent; filter by categories |
+| **RSS** | Any RSS/Atom feed URL | `feed_url`: Your feed URL |
+| **LessWrong** | Rationality and AI alignment discussions | General feed configuration |
 
-```bash
-make build
-./bin/cartero -config config.toml
-```
+## Targets
 
-## Configuration
+Targets define where your content gets posted. You can send content to multiple destinations:
 
-Copy `config.sample.toml` to `config.toml` and configure:
+| Target | Type | Description |
+|--------|----------|-------------|
+| **Discord** | text or forum | Posts content to Discord channels or forum threads |
+| **Feed** | RSS/Atom | Exposes your aggregated content as a web feed |
 
-- Sources: Which platforms to fetch from
-- Processors: How to filter and transform content
-- Targets: Where to post the content
-
-See `config.sample.toml` for examples.
