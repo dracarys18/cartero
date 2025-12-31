@@ -25,10 +25,9 @@ func (pn *ProcessorNode) GetDependencies() []string {
 }
 
 type ProcessorExecutor struct {
-	nodes              map[string]*ProcessorNode
-	executionOrder     []string
-	executionOrderOnce sync.Once
-	mu                 sync.RWMutex
+	nodes          map[string]*ProcessorNode
+	executionOrder []string
+	mu             sync.RWMutex
 }
 
 func NewProcessorExecutor() *ProcessorExecutor {

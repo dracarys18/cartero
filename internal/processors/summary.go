@@ -83,7 +83,6 @@ func (d *SummaryProcessor) Process(ctx context.Context, item *core.Item) (*core.
 		return processed, nil
 	}
 
-	summary = fmt.Sprintf("%s", summary)
 	if len(summary) == 0 {
 		log.Printf("SummaryProcessor %s: warning - generated empty summary for item %s, publishing without summary", d.name, item.ID)
 		return processed, nil
