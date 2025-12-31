@@ -2,6 +2,7 @@ package discord
 
 import (
 	"bytes"
+	"cartero/internal/components"
 	"cartero/internal/core"
 	"cartero/internal/platforms"
 	"cartero/internal/state"
@@ -47,7 +48,8 @@ func New(name string, channelID, channelType string) *Target {
 }
 
 func (d *Target) SetState(appState *state.State) {
-	d.platform = appState.Platforms.Discord()
+	platformCmp := appState.Registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
+	d.platform = platformCmp.Discord()
 	if d.platform == nil {
 		log.Printf("Discord target %s: Warning - Discord platform not initialized in state", d.name)
 	}

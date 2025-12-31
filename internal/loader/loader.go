@@ -76,9 +76,9 @@ func (l *Loader) Initialize(ctx context.Context) (*state.State, error) {
 
 	log.Printf("[Loader] All components initialized successfully")
 
-	appState := state.NewState(l.config, registry, nil, platformComp)
-
 	pipeline, err := l.buildPipeline(ctx, registry)
+	appState := state.NewState(l.config, registry, pipeline)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to build pipeline: %w", err)
 	}

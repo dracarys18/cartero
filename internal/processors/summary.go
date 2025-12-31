@@ -1,6 +1,7 @@
 package processors
 
 import (
+	"cartero/internal/components"
 	"cartero/internal/core"
 	"cartero/internal/platforms"
 	"cartero/internal/state"
@@ -31,7 +32,8 @@ func NewSummaryProcessor(name string, model string) *SummaryProcessor {
 }
 
 func (d *SummaryProcessor) SetState(appState *state.State) {
-	d.ollamaClient = appState.Platforms.OllamaPlatform(d.model)
+	platformComp := appState.Registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
+	d.ollamaClient = platformComp.OllamaPlatform(d.model)
 	if d.ollamaClient == nil {
 		// Log warning or panic? Original code panicked.
 		// Since this is initialization phase (late), panic is acceptable if strictly required.
