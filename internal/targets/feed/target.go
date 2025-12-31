@@ -7,7 +7,6 @@ import (
 
 	"cartero/internal/components"
 	"cartero/internal/core"
-	"cartero/internal/state"
 	"cartero/internal/storage"
 )
 
@@ -16,15 +15,12 @@ type Target struct {
 	feedStore storage.FeedStore
 }
 
-func New(name string) *Target {
+func New(name string, registry *components.Registry) *Target {
+	store := registry.Get(components.StorageComponentName).(*components.StorageComponent).Store()
 	return &Target{
-		name: name,
+		name:      name,
+		feedStore: store.Feed(),
 	}
-}
-
-func (t *Target) SetState(appState *state.State) {
-	store := appState.Registry.Get(components.StorageComponentName).(*components.StorageComponent).Store()
-	t.feedStore = store.Feed()
 }
 
 func (t *Target) Name() string {
@@ -76,7 +72,7 @@ func (t *Target) Publish(ctx context.Context, item *core.ProcessedItem) (*core.P
 		Target:    t.name,
 		ItemID:    item.Original.ID,
 		Timestamp: time.Now(),
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"feed_type": "rss/atom/json",
 		},
 	}, nil

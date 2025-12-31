@@ -4,7 +4,6 @@ import (
 	"cartero/internal/components"
 	"cartero/internal/core"
 	"cartero/internal/platforms"
-	"cartero/internal/state"
 	"cartero/internal/utils"
 	"context"
 	"fmt"
@@ -23,21 +22,13 @@ type SummaryProcessor struct {
 	mu           sync.RWMutex
 }
 
-func NewSummaryProcessor(name string, model string) *SummaryProcessor {
+func NewSummaryProcessor(name string, model string, registry *components.Registry) *SummaryProcessor {
+	pc := registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
 	return &SummaryProcessor{
-		name:  name,
-		model: model,
-		mu:    sync.RWMutex{},
-	}
-}
-
-func (d *SummaryProcessor) SetState(appState *state.State) {
-	platformComp := appState.Registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
-	d.ollamaClient = platformComp.OllamaPlatform(d.model)
-	if d.ollamaClient == nil {
-		// Log warning or panic? Original code panicked.
-		// Since this is initialization phase (late), panic is acceptable if strictly required.
-		log.Printf("SummaryProcessor %s: Warning - Ollama platform not found for model %s", d.name, d.model)
+		name:         name,
+		model:        model,
+		mu:           sync.RWMutex{},
+		ollamaClient: pc.OllamaPlatform(model),
 	}
 }
 

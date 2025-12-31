@@ -5,7 +5,6 @@ import (
 	"cartero/internal/components"
 	"cartero/internal/core"
 	"cartero/internal/platforms"
-	"cartero/internal/state"
 	"cartero/internal/utils"
 	"context"
 	"encoding/json"
@@ -28,7 +27,8 @@ type Target struct {
 	template    *template.Template
 }
 
-func New(name string, channelID, channelType string) *Target {
+func New(name string, channelID, channelType string, registry *components.Registry) *Target {
+	platformCmp := registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
 	templatePath := "templates/discord.tmpl"
 
 	tmpl, err := utils.LoadTemplate(templatePath)
@@ -44,14 +44,7 @@ func New(name string, channelID, channelType string) *Target {
 		channelID:   channelID,
 		channelType: channelType,
 		template:    tmpl,
-	}
-}
-
-func (d *Target) SetState(appState *state.State) {
-	platformCmp := appState.Registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
-	d.platform = platformCmp.Discord()
-	if d.platform == nil {
-		log.Printf("Discord target %s: Warning - Discord platform not initialized in state", d.name)
+		platform:    platformCmp.Discord(),
 	}
 }
 
@@ -95,7 +88,7 @@ func (d *Target) Publish(ctx context.Context, item *core.ProcessedItem) (*core.P
 		Target:    d.name,
 		ItemID:    item.Original.ID,
 		Timestamp: time.Now(),
-		Metadata: map[string]interface{}{
+		Metadata: map[string]any{
 			"message_id": messageID,
 			"channel_id": d.channelID,
 		},

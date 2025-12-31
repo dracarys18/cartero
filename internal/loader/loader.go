@@ -15,29 +15,18 @@ import (
 	"cartero/internal/targets"
 )
 
-type stateSetter interface {
-	SetState(s *state.State)
-}
-
 type Loader struct {
-	config     *config.Config
-	components []stateSetter
+	config *config.Config
 }
 
 func NewLoader(cfg *config.Config) *Loader {
 	return &Loader{
-		config:     cfg,
-		components: []stateSetter{},
+		config: cfg,
 	}
 }
 
 func (l *Loader) Initialize(ctx context.Context) (*state.State, error) {
 	registry := components.NewRegistry()
-
-	// Initialize Components
-	// We need to capture the PlatformComponent explicitly to pass it to State
-	var platformComp *components.PlatformComponent
-
 	log.Printf("[Loader] Initializing all components")
 
 	storageComp := components.NewStorageComponent(l.config.Storage.Path)
@@ -45,7 +34,7 @@ func (l *Loader) Initialize(ctx context.Context) (*state.State, error) {
 		return nil, fmt.Errorf("failed to register storage component: %w", err)
 	}
 
-	platformComp = l.buildPlatformComponent()
+	platformComp := l.buildPlatformComponent()
 	if err := registry.Register(platformComp); err != nil {
 		return nil, fmt.Errorf("failed to register platform component: %w", err)
 	}
@@ -85,10 +74,6 @@ func (l *Loader) Initialize(ctx context.Context) (*state.State, error) {
 
 	appState.Pipeline = pipeline
 
-	for _, comp := range l.components {
-		comp.SetState(appState)
-	}
-
 	return appState, nil
 }
 
@@ -96,34 +81,30 @@ func (l *Loader) buildPlatformComponent() *components.PlatformComponent {
 	return components.NewPlatformComponent(l.config.Platforms)
 }
 
-func (l *Loader) buildPipeline(ctx context.Context, registry *components.Registry) (*core.Pipeline, error) {
+func (l *Loader) buildPipeline(_ context.Context, registry *components.Registry) (*core.Pipeline, error) {
 	store := registry.Get(components.StorageComponentName).(*components.StorageComponent).Store()
 	pipeline := core.NewPipeline(store.Items())
 
-	if err := l.addProcessors(pipeline); err != nil {
+	if err := l.addProcessors(pipeline, registry); err != nil {
 		return nil, fmt.Errorf("failed to add processors: %w", err)
 	}
 
-	if err := l.addSourceRoutes(pipeline); err != nil {
+	if err := l.addSourceRoutes(pipeline, registry); err != nil {
 		return nil, fmt.Errorf("failed to add source routes: %w", err)
 	}
 
 	return pipeline, nil
 }
 
-func (l *Loader) addProcessors(pipeline *core.Pipeline) error {
+func (l *Loader) addProcessors(pipeline *core.Pipeline, registry *components.Registry) error {
 	for name, processorCfg := range l.config.Processors {
 		if !processorCfg.Enabled {
 			continue
 		}
 
-		processor, err := l.createProcessor(name, processorCfg)
+		processor, err := l.createProcessor(name, processorCfg, registry)
 		if err != nil {
 			return fmt.Errorf("failed to create processor %s: %w", name, err)
-		}
-
-		if setter, ok := processor.(stateSetter); ok {
-			l.components = append(l.components, setter)
 		}
 
 		pipelineConfig := core.ProcessorConfig{
@@ -138,7 +119,7 @@ func (l *Loader) addProcessors(pipeline *core.Pipeline) error {
 	return nil
 }
 
-func (l *Loader) addSourceRoutes(pipeline *core.Pipeline) error {
+func (l *Loader) addSourceRoutes(pipeline *core.Pipeline, registry *components.Registry) error {
 	for sourceName, sourceCfg := range l.config.Sources {
 		if !sourceCfg.Enabled {
 			continue
@@ -163,13 +144,9 @@ func (l *Loader) addSourceRoutes(pipeline *core.Pipeline) error {
 				continue
 			}
 
-			target, err := l.createTarget(targetName, targetCfg)
+			target, err := l.createTarget(targetName, targetCfg, registry)
 			if err != nil {
 				return fmt.Errorf("failed to create target %s for source %s: %w", targetName, sourceName, err)
-			}
-
-			if setter, ok := target.(stateSetter); ok {
-				l.components = append(l.components, setter)
 			}
 
 			routeTargets = append(routeTargets, target)
@@ -220,11 +197,11 @@ func (l *Loader) createSource(name string, cfg config.SourceConfig) (core.Source
 	}
 }
 
-func (l *Loader) createProcessor(name string, cfg config.ProcessorConfig) (core.Processor, error) {
+func (l *Loader) createProcessor(name string, cfg config.ProcessorConfig, registry *components.Registry) (core.Processor, error) {
 	switch cfg.Type {
 	case "summary":
 		s := cfg.Settings.SummarySettings
-		return processors.NewSummaryProcessor(name, s.Model), nil
+		return processors.NewSummaryProcessor(name, s.Model, registry), nil
 
 	case "extract_fields":
 		s := cfg.Settings.ExtractFieldsSettings
@@ -272,7 +249,7 @@ func (l *Loader) createProcessor(name string, cfg config.ProcessorConfig) (core.
 	}
 }
 
-func (l *Loader) createTarget(name string, cfg config.TargetConfig) (core.Target, error) {
+func (l *Loader) createTarget(name string, cfg config.TargetConfig, re *components.Registry) (core.Target, error) {
 	switch cfg.Type {
 	case "discord":
 		s := cfg.Settings.DiscordTargetSettings
@@ -281,10 +258,10 @@ func (l *Loader) createTarget(name string, cfg config.TargetConfig) (core.Target
 			return nil, fmt.Errorf("channel_id is required for discord target")
 		}
 
-		return targets.NewDiscordTarget(name, s.ChannelID, s.ChannelType), nil
+		return targets.NewDiscordTarget(name, s.ChannelID, s.ChannelType, re), nil
 
 	case "feed":
-		return targets.NewFeedTarget(name), nil
+		return targets.NewFeedTarget(name, re), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported target type: %s", cfg.Type)
