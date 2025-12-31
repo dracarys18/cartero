@@ -1,6 +1,5 @@
-# Cartero
-
 <div align="center">
+  <h1>Cartero</h1>
   <img src="docs/assets/postman.png" alt="Cartero Postman" width="200">
 </div>
 
