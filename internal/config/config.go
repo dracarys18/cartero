@@ -100,8 +100,7 @@ type ProcessorSettings struct {
 	ExtractFieldsSettings
 	TemplateSettings
 	ContentDedupeSettings
-
-	ExtractTextSettings `toml:"extract_text"`
+	ExtractTextSettings
 }
 
 type DedupeSettings struct {
