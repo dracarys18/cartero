@@ -4,7 +4,6 @@ import (
 	"cartero/internal/components"
 	"cartero/internal/core"
 	"cartero/internal/platforms"
-	"cartero/internal/utils"
 	"context"
 	"fmt"
 	"log"
@@ -37,20 +36,7 @@ func (d *SummaryProcessor) Name() string {
 }
 
 func (d *SummaryProcessor) Process(ctx context.Context, item *core.Item) error {
-	urlValue, exists := item.GetMetadata("url")
-	if !exists {
-		log.Printf("SummaryProcessor %s: warning - no URL in metadata for item %s, publishing without summary", d.name, item.ID)
-		return nil
-	}
-
-	content, err := utils.GetArticleText(urlValue.(string))
-	if err != nil {
-		log.Printf("SummaryProcessor %s: warning - couldn't get article text for item %s, publishing without summary: %v", d.name, item.ID, err)
-		return nil
-	}
-
-	log.Printf("SummaryProcessor %s: fetched article content for item %s (%d chars)", d.name, item.ID, len(content))
-
+	content := item.GetTextContent()
 	prompt := fmt.Sprintf("%s%s", Prompt, content)
 
 	req := &api.GenerateRequest{
@@ -64,7 +50,7 @@ func (d *SummaryProcessor) Process(ctx context.Context, item *core.Item) error {
 		return nil
 	}
 
-	err = d.ollamaClient.Generate(ctx, req, respFunc)
+	err := d.ollamaClient.Generate(ctx, req, respFunc)
 	if err != nil {
 		log.Printf("SummaryProcessor %s: warning - couldn't generate summary, publishing without summary: %v", d.name, err)
 		return nil

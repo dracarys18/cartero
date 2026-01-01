@@ -244,6 +244,9 @@ func (l *Loader) createProcessor(name string, cfg config.ProcessorConfig, regist
 		rate := config.ParseDuration(s.RefillRate, 1*time.Second)
 		return processors.NewTokenBucketProcessor(name, s.Capacity, rate), nil
 
+	case "extract_text":
+		limit := cfg.Settings.ExtractTextSettings.Limit
+		return processors.NewExtractProcessor(name, limit), nil
 	default:
 		return nil, fmt.Errorf("unsupported processor type: %s", cfg.Type)
 	}

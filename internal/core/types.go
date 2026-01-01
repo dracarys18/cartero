@@ -32,6 +32,10 @@ func (i *Item) GetTimestamp() time.Time {
 	return i.Timestamp
 }
 
+func (i *Item) GetTextContent() string {
+	return i.TextContent
+}
+
 func (i *Item) ModifyContent(fn func() interface{}) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()

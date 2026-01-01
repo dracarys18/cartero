@@ -100,6 +100,8 @@ type ProcessorSettings struct {
 	ExtractFieldsSettings
 	TemplateSettings
 	ContentDedupeSettings
+
+	ExtractTextSettings `toml:"extract_text"`
 }
 
 type DedupeSettings struct {
@@ -135,6 +137,10 @@ type SummarySettings struct {
 
 type ExtractFieldsSettings struct {
 	Fields []string `toml:"fields"`
+}
+
+type ExtractTextSettings struct {
+	Limit int `toml:"limit"`
 }
 
 type TemplateSettings struct {
