@@ -8,7 +8,7 @@ import (
 	"github.com/go-shiori/go-readability"
 )
 
-func GetArticleText(u string) (string, error) {
+func GetArticleText(u string, mod ...readability.RequestWith) (string, error) {
 	if u == "" {
 		return "", fmt.Errorf("URL is empty")
 	}
@@ -19,7 +19,7 @@ func GetArticleText(u string) (string, error) {
 	}
 
 	if len(article.TextContent) > 10000 {
-		log.Printf("GetArticleText: truncating content from %d to 10000 characters", len(article.TextContent))
+		log.Printf("GetArticleText: truncating content from %d to 4000 characters", len(article.TextContent))
 		article.TextContent = article.TextContent[:10000] + "..."
 	}
 

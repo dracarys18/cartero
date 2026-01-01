@@ -2,6 +2,7 @@ package filters
 
 import (
 	"context"
+	"fmt"
 
 	"cartero/internal/core"
 )
@@ -24,17 +25,13 @@ func (f *FilterProcessor) Name() string {
 	return f.name
 }
 
-func (f *FilterProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
+func (f *FilterProcessor) Process(ctx context.Context, item *core.Item) error {
 	if f.filterFn != nil {
 		if !f.filterFn(item) {
-			// Filter rejected the item - return nil to signal filtering
-			return nil, nil
+			// Filter rejected the item - return error to signal filtering
+			return fmt.Errorf("filter %s rejected item", f.name)
 		}
 	}
-	// Filter accepted the item - return it unchanged
-	return &core.ProcessedItem{
-		Original: item,
-		Data:     item.Content,
-		Metadata: item.Metadata,
-	}, nil
+	// Filter accepted the item - continue processing
+	return nil
 }

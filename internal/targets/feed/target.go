@@ -31,46 +31,46 @@ func (t *Target) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (t *Target) Publish(ctx context.Context, item *core.ProcessedItem) (*core.PublishResult, error) {
+func (t *Target) Publish(ctx context.Context, item *core.Item) (*core.PublishResult, error) {
 	title := "Untitled"
-	if t, ok := item.Original.Metadata["title"].(string); ok {
+	if t, ok := item.Metadata["title"].(string); ok {
 		title = t
 	}
 
 	link := ""
-	if l, ok := item.Original.Metadata["url"].(string); ok {
+	if l, ok := item.Metadata["url"].(string); ok {
 		link = l
-	} else if l, ok := item.Original.Metadata["link"].(string); ok {
+	} else if l, ok := item.Metadata["link"].(string); ok {
 		link = l
 	}
 
 	description := ""
-	if d, ok := item.Original.Metadata["description"].(string); ok {
+	if d, ok := item.Metadata["description"].(string); ok {
 		description = d
 	}
 
 	author := ""
-	if a, ok := item.Original.Metadata["author"].(string); ok {
+	if a, ok := item.Metadata["author"].(string); ok {
 		author = a
 	}
 
 	content := ""
-	if s, ok := item.Original.Metadata["summary"].(string); ok {
+	if s, ok := item.Metadata["summary"].(string); ok {
 		content = s
 	}
 
-	err := t.feedStore.InsertEntry(ctx, item.Original.ID, title, link, description, content, author, item.Original.Source, item.Original.Timestamp)
+	err := t.feedStore.InsertEntry(ctx, item.ID, title, link, description, content, author, item.Source, item.Timestamp)
 	if err != nil {
-		log.Printf("Feed target %s: failed to insert entry %s: %v", t.name, item.Original.ID, err)
+		log.Printf("Feed target %s: failed to insert entry %s: %v", t.name, item.ID, err)
 		return nil, err
 	}
 
-	log.Printf("Feed target %s: inserted entry %s", t.name, item.Original.ID)
+	log.Printf("Feed target %s: inserted entry %s", t.name, item.ID)
 
 	return &core.PublishResult{
 		Success:   true,
 		Target:    t.name,
-		ItemID:    item.Original.ID,
+		ItemID:    item.ID,
 		Timestamp: time.Now(),
 		Metadata: map[string]any{
 			"feed_type": "rss/atom/json",

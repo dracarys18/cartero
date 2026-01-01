@@ -2,15 +2,18 @@ package core
 
 import (
 	"context"
+	"sync"
 	"time"
 )
 
 type Item struct {
-	ID        string
-	Content   interface{}
-	Metadata  map[string]interface{}
-	Source    string
-	Timestamp time.Time
+	ID          string
+	Content     interface{}
+	Metadata    map[string]interface{}
+	Source      string
+	TextContent string
+	Timestamp   time.Time
+	mu          sync.RWMutex
 }
 
 func (i *Item) GetID() string {
@@ -29,10 +32,38 @@ func (i *Item) GetTimestamp() time.Time {
 	return i.Timestamp
 }
 
-type ProcessedItem struct {
-	Original *Item
-	Data     interface{}
-	Metadata map[string]interface{}
+func (i *Item) ModifyContent(fn func() interface{}) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.Content = fn()
+	return nil
+}
+
+func (i *Item) GetMetadata(key string) (interface{}, bool) {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+	if i.Metadata == nil {
+		return nil, false
+	}
+	val, ok := i.Metadata[key]
+	return val, ok
+}
+
+func (i *Item) AddMetadata(key string, value any) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	if i.Metadata == nil {
+		i.Metadata = make(map[string]interface{})
+	}
+	i.Metadata[key] = value
+	return nil
+}
+
+func (i *Item) SetTextContent(text string) error {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.TextContent = text
+	return nil
 }
 
 type PublishResult struct {
@@ -53,7 +84,7 @@ type Source interface {
 
 type Processor interface {
 	Name() string
-	Process(ctx context.Context, item *Item) (*ProcessedItem, error)
+	Process(ctx context.Context, item *Item) error
 }
 
 type ProcessorConfig struct {
@@ -66,7 +97,7 @@ type ProcessorConfig struct {
 type Target interface {
 	Name() string
 	Initialize(ctx context.Context) error
-	Publish(ctx context.Context, item *ProcessedItem) (*PublishResult, error)
+	Publish(ctx context.Context, item *Item) (*PublishResult, error)
 	Shutdown(ctx context.Context) error
 }
 

@@ -26,24 +26,24 @@ func (t *TransformProcessor) Name() string {
 	return t.name
 }
 
-func (t *TransformProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
-	processed := &core.ProcessedItem{
-		Original: item,
-		Data:     item.Content,
-		Metadata: make(map[string]interface{}),
-	}
-
+func (t *TransformProcessor) Process(ctx context.Context, item *core.Item) error {
 	if t.transformFn != nil {
 		transformed, err := t.transformFn(item)
 		if err != nil {
-			return nil, fmt.Errorf("transform failed: %w", err)
+			return fmt.Errorf("transform failed: %w", err)
 		}
-		processed.Data = transformed
-		processed.Metadata["transformed"] = true
-		processed.Metadata["transformer"] = t.name
+		if err := item.ModifyContent(func() interface{} { return transformed }); err != nil {
+			return err
+		}
+		if err := item.AddMetadata("transformed", true); err != nil {
+			return err
+		}
+		if err := item.AddMetadata("transformer", t.name); err != nil {
+			return err
+		}
 	}
 
-	return processed, nil
+	return nil
 }
 
 func FieldExtractor(name string, fields []string) *TransformProcessor {
@@ -137,13 +137,7 @@ func (c *ChainTransformProcessor) Name() string {
 	return c.name
 }
 
-func (c *ChainTransformProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
-	processed := &core.ProcessedItem{
-		Original: item,
-		Data:     item.Content,
-		Metadata: make(map[string]interface{}),
-	}
-
+func (c *ChainTransformProcessor) Process(ctx context.Context, item *core.Item) error {
 	currentData := item.Content
 
 	for _, transformer := range c.transformers {
@@ -155,19 +149,18 @@ func (c *ChainTransformProcessor) Process(ctx context.Context, item *core.Item) 
 			Timestamp: item.Timestamp,
 		}
 
-		result, err := transformer.Process(ctx, tempItem)
-		if err != nil {
-			return nil, fmt.Errorf("transformer %s failed: %w", transformer.Name(), err)
+		if err := transformer.Process(ctx, tempItem); err != nil {
+			return fmt.Errorf("transformer %s failed: %w", transformer.Name(), err)
 		}
 
-		currentData = result.Data
+		currentData = tempItem.GetContent()
 
-		for k, v := range result.Metadata {
-			processed.Metadata[k] = v
+		for k, v := range tempItem.Metadata {
+			if err := item.AddMetadata(k, v); err != nil {
+				return err
+			}
 		}
 	}
 
-	processed.Data = currentData
-
-	return processed, nil
+	return item.ModifyContent(func() any { return currentData })
 }

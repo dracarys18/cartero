@@ -2,6 +2,7 @@ package filters
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -31,7 +32,7 @@ func (r *RateLimitProcessor) Name() string {
 	return r.name
 }
 
-func (r *RateLimitProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
+func (r *RateLimitProcessor) Process(ctx context.Context, item *core.Item) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -44,15 +45,11 @@ func (r *RateLimitProcessor) Process(ctx context.Context, item *core.Item) (*cor
 
 	if r.counter >= r.limit {
 		// Rate limit exceeded, filter it out
-		return nil, nil
+		return fmt.Errorf("RateLimitProcessor %s: rate limit exceeded (%d/%d)", r.name, r.counter, r.limit)
 	}
 
 	r.counter++
-	return &core.ProcessedItem{
-		Original: item,
-		Data:     item.Content,
-		Metadata: item.Metadata,
-	}, nil
+	return nil
 }
 
 type TokenBucketProcessor struct {
@@ -78,7 +75,7 @@ func (t *TokenBucketProcessor) Name() string {
 	return t.name
 }
 
-func (t *TokenBucketProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
+func (t *TokenBucketProcessor) Process(ctx context.Context, item *core.Item) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -93,15 +90,11 @@ func (t *TokenBucketProcessor) Process(ctx context.Context, item *core.Item) (*c
 
 	if t.tokens <= 0 {
 		// No tokens available, filter it out
-		return nil, nil
+		return fmt.Errorf("TokenBucketProcessor %s: no tokens available (tokens: %d)", t.name, t.tokens)
 	}
 
 	t.tokens--
-	return &core.ProcessedItem{
-		Original: item,
-		Data:     item.Content,
-		Metadata: item.Metadata,
-	}, nil
+	return nil
 }
 
 func min(a, b int) int {

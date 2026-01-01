@@ -173,20 +173,14 @@ func (p *Pipeline) processSource(ctx context.Context, route SourceRoute) error {
 }
 
 func (p *Pipeline) processItem(ctx context.Context, item *Item, route SourceRoute) error {
-	processed := &ProcessedItem{
-		Original: item,
-		Data:     item.Content,
-		Metadata: make(map[string]interface{}),
-	}
-
 	filterFunc := func(target Target) bool {
-		published, err := p.itemStore.IsPublished(ctx, processed.Original.ID, target.Name())
+		published, err := p.itemStore.IsPublished(ctx, item.ID, target.Name())
 		if err != nil {
-			log.Printf("Error checking if item %s published to %s: %v", processed.Original.ID, target.Name(), err)
+			log.Printf("Error checking if item %s published to %s: %v", item.ID, target.Name(), err)
 			return false
 		}
 		if published {
-			log.Printf("Item %s already published to target %s, skipping", processed.Original.ID, target.Name())
+			log.Printf("Item %s already published to target %s, skipping", item.ID, target.Name())
 			return false
 		}
 		return true
@@ -200,29 +194,22 @@ func (p *Pipeline) processItem(ctx context.Context, item *Item, route SourceRout
 
 	log.Printf("Item %s: Running %d processors", item.ID, len(p.processors))
 
-	result, err := p.processorExecutor.ExecuteProcessors(ctx, item)
+	err := p.processorExecutor.ExecuteProcessors(ctx, item)
 	if err != nil {
-		return fmt.Errorf("processor execution error: %w", err)
-	}
-
-	// If result is nil, item was filtered out during processing
-	if result == nil {
-		log.Printf("Item %s: filtered out during processing", item.ID)
+		log.Printf("Item %s: filtered out during processing: %v", item.ID, err)
 		return nil
 	}
 
-	processed = result
-
 	log.Printf("Item %s: All processors completed! Publishing to %d targets", item.ID, len(route.Targets))
-	return p.publishToTargets(ctx, processed, route)
+	return p.publishToTargets(ctx, item, route)
 }
 
-func (p *Pipeline) publishToTargets(ctx context.Context, item *ProcessedItem, route SourceRoute) error {
+func (p *Pipeline) publishToTargets(ctx context.Context, item *Item, route SourceRoute) error {
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(route.Targets))
 
 	for i, target := range route.Targets {
-		log.Printf("Queuing item %s for target %s", item.Original.ID, target.Name())
+		log.Printf("Queuing item %s for target %s", item.ID, target.Name())
 		wg.Add(1)
 		go func(t Target, idx int) {
 			defer wg.Done()
@@ -236,15 +223,15 @@ func (p *Pipeline) publishToTargets(ctx context.Context, item *ProcessedItem, ro
 			}
 
 			if err := p.publishWithRetry(ctx, t, item); err != nil {
-				log.Printf("Failed to publish item %s to target %s after retries: %v", item.Original.ID, t.Name(), err)
+				log.Printf("Failed to publish item %s to target %s after retries: %v", item.ID, t.Name(), err)
 				errChan <- err
 				return
 			}
 
-			log.Printf("Successfully published item %s to target %s", item.Original.ID, t.Name())
+			log.Printf("Successfully published item %s to target %s", item.ID, t.Name())
 
-			if err := p.itemStore.MarkPublished(ctx, item.Original.ID, t.Name()); err != nil {
-				log.Printf("Error marking item %s as published to %s: %v", item.Original.ID, t.Name(), err)
+			if err := p.itemStore.MarkPublished(ctx, item.ID, t.Name()); err != nil {
+				log.Printf("Error marking item %s as published to %s: %v", item.ID, t.Name(), err)
 				errChan <- err
 			}
 		}(target, i)
@@ -264,12 +251,12 @@ func (p *Pipeline) publishToTargets(ctx context.Context, item *ProcessedItem, ro
 	return nil
 }
 
-func (p *Pipeline) publishWithRetry(ctx context.Context, target Target, item *ProcessedItem) error {
+func (p *Pipeline) publishWithRetry(ctx context.Context, target Target, item *Item) error {
 	maxRetries := 3
 	var lastErr error
 
 	if attempt := 0; attempt == 0 {
-		log.Printf("Publishing item %s to target %s", item.Original.ID, target.Name())
+		log.Printf("Publishing item %s to target %s", item.ID, target.Name())
 	}
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
@@ -277,7 +264,7 @@ func (p *Pipeline) publishWithRetry(ctx context.Context, target Target, item *Pr
 
 		if err == nil && result.Success {
 			if attempt > 0 {
-				log.Printf("Target %s: item %s published successfully on attempt %d", target.Name(), item.Original.ID, attempt+1)
+				log.Printf("Target %s: item %s published successfully on attempt %d", target.Name(), item.ID, attempt+1)
 			}
 			return nil
 		}

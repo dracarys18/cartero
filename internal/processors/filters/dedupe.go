@@ -41,7 +41,7 @@ func (d *DedupeProcessor) Name() string {
 }
 
 // Process implements the Processor interface
-func (d *DedupeProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
+func (d *DedupeProcessor) Process(ctx context.Context, item *core.Item) error {
 	hash := d.hashItem(item)
 
 	d.mu.Lock()
@@ -49,17 +49,12 @@ func (d *DedupeProcessor) Process(ctx context.Context, item *core.Item) (*core.P
 
 	if lastSeen, exists := d.seen[hash]; exists {
 		// Item is a duplicate, filter it out
-		fmt.Printf("DedupeProcessor %s: duplicate item %s (first seen: %v)\n", d.name, item.ID, lastSeen)
-		return nil, nil
+		return fmt.Errorf("DedupeProcessor %s: duplicate item %s (first seen: %v)", d.name, item.ID, lastSeen)
 	}
 
 	// Item is unique, mark as seen and allow processing
 	d.seen[hash] = time.Now()
-	return &core.ProcessedItem{
-		Original: item,
-		Data:     item.Content,
-		Metadata: item.Metadata,
-	}, nil
+	return nil
 }
 
 func (d *DedupeProcessor) hashItem(item *core.Item) string {
@@ -116,7 +111,7 @@ func (c *ContentDedupeProcessor) Name() string {
 }
 
 // Process implements the Processor interface
-func (c *ContentDedupeProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
+func (c *ContentDedupeProcessor) Process(ctx context.Context, item *core.Item) error {
 	var content string
 	if c.fieldName != "" {
 		if val, ok := item.Metadata[c.fieldName]; ok {
@@ -134,16 +129,12 @@ func (c *ContentDedupeProcessor) Process(ctx context.Context, item *core.Item) (
 
 	if c.seen[hash] {
 		// Content is a duplicate, filter it out
-		return nil, nil
+		return fmt.Errorf("ContentDedupeProcessor %s: duplicate content detected for item %s", c.name, item.ID)
 	}
 
 	// Content is unique, mark as seen and allow processing
 	c.seen[hash] = true
-	return &core.ProcessedItem{
-		Original: item,
-		Data:     item.Content,
-		Metadata: item.Metadata,
-	}, nil
+	return nil
 }
 
 func (c *ContentDedupeProcessor) Reset() {

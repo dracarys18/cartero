@@ -57,9 +57,9 @@ func (d *Target) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (d *Target) Publish(ctx context.Context, item *core.ProcessedItem) (*core.PublishResult, error) {
+func (d *Target) Publish(ctx context.Context, item *core.Item) (*core.PublishResult, error) {
 	log.Printf("Discord target %s: publishing item %s to %s channel %s",
-		d.name, item.Original.ID, d.channelType, d.channelID)
+		d.name, item.ID, d.channelType, d.channelID)
 
 	var messageID string
 	var err error
@@ -77,7 +77,7 @@ func (d *Target) Publish(ctx context.Context, item *core.ProcessedItem) (*core.P
 		return &core.PublishResult{
 			Success:   false,
 			Target:    d.name,
-			ItemID:    item.Original.ID,
+			ItemID:    item.ID,
 			Timestamp: time.Now(),
 			Error:     err,
 		}, err
@@ -86,7 +86,7 @@ func (d *Target) Publish(ctx context.Context, item *core.ProcessedItem) (*core.P
 	return &core.PublishResult{
 		Success:   true,
 		Target:    d.name,
-		ItemID:    item.Original.ID,
+		ItemID:    item.ID,
 		Timestamp: time.Now(),
 		Metadata: map[string]any{
 			"message_id": messageID,
@@ -95,9 +95,9 @@ func (d *Target) Publish(ctx context.Context, item *core.ProcessedItem) (*core.P
 	}, nil
 }
 
-func (d *Target) createForumThread(item *core.ProcessedItem) (string, error) {
+func (d *Target) createForumThread(item *core.Item) (string, error) {
 	title := "Untitled"
-	if t, ok := item.Original.Metadata["title"].(string); ok {
+	if t, ok := item.Metadata["title"].(string); ok {
 		title = t
 		if len(title) > 100 {
 			title = title[:97] + "..."
@@ -181,7 +181,7 @@ func (d *Target) createForumThread(item *core.ProcessedItem) (string, error) {
 	return thread.ID, nil
 }
 
-func (d *Target) sendMessage(item *core.ProcessedItem) (string, error) {
+func (d *Target) sendMessage(item *core.Item) (string, error) {
 	embed, err := d.buildEmbed(item)
 	if err != nil {
 		return "", fmt.Errorf("failed to build embed: %w", err)
@@ -197,9 +197,9 @@ func (d *Target) sendMessage(item *core.ProcessedItem) (string, error) {
 	return msg.ID, nil
 }
 
-func (d *Target) buildEmbed(item *core.ProcessedItem) (*discordgo.MessageEmbed, error) {
+func (d *Target) buildEmbed(item *core.Item) (*discordgo.MessageEmbed, error) {
 	var buf bytes.Buffer
-	if err := d.template.Execute(&buf, item.Original); err != nil {
+	if err := d.template.Execute(&buf, item); err != nil {
 		return nil, fmt.Errorf("template execution error: %w", err)
 	}
 

@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"maps"
 	"sync"
@@ -74,14 +73,7 @@ func (pe *ProcessorExecutor) Initialize() error {
 	return nil
 }
 
-func (pe *ProcessorExecutor) ExecuteProcessors(ctx context.Context, item *Item) (*ProcessedItem, error) {
-
-	processed := &ProcessedItem{
-		Original: item,
-		Data:     item.Content,
-		Metadata: make(map[string]any),
-	}
-
+func (pe *ProcessorExecutor) ExecuteProcessors(ctx context.Context, item *Item) error {
 	pe.mu.RLock()
 	executionOrder := pe.executionOrder
 	nodes := make(map[string]*ProcessorNode)
@@ -92,20 +84,14 @@ func (pe *ProcessorExecutor) ExecuteProcessors(ctx context.Context, item *Item) 
 		node := nodes[processorName]
 		log.Printf("Executing processor: %s (depends_on=%v)", node.Name, node.DependsOn)
 
-		result, err := node.Processor.Process(ctx, item)
+		err := node.Processor.Process(ctx, item)
 		if err != nil {
-			log.Printf("Processor %s failed: %v", node.Name, err)
-			return nil, fmt.Errorf("processor %s error: %w", node.Name, err)
+			log.Printf("Processor %s stopped processing for item %s: %v", node.Name, item.ID, err)
+			return err
 		}
 
-		if result == nil {
-			log.Printf("Processor %s filtered out item %s", node.Name, item.ID)
-			return nil, nil
-		}
-
-		processed = result
 		log.Printf("Processor %s completed successfully", node.Name)
 	}
 
-	return processed, nil
+	return nil
 }

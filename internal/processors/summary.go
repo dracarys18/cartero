@@ -36,23 +36,17 @@ func (d *SummaryProcessor) Name() string {
 	return d.name
 }
 
-func (d *SummaryProcessor) Process(ctx context.Context, item *core.Item) (*core.ProcessedItem, error) {
-	processed := &core.ProcessedItem{
-		Original: item,
-		Data:     item.Content,
-		Metadata: item.Metadata,
-	}
-
-	urlValue, exists := item.Metadata["url"]
+func (d *SummaryProcessor) Process(ctx context.Context, item *core.Item) error {
+	urlValue, exists := item.GetMetadata("url")
 	if !exists {
 		log.Printf("SummaryProcessor %s: warning - no URL in metadata for item %s, publishing without summary", d.name, item.ID)
-		return processed, nil
+		return nil
 	}
 
 	content, err := utils.GetArticleText(urlValue.(string))
 	if err != nil {
 		log.Printf("SummaryProcessor %s: warning - couldn't get article text for item %s, publishing without summary: %v", d.name, item.ID, err)
-		return processed, nil
+		return nil
 	}
 
 	log.Printf("SummaryProcessor %s: fetched article content for item %s (%d chars)", d.name, item.ID, len(content))
@@ -73,16 +67,18 @@ func (d *SummaryProcessor) Process(ctx context.Context, item *core.Item) (*core.
 	err = d.ollamaClient.Generate(ctx, req, respFunc)
 	if err != nil {
 		log.Printf("SummaryProcessor %s: warning - couldn't generate summary, publishing without summary: %v", d.name, err)
-		return processed, nil
+		return nil
 	}
 
 	if len(summary) == 0 {
 		log.Printf("SummaryProcessor %s: warning - generated empty summary for item %s, publishing without summary", d.name, item.ID)
-		return processed, nil
+		return nil
 	}
 
-	processed.Metadata["summary"] = summary
+	if err := item.AddMetadata("summary", summary); err != nil {
+		return err
+	}
 	log.Printf("SummaryProcessor %s: generated summary for item %s: %s", d.name, item.ID, summary)
 
-	return processed, nil
+	return nil
 }
