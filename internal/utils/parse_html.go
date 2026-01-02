@@ -9,6 +9,9 @@ import (
 )
 
 func GetArticleText(u string, limit int, mod ...readability.RequestWith) (string, error) {
+	if limit <= 0 {
+		limit = 20000
+	}
 	if u == "" {
 		return "", fmt.Errorf("URL is empty")
 	}
