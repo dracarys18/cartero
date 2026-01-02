@@ -5,7 +5,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/go-shiori/go-readability"
+	readability "codeberg.org/readeck/go-readability/v2"
+	"codeberg.org/readeck/go-readability/v2/render"
 )
 
 func GetArticleText(u string, limit int, mod ...readability.RequestWith) (string, error) {
@@ -17,15 +18,17 @@ func GetArticleText(u string, limit int, mod ...readability.RequestWith) (string
 	}
 
 	article, err := readability.FromURL(u, 30*time.Second)
+	textContent := render.InnerText(article.Node)
+
 	if err != nil {
 		return "", fmt.Errorf("failed to extract content: %v", err)
 	}
 
-	if len(article.TextContent) > limit {
-		log.Printf("GetArticleText: truncating content from %d to 4000 characters", len(article.TextContent))
-		article.TextContent = article.TextContent[:limit] + "..."
+	if len(textContent) > limit {
+		log.Printf("GetArticleText: truncating content from %d to 4000 characters", len(textContent))
+		textContent = textContent[:limit] + "..."
 	}
 
-	log.Printf("GetArticleText: returning %d characters for URL '%s'", len(article.TextContent), u)
-	return article.TextContent, nil
+	log.Printf("GetArticleText: returning %d characters for URL '%s'", len(textContent), u)
+	return textContent, nil
 }

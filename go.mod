@@ -9,9 +9,9 @@ require (
 )
 
 require (
+	codeberg.org/readeck/go-readability/v2 v2.1.0
 	github.com/blevesearch/bleve/v2 v2.5.5
 	github.com/bwmarrin/discordgo v0.29.0
-	github.com/go-shiori/go-readability v0.0.0-20251205110129-5db1dc9836f0
 	github.com/gorilla/feeds v1.1.2
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/mmcdole/gofeed v1.3.0

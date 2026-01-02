@@ -17,28 +17,44 @@ type Item struct {
 }
 
 func (i *Item) GetID() string {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
 	return i.ID
 }
 
 func (i *Item) GetSource() string {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
 	return i.Source
 }
 
 func (i *Item) GetContent() interface{} {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
 	return i.Content
 }
 
 func (i *Item) GetTimestamp() time.Time {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
 	return i.Timestamp
 }
 
 func (i *Item) GetTextContent() string {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
 	return i.TextContent
 }
 
 func (i *Item) ModifyContent(fn func() interface{}) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
+
 	i.Content = fn()
 	return nil
 }
