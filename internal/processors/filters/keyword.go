@@ -1,10 +1,13 @@
 package filters
 
 import (
+	"context"
+	"fmt"
 	"slices"
 	"strings"
 
 	"cartero/internal/core"
+	"cartero/internal/processors/names"
 
 	"github.com/blevesearch/bleve/v2/analysis"
 	"github.com/blevesearch/bleve/v2/analysis/lang/en"
@@ -22,38 +25,64 @@ func init() {
 	}
 }
 
-func KeywordFilter(name string, keywords []string, mode string) *FilterProcessor {
+type KeywordFilterProcessor struct {
+	name            string
+	stemmedKeywords []string
+	mode            string
+}
+
+func NewKeywordFilterProcessor(name string, keywords []string, mode string) *KeywordFilterProcessor {
 	stemmedKeywords := make([]string, 0, len(keywords))
 	for _, kw := range keywords {
 		tokens := analyzeText(strings.ToLower(kw))
 		stemmedKeywords = append(stemmedKeywords, tokens...)
 	}
 
-	return NewFilterProcessor(name, func(item *core.Item) bool {
-		title, ok := item.Metadata["title"].(string)
-		if !ok {
-			return true
-		}
+	return &KeywordFilterProcessor{
+		name:            name,
+		stemmedKeywords: stemmedKeywords,
+		mode:            mode,
+	}
+}
 
-		tokens := analyzeText(title)
+func (k *KeywordFilterProcessor) Name() string {
+	return k.name
+}
 
-		matches := false
-		for _, token := range tokens {
-			if slices.Contains(stemmedKeywords, token) {
-				matches = true
-				break
-			}
-		}
+func (k *KeywordFilterProcessor) DependsOn() []string {
+	return []string{
+		names.ExtractText,
+	}
+}
 
-		switch mode {
-		case "include":
-			return matches
-		case "exclude":
-			return !matches
-		default:
-			return true
+func (k *KeywordFilterProcessor) Process(ctx context.Context, item *core.Item) error {
+	title, ok := item.Metadata["title"].(string)
+	if !ok {
+		return nil
+	}
+
+	tokens := analyzeText(title)
+
+	matches := false
+	for _, token := range tokens {
+		if slices.Contains(k.stemmedKeywords, token) {
+			matches = true
+			break
 		}
-	})
+	}
+
+	switch k.mode {
+	case "include":
+		if !matches {
+			return fmt.Errorf("KeywordFilterProcessor %s: item %s does not contain any keywords (include mode)", k.name, item.ID)
+		}
+	case "exclude":
+		if matches {
+			return fmt.Errorf("KeywordFilterProcessor %s: item %s contains excluded keywords", k.name, item.ID)
+		}
+	}
+
+	return nil
 }
 
 func analyzeText(text string) []string {
@@ -69,4 +98,8 @@ func analyzeText(text string) []string {
 	}
 
 	return tokens
+}
+
+func KeywordFilter(name string, keywords []string, mode string) *KeywordFilterProcessor {
+	return NewKeywordFilterProcessor(name, keywords, mode)
 }

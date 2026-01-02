@@ -32,6 +32,10 @@ func (r *RateLimitProcessor) Name() string {
 	return r.name
 }
 
+func (r *RateLimitProcessor) DependsOn() []string {
+	return []string{}
+}
+
 func (r *RateLimitProcessor) Process(ctx context.Context, item *core.Item) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -44,7 +48,6 @@ func (r *RateLimitProcessor) Process(ctx context.Context, item *core.Item) error
 	}
 
 	if r.counter >= r.limit {
-		// Rate limit exceeded, filter it out
 		return fmt.Errorf("RateLimitProcessor %s: rate limit exceeded (%d/%d)", r.name, r.counter, r.limit)
 	}
 
@@ -73,6 +76,10 @@ func NewTokenBucketProcessor(name string, capacity int, refillRate time.Duration
 
 func (t *TokenBucketProcessor) Name() string {
 	return t.name
+}
+
+func (t *TokenBucketProcessor) DependsOn() []string {
+	return []string{}
 }
 
 func (t *TokenBucketProcessor) Process(ctx context.Context, item *core.Item) error {

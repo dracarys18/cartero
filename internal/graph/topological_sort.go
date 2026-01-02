@@ -57,7 +57,7 @@ func ValidateGraph(nodes map[string]Node) error {
 	for name, node := range nodes {
 		for _, dep := range node.GetDependencies() {
 			if _, exists := nodes[dep]; !exists {
-				return fmt.Errorf("node %s depends on %s which does not exist", name, dep)
+				return fmt.Errorf("processor %s depends on %s which is not enabled or does not exist in the pipeline. Make sure the %s processor is enabled in your configuration", name, dep, dep)
 			}
 		}
 	}

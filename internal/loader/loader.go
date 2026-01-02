@@ -108,10 +108,9 @@ func (l *Loader) addProcessors(pipeline *core.Pipeline, registry *components.Reg
 		}
 
 		pipelineConfig := core.ProcessorConfig{
-			Name:      name,
-			Type:      processorCfg.Type,
-			Enabled:   processorCfg.Enabled,
-			DependsOn: processorCfg.DependsOn,
+			Name:    name,
+			Type:    processorCfg.Type,
+			Enabled: processorCfg.Enabled,
 		}
 		pipeline.AddProcessorWithConfig(processor, pipelineConfig)
 	}
@@ -219,11 +218,11 @@ func (l *Loader) createProcessor(name string, cfg config.ProcessorConfig, regist
 
 	case "filter_score":
 		s := cfg.Settings.ScoreFilterSettings
-		return processors.MinScoreFilter(name, s.MinScore), nil
+		return processors.NewScoreFilterProcessor(name, s.MinScore), nil
 
 	case "filter_keyword":
 		s := cfg.Settings.KeywordFilterSettings
-		return processors.KeywordFilter(name, s.Keywords, s.Mode), nil
+		return processors.NewKeywordFilterProcessor(name, s.Keywords, s.Mode), nil
 
 	case "dedupe":
 		s := cfg.Settings.DedupeSettings

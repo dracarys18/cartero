@@ -58,7 +58,7 @@ func (p *Pipeline) AddProcessorWithConfig(processor Processor, config ProcessorC
 	defer p.mu.Unlock()
 	p.processors = append(p.processors, processor)
 	p.processorConfigs[config.Name] = config
-	p.processorExecutor.AddProcessor(config.Name, processor, config.DependsOn)
+	p.processorExecutor.AddProcessor(config.Type, processor)
 	return p
 }
 

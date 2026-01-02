@@ -35,14 +35,14 @@ func NewProcessorExecutor() *ProcessorExecutor {
 	}
 }
 
-func (pe *ProcessorExecutor) AddProcessor(name string, processor Processor, dependsOn []string) {
+func (pe *ProcessorExecutor) AddProcessor(typ string, processor Processor) {
 	pe.mu.Lock()
 	defer pe.mu.Unlock()
 
-	pe.nodes[name] = &ProcessorNode{
-		Name:      name,
+	pe.nodes[typ] = &ProcessorNode{
+		Name:      typ,
 		Processor: processor,
-		DependsOn: dependsOn,
+		DependsOn: processor.DependsOn(),
 	}
 }
 

@@ -26,6 +26,10 @@ func (t *TransformProcessor) Name() string {
 	return t.name
 }
 
+func (t *TransformProcessor) DependsOn() []string {
+	return []string{}
+}
+
 func (t *TransformProcessor) Process(ctx context.Context, item *core.Item) error {
 	if t.transformFn != nil {
 		transformed, err := t.transformFn(item)
@@ -135,6 +139,10 @@ func NewChainTransformProcessor(name string, transformers ...*TransformProcessor
 
 func (c *ChainTransformProcessor) Name() string {
 	return c.name
+}
+
+func (c *ChainTransformProcessor) DependsOn() []string {
+	return []string{}
 }
 
 func (c *ChainTransformProcessor) Process(ctx context.Context, item *core.Item) error {

@@ -40,6 +40,10 @@ func (d *DedupeProcessor) Name() string {
 	return d.name
 }
 
+func (d *DedupeProcessor) DependsOn() []string {
+	return []string{}
+}
+
 // Process implements the Processor interface
 func (d *DedupeProcessor) Process(ctx context.Context, item *core.Item) error {
 	hash := d.hashItem(item)
@@ -110,7 +114,10 @@ func (c *ContentDedupeProcessor) Name() string {
 	return c.name
 }
 
-// Process implements the Processor interface
+func (c *ContentDedupeProcessor) DependsOn() []string {
+	return []string{}
+}
+
 func (c *ContentDedupeProcessor) Process(ctx context.Context, item *core.Item) error {
 	var content string
 	if c.fieldName != "" {
@@ -128,11 +135,9 @@ func (c *ContentDedupeProcessor) Process(ctx context.Context, item *core.Item) e
 	defer c.mu.Unlock()
 
 	if c.seen[hash] {
-		// Content is a duplicate, filter it out
 		return fmt.Errorf("ContentDedupeProcessor %s: duplicate content detected for item %s", c.name, item.ID)
 	}
 
-	// Content is unique, mark as seen and allow processing
 	c.seen[hash] = true
 	return nil
 }

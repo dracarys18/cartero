@@ -2,6 +2,7 @@ package processors
 
 import (
 	"cartero/internal/core"
+	"cartero/internal/processors/names"
 	"cartero/internal/utils"
 	"context"
 	"fmt"
@@ -22,6 +23,12 @@ func NewExtractProcessor(name string, limit int) *ExtractText {
 
 func (e *ExtractText) Name() string {
 	return e.name
+}
+
+func (e *ExtractText) DependsOn() []string {
+	return []string{
+		names.ScoreFilter,
+	}
 }
 
 func (e *ExtractText) Process(ctx context.Context, item *core.Item) error {

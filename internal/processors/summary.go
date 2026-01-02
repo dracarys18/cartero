@@ -4,6 +4,7 @@ import (
 	"cartero/internal/components"
 	"cartero/internal/core"
 	"cartero/internal/platforms"
+	procnames "cartero/internal/processors/names"
 	"context"
 	"fmt"
 	"log"
@@ -33,6 +34,10 @@ func NewSummaryProcessor(name string, model string, registry *components.Registr
 
 func (d *SummaryProcessor) Name() string {
 	return d.name
+}
+
+func (d *SummaryProcessor) DependsOn() []string {
+	return []string{procnames.ScoreFilter,procnames.KeywordFilter,procnames.ExtractText}
 }
 
 func (d *SummaryProcessor) Process(ctx context.Context, item *core.Item) error {

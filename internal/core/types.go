@@ -105,13 +105,13 @@ type Source interface {
 type Processor interface {
 	Name() string
 	Process(ctx context.Context, item *Item) error
+	DependsOn() []string
 }
 
 type ProcessorConfig struct {
-	Name      string
-	Type      string
-	Enabled   bool
-	DependsOn []string
+	Name    string
+	Type    string
+	Enabled bool
 }
 
 type Target interface {

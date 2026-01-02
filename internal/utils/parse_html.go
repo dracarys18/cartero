@@ -18,11 +18,12 @@ func GetArticleText(u string, limit int, mod ...readability.RequestWith) (string
 	}
 
 	article, err := readability.FromURL(u, 30*time.Second)
-	textContent := render.InnerText(article.Node)
 
-	if err != nil {
+	if err != nil || article.Node == nil {
 		return "", fmt.Errorf("failed to extract content: %v", err)
 	}
+
+	textContent := render.InnerText(article.Node)
 
 	if len(textContent) > limit {
 		log.Printf("GetArticleText: truncating content from %d to 4000 characters", len(textContent))
