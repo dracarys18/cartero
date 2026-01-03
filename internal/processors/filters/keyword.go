@@ -3,7 +3,7 @@ package filters
 import (
 	"context"
 	"fmt"
-	"slices"
+	"log"
 	"strings"
 
 	"cartero/internal/core"
@@ -27,15 +27,17 @@ func init() {
 
 type KeywordFilterProcessor struct {
 	name            string
-	stemmedKeywords []string
+	stemmedKeywords map[string]bool
 	mode            string
 }
 
 func NewKeywordFilterProcessor(name string, keywords []string, mode string) *KeywordFilterProcessor {
-	stemmedKeywords := make([]string, 0, len(keywords))
+	stemmedKeywords := make(map[string]bool, len(keywords))
 	for _, kw := range keywords {
 		tokens := analyzeText(strings.ToLower(kw))
-		stemmedKeywords = append(stemmedKeywords, tokens...)
+		for _, token := range tokens {
+			stemmedKeywords[token] = true
+		}
 	}
 
 	return &KeywordFilterProcessor{
@@ -56,32 +58,46 @@ func (k *KeywordFilterProcessor) DependsOn() []string {
 }
 
 func (k *KeywordFilterProcessor) Process(ctx context.Context, item *core.Item) error {
+	threshold := 0.15
 	title, ok := item.Metadata["title"].(string)
 	if !ok {
 		return nil
 	}
 
-	tokens := analyzeText(title)
+	text := fmt.Sprintf("%s %s", title, item.TextContent)
+	tokens := analyzeText(text)
 
-	matches := false
+	uniqueMatches := make(map[string]bool)
 	for _, token := range tokens {
-		if slices.Contains(k.stemmedKeywords, token) {
-			matches = true
-			break
+		if _, exists := k.stemmedKeywords[token]; exists {
+			uniqueMatches[token] = true
 		}
 	}
+
+	totalInterestCount := len(k.stemmedKeywords)
+	if totalInterestCount == 0 {
+		return nil
+	}
+
+	coverageScore := float64(len(uniqueMatches)) / float64(totalInterestCount)
+
+	matches := coverageScore >= threshold
 
 	switch k.mode {
 	case "include":
 		if !matches {
-			return fmt.Errorf("KeywordFilterProcessor %s: item %s does not contain any keywords (include mode)", k.name, item.ID)
+			return fmt.Errorf("KeywordFilterProcessor %s: item %s coverage %.2f%% is below threshold %.2f%%",
+				k.name, item.ID, coverageScore*100, threshold*100)
 		}
 	case "exclude":
 		if matches {
-			return fmt.Errorf("KeywordFilterProcessor %s: item %s contains excluded keywords", k.name, item.ID)
+			return fmt.Errorf("KeywordFilterProcessor %s: item %s coverage %.2f%% exceeds exclusion threshold",
+				k.name, item.ID, coverageScore*100)
 		}
 	}
 
+	log.Printf("KeywordFilterProcessor %s: item %s coverage %.2f%%",
+		k.name, item.ID, coverageScore*100)
 	return nil
 }
 
