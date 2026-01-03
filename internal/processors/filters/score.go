@@ -27,6 +27,7 @@ func (s *ScoreFilterProcessor) Name() string {
 func (s *ScoreFilterProcessor) DependsOn() []string {
 	return []string{
 		names.Dedupe,
+		names.ContentDedupe,
 	}
 }
 

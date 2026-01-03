@@ -24,8 +24,10 @@ func TopologicalSort(nodes map[string]Node) ([]string, error) {
 		}
 
 		node, exists := nodes[name]
+
+		// Skip if nodes does not exist (dependency not in the graph)
 		if !exists {
-			return fmt.Errorf("node %s not found", name)
+			return nil
 		}
 
 		visiting[name] = true
@@ -51,15 +53,4 @@ func TopologicalSort(nodes map[string]Node) ([]string, error) {
 	}
 
 	return result, nil
-}
-
-func ValidateGraph(nodes map[string]Node) error {
-	for name, node := range nodes {
-		for _, dep := range node.GetDependencies() {
-			if _, exists := nodes[dep]; !exists {
-				return fmt.Errorf("processor %s depends on %s which is not enabled or does not exist in the pipeline. Make sure the %s processor is enabled in your configuration", name, dep, dep)
-			}
-		}
-	}
-	return nil
 }

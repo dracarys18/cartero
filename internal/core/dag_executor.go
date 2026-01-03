@@ -59,10 +59,6 @@ func (pe *ProcessorExecutor) Initialize() error {
 		nodes[name] = node
 	}
 
-	if err := graph.ValidateGraph(nodes); err != nil {
-		return err
-	}
-
 	order, err := graph.TopologicalSort(nodes)
 	if err != nil {
 		return err
