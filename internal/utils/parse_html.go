@@ -2,7 +2,7 @@ package utils
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	readability "codeberg.org/readeck/go-readability/v2"
@@ -26,10 +26,10 @@ func GetArticleText(u string, limit int, mod ...readability.RequestWith) (string
 	textContent := render.InnerText(article.Node)
 
 	if len(textContent) > limit {
-		log.Printf("GetArticleText: truncating content from %d to 4000 characters", len(textContent))
+		slog.Debug("GetArticleText truncating content", "original_length", len(textContent), "limit", limit)
 		textContent = textContent[:limit] + "..."
 	}
 
-	log.Printf("GetArticleText: returning %d characters for URL '%s'", len(textContent), u)
+	slog.Debug("GetArticleText returning content", "length", len(textContent), "url", u)
 	return textContent, nil
 }

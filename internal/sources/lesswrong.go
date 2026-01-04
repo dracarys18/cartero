@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -65,7 +65,7 @@ func (l *LessWrongSource) Name() string {
 }
 
 func (l *LessWrongSource) Initialize(ctx context.Context) error {
-	log.Printf("LessWrong source %s: initializing (view=curated, max_items=%d)", l.name, l.maxItems)
+	slog.Info("LessWrong source initializing", "source", l.name, "view", "curated", "max_items", l.maxItems)
 	return nil
 }
 
@@ -77,15 +77,15 @@ func (l *LessWrongSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan 
 		defer close(itemChan)
 		defer close(errChan)
 
-		log.Printf("LessWrong source %s: fetching posts", l.name)
+		slog.Debug("LessWrong source fetching posts", "source", l.name)
 		posts, err := l.fetchPosts(ctx)
 		if err != nil {
-			log.Printf("LessWrong source %s: error fetching posts: %v", l.name, err)
+			slog.Error("LessWrong source error fetching posts", "source", l.name, "error", err)
 			errChan <- err
 			return
 		}
 
-		log.Printf("LessWrong source %s: retrieved %d posts", l.name, len(posts))
+		slog.Debug("LessWrong source retrieved posts", "source", l.name, "count", len(posts))
 
 		for i, post := range posts {
 			select {
@@ -117,8 +117,7 @@ func (l *LessWrongSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan 
 
 				select {
 				case itemChan <- item:
-					log.Printf("LessWrong source %s: sent item %d/%d (id=%s, score=%d)",
-						l.name, i+1, len(posts), post.ID, post.BaseScore)
+					slog.Debug("LessWrong source sent item", "source", l.name, "index", i+1, "total", len(posts), "post_id", post.ID, "score", post.BaseScore)
 				case <-ctx.Done():
 					errChan <- ctx.Err()
 					return
@@ -126,7 +125,7 @@ func (l *LessWrongSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan 
 			}
 		}
 
-		log.Printf("LessWrong source %s: finished fetching all items", l.name)
+		slog.Debug("LessWrong source finished fetching all items", "source", l.name)
 	}()
 
 	return itemChan, errChan
@@ -172,7 +171,7 @@ func (l *LessWrongSource) fetchPosts(ctx context.Context) ([]LWPost, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "Cartero/1.0")
 
-	log.Printf("LessWrong source %s: sending GraphQL request: %s", l.name, string(body))
+	slog.Debug("LessWrong source sending GraphQL request", "source", l.name, "body", string(body))
 
 	resp, err := l.httpClient.Do(req)
 	if err != nil {
@@ -186,7 +185,7 @@ func (l *LessWrongSource) fetchPosts(ctx context.Context) ([]LWPost, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("LessWrong source %s: GraphQL error (status %d): %s", l.name, resp.StatusCode, string(respBody))
+		slog.Error("LessWrong source GraphQL error", "source", l.name, "status_code", resp.StatusCode, "body", string(respBody))
 		return nil, fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(respBody))
 	}
 
@@ -203,6 +202,6 @@ func (l *LessWrongSource) fetchPosts(ctx context.Context) ([]LWPost, error) {
 }
 
 func (l *LessWrongSource) Shutdown(ctx context.Context) error {
-	log.Printf("LessWrong source %s: shutting down", l.name)
+	slog.Debug("LessWrong source shutting down", "source", l.name)
 	return nil
 }

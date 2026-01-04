@@ -3,7 +3,7 @@ package components
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"cartero/internal/server/feed"
 	"cartero/internal/storage"
@@ -90,7 +90,7 @@ func (c *ServerComponent) startServer(ctx context.Context, cfg ServerConfig, fee
 func (c *ServerComponent) Close(ctx context.Context) error {
 	for name, server := range c.servers {
 		if err := server.Shutdown(ctx); err != nil {
-			log.Printf("[Servers] Error shutting down server %s: %v", name, err)
+			slog.Error("Error shutting down server", "server", name, "error", err)
 		}
 	}
 	return nil

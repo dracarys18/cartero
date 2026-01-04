@@ -3,7 +3,7 @@ package storage
 import (
 	"database/sql"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -17,7 +17,7 @@ type Store struct {
 }
 
 func New(dbPath string) (*Store, error) {
-	log.Printf("Initializing storage at %s", dbPath)
+	slog.Info("Initializing storage", "path", dbPath)
 
 	conn, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
@@ -34,7 +34,7 @@ func New(dbPath string) (*Store, error) {
 		return nil, err
 	}
 
-	log.Printf("Storage initialized successfully")
+	slog.Info("Storage initialized successfully")
 
 	return &Store{
 		items: newItemStore(conn),
@@ -43,7 +43,7 @@ func New(dbPath string) (*Store, error) {
 }
 
 func runMigrations(conn *sql.DB) error {
-	log.Printf("Running database migrations")
+	slog.Debug("Running database migrations")
 
 	if err := goose.SetDialect("sqlite3"); err != nil {
 		return fmt.Errorf("failed to set goose dialect: %w", err)
@@ -52,7 +52,7 @@ func runMigrations(conn *sql.DB) error {
 	migrationsDir := filepath.Join("db", "migrations")
 	if _, err := os.Stat(migrationsDir); err != nil {
 		if os.IsNotExist(err) {
-			log.Printf("Migrations directory not found at %s, skipping migrations", migrationsDir)
+			slog.Debug("Migrations directory not found, skipping migrations", "path", migrationsDir)
 			return nil
 		}
 		return fmt.Errorf("failed to access migrations directory: %w", err)
@@ -62,7 +62,7 @@ func runMigrations(conn *sql.DB) error {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
-	log.Printf("Migrations completed successfully")
+	slog.Debug("Migrations completed successfully")
 	return nil
 }
 

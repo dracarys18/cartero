@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 )
 
@@ -85,14 +85,14 @@ func (s *feedStore) DeleteOlderThan(ctx context.Context, age time.Duration) erro
 	cutoff := time.Now().Add(-age)
 	query := `DELETE FROM feed_entries WHERE created_at < ?`
 
-	log.Printf("Deleting feed entries older than %v (cutoff: %s)", age, cutoff.Format(time.RFC3339))
+	slog.Debug("Deleting feed entries older than cutoff", "age", age, "cutoff", cutoff.Format(time.RFC3339))
 	result, err := s.db.ExecContext(ctx, query, cutoff)
 	if err != nil {
 		return fmt.Errorf("failed to delete old entries: %w", err)
 	}
 
 	if rows, err := result.RowsAffected(); err == nil {
-		log.Printf("Deleted %d old feed entries", rows)
+		slog.Debug("Deleted old feed entries", "count", rows)
 	}
 
 	return nil

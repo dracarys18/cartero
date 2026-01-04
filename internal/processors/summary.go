@@ -7,7 +7,7 @@ import (
 	procnames "cartero/internal/processors/names"
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 
 	"github.com/ollama/ollama/api"
@@ -37,7 +37,7 @@ func (d *SummaryProcessor) Name() string {
 }
 
 func (d *SummaryProcessor) DependsOn() []string {
-	return []string{procnames.ScoreFilter,procnames.KeywordFilter,procnames.ExtractText}
+	return []string{procnames.ScoreFilter, procnames.KeywordFilter, procnames.ExtractText}
 }
 
 func (d *SummaryProcessor) Process(ctx context.Context, item *core.Item) error {
@@ -57,19 +57,19 @@ func (d *SummaryProcessor) Process(ctx context.Context, item *core.Item) error {
 
 	err := d.ollamaClient.Generate(ctx, req, respFunc)
 	if err != nil {
-		log.Printf("SummaryProcessor %s: warning - couldn't generate summary, publishing without summary: %v", d.name, err)
+		slog.Warn("Couldn't generate summary, publishing without summary", "processor", d.name, "error", err)
 		return nil
 	}
 
 	if len(summary) == 0 {
-		log.Printf("SummaryProcessor %s: warning - generated empty summary for item %s, publishing without summary", d.name, item.ID)
+		slog.Warn("Generated empty summary for item, publishing without summary", "processor", d.name, "item_id", item.ID)
 		return nil
 	}
 
 	if err := item.AddMetadata("summary", summary); err != nil {
 		return err
 	}
-	log.Printf("SummaryProcessor %s: generated summary for item %s: %s", d.name, item.ID, summary)
+	slog.Debug("Generated summary for item", "processor", d.name, "item_id", item.ID, "summary", summary)
 
 	return nil
 }

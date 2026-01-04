@@ -2,7 +2,7 @@ package core
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"maps"
 	"sync"
 
@@ -65,7 +65,7 @@ func (pe *ProcessorExecutor) Initialize() error {
 	}
 
 	pe.executionOrder = order
-	log.Printf("Pipeline: Processor execution order: %v", pe.executionOrder)
+	slog.Info("Pipeline: Processor execution order", "order", pe.executionOrder)
 	return nil
 }
 
@@ -78,15 +78,15 @@ func (pe *ProcessorExecutor) ExecuteProcessors(ctx context.Context, item *Item) 
 
 	for _, processorName := range executionOrder {
 		node := nodes[processorName]
-		log.Printf("Executing processor: %s (depends_on=%v)", node.Name, node.DependsOn)
+		slog.Debug("Executing processor", "processor", node.Name, "depends_on", node.DependsOn)
 
 		err := node.Processor.Process(ctx, item)
 		if err != nil {
-			log.Printf("Processor %s stopped processing for item %s: %v", node.Name, item.ID, err)
+			slog.Warn("Processor stopped processing for item", "processor", node.Name, "item_id", item.ID, "error", err)
 			return err
 		}
 
-		log.Printf("Processor %s completed successfully", node.Name)
+		slog.Debug("Processor completed successfully", "processor", node.Name)
 	}
 
 	return nil

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -58,7 +58,7 @@ func (l *LobstersSource) Name() string {
 }
 
 func (l *LobstersSource) Initialize(ctx context.Context) error {
-	log.Printf("Lobsters source %s: initializing (sort_by=%s, max_items=%d)", l.name, l.sortBy, l.maxItems)
+	slog.Info("Lobsters source initializing", "source", l.name, "sort_by", l.sortBy, "max_items", l.maxItems)
 	return nil
 }
 
@@ -70,22 +70,22 @@ func (l *LobstersSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan e
 		defer close(itemChan)
 		defer close(errChan)
 
-		log.Printf("Lobsters source %s: fetching posts", l.name)
+		slog.Debug("Lobsters source fetching posts", "source", l.name)
 		posts, err := l.fetchPosts(ctx)
 		if err != nil {
-			log.Printf("Lobsters source %s: error fetching posts: %v", l.name, err)
+			slog.Error("Lobsters source error fetching posts", "source", l.name, "error", err)
 			errChan <- err
 			return
 		}
 
-		log.Printf("Lobsters source %s: retrieved %d posts", l.name, len(posts))
+		slog.Debug("Lobsters source retrieved posts", "source", l.name, "count", len(posts))
 
 		limit := l.maxItems
 		if limit > len(posts) {
 			limit = len(posts)
 		}
 
-		log.Printf("Lobsters source %s: processing %d posts", l.name, limit)
+		slog.Debug("Lobsters source processing posts", "source", l.name, "limit", limit)
 
 		for i := 0; i < limit; i++ {
 			select {
@@ -121,8 +121,7 @@ func (l *LobstersSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan e
 
 				select {
 				case itemChan <- item:
-					log.Printf("Lobsters source %s: sent item %d/%d (id=%s, score=%d)",
-						l.name, i+1, limit, post.ShortID, post.Score)
+					slog.Debug("Lobsters source sent item", "source", l.name, "index", i+1, "limit", limit, "post_id", post.ShortID, "score", post.Score)
 				case <-ctx.Done():
 					errChan <- ctx.Err()
 					return
@@ -130,7 +129,7 @@ func (l *LobstersSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan e
 			}
 		}
 
-		log.Printf("Lobsters source %s: finished processing all items", l.name)
+		slog.Debug("Lobsters source finished processing all items", "source", l.name)
 	}()
 
 	return itemChan, errChan
@@ -203,7 +202,7 @@ func (l *LobstersSource) shouldIncludePost(post LobstersPost) bool {
 }
 
 func (l *LobstersSource) Shutdown(ctx context.Context) error {
-	log.Printf("Lobsters source %s: shutting down", l.name)
+	slog.Debug("Lobsters source shutting down", "source", l.name)
 	l.httpClient.CloseIdleConnections()
 	return nil
 }

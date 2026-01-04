@@ -3,7 +3,7 @@ package filters
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 
 	"cartero/internal/core"
@@ -117,8 +117,7 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, item *core.Item) e
 		}
 	}
 
-	log.Printf("KeywordFilterProcessor %s: item %s coverage %.2f%%",
-		k.name, item.ID, score*100)
+	slog.Debug("KeywordFilterProcessor item coverage", "processor", k.name, "item_id", item.ID, "coverage", score*100)
 	return nil
 }
 

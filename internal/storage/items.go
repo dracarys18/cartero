@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 )
 
@@ -81,14 +81,14 @@ func (s *itemStore) DeleteOlderThan(ctx context.Context, age time.Duration) erro
 	cutoff := time.Now().Add(-age)
 	query := `DELETE FROM items WHERE timestamp < ?`
 
-	log.Printf("Deleting items older than %v (cutoff: %s)", age, cutoff.Format(time.RFC3339))
+	slog.Debug("Deleting items older than cutoff", "age", age, "cutoff", cutoff.Format(time.RFC3339))
 	result, err := s.db.ExecContext(ctx, query, cutoff)
 	if err != nil {
 		return fmt.Errorf("failed to delete old items: %w", err)
 	}
 
 	if rows, err := result.RowsAffected(); err == nil {
-		log.Printf("Deleted %d old items", rows)
+		slog.Debug("Deleted old items", "count", rows)
 	}
 
 	return nil

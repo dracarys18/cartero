@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"html"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -39,7 +39,7 @@ func (r *RSSSource) Name() string {
 }
 
 func (r *RSSSource) Initialize(ctx context.Context) error {
-	log.Printf("RSS source %s: initializing (feed_url=%s, max_items=%d)", r.name, r.feedURL, r.maxItems)
+	slog.Info("RSS source initializing", "source", r.name, "feed_url", r.feedURL, "max_items", r.maxItems)
 	return nil
 }
 
@@ -51,22 +51,22 @@ func (r *RSSSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan error)
 		defer close(itemChan)
 		defer close(errChan)
 
-		log.Printf("RSS source %s: fetching feed", r.name)
+		slog.Debug("RSS source fetching feed", "source", r.name)
 		feed, err := r.parser.ParseURLWithContext(r.feedURL, ctx)
 		if err != nil {
-			log.Printf("RSS source %s: error fetching feed: %v", r.name, err)
+			slog.Error("RSS source error fetching feed", "source", r.name, "error", err)
 			errChan <- fmt.Errorf("failed to parse feed: %w", err)
 			return
 		}
 
-		log.Printf("RSS source %s: retrieved %d items", r.name, len(feed.Items))
+		slog.Debug("RSS source retrieved items", "source", r.name, "count", len(feed.Items))
 
 		limit := r.maxItems
 		if limit > len(feed.Items) {
 			limit = len(feed.Items)
 		}
 
-		log.Printf("RSS source %s: processing %d items", r.name, limit)
+		slog.Debug("RSS source processing items", "source", r.name, "limit", limit)
 
 		for i := 0; i < limit; i++ {
 			select {
@@ -79,8 +79,7 @@ func (r *RSSSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan error)
 
 				select {
 				case itemChan <- item:
-					log.Printf("RSS source %s: sent item %d/%d (id=%s)",
-						r.name, i+1, limit, item.ID)
+					slog.Debug("RSS source sent item", "source", r.name, "index", i+1, "limit", limit, "item_id", item.ID)
 				case <-ctx.Done():
 					errChan <- ctx.Err()
 					return
@@ -88,7 +87,7 @@ func (r *RSSSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan error)
 			}
 		}
 
-		log.Printf("RSS source %s: finished processing all items", r.name)
+		slog.Debug("RSS source finished processing all items", "source", r.name)
 	}()
 
 	return itemChan, errChan
@@ -160,7 +159,7 @@ func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *core.Item {
 }
 
 func (r *RSSSource) Shutdown(ctx context.Context) error {
-	log.Printf("RSS source %s: shutting down", r.name)
+	slog.Debug("RSS source shutting down", "source", r.name)
 	return nil
 }
 

@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"text/template"
@@ -33,11 +33,11 @@ func New(name string, channelID, channelType string, registry *components.Regist
 
 	tmpl, err := utils.LoadTemplate(templatePath)
 	if err != nil {
-		log.Printf("Discord target %s: FATAL - %v", name, err)
+		slog.Error("Discord target FATAL error", "target", name, "error", err)
 		panic(err.Error())
 	}
 
-	log.Printf("Discord target %s: loaded template from %s", name, templatePath)
+	slog.Debug("Discord target loaded template", "target", name, "path", templatePath)
 
 	return &Target{
 		name:        name,
@@ -53,13 +53,12 @@ func (d *Target) Name() string {
 }
 
 func (d *Target) Initialize(ctx context.Context) error {
-	log.Printf("Discord target %s: initializing (channel_id=%s, type=%s)", d.name, d.channelID, d.channelType)
+	slog.Info("Discord target initializing", "target", d.name, "channel_id", d.channelID, "type", d.channelType)
 	return nil
 }
 
 func (d *Target) Publish(ctx context.Context, item *core.Item) (*core.PublishResult, error) {
-	log.Printf("Discord target %s: publishing item %s to %s channel %s",
-		d.name, item.ID, d.channelType, d.channelID)
+	slog.Debug("Discord target publishing item", "target", d.name, "item_id", item.ID, "channel_type", d.channelType, "channel_id", d.channelID)
 
 	var messageID string
 	var err error
@@ -104,7 +103,7 @@ func (d *Target) createForumThread(item *core.Item) (string, error) {
 		}
 	}
 
-	log.Printf("Discord target %s: creating forum thread '%s'", d.name, title)
+	slog.Debug("Discord target creating forum thread", "target", d.name, "title", title)
 
 	embed, err := d.buildEmbed(item)
 	if err != nil {
@@ -174,7 +173,7 @@ func (d *Target) createForumThread(item *core.Item) (string, error) {
 		return "", fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	log.Printf("Discord target %s: forum thread created successfully in channel %s", d.name, d.channelID)
+	slog.Info("Discord target forum thread created successfully", "target", d.name, "channel_id", d.channelID)
 
 	time.Sleep(d.platform.SleepDuration())
 
@@ -206,7 +205,7 @@ func (d *Target) buildEmbed(item *core.Item) (*discordgo.MessageEmbed, error) {
 	var embed Embed
 	output := strings.TrimSpace(buf.String())
 	if err := json.Unmarshal([]byte(output), &embed); err != nil {
-		log.Printf("Discord target %s: template output: %s", d.name, output)
+		slog.Error("Discord target failed to parse template output as JSON", "target", d.name, "output", output)
 		return nil, fmt.Errorf("failed to parse template output as JSON: %w", err)
 	}
 
@@ -222,7 +221,7 @@ func (d *Target) buildEmbed(item *core.Item) (*discordgo.MessageEmbed, error) {
 		value := field.Value
 		if field.Name == "Summary" && len(value) > 1024 {
 			value = value[:1021] + "..."
-			log.Printf("Discord target %s: truncated summary from %d to 1024 chars", d.name, len(field.Value))
+			slog.Debug("Discord target truncated summary", "target", d.name, "original_length", len(field.Value))
 		}
 		dgEmbed.Fields = append(dgEmbed.Fields, &discordgo.MessageEmbedField{
 			Name:   field.Name,
@@ -241,7 +240,7 @@ func (d *Target) buildEmbed(item *core.Item) (*discordgo.MessageEmbed, error) {
 }
 
 func (d *Target) Shutdown(ctx context.Context) error {
-	log.Printf("Discord target %s: shutting down", d.name)
+	slog.Debug("Discord target shutting down", "target", d.name)
 	return nil
 }
 

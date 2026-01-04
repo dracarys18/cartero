@@ -2,7 +2,7 @@ package feed
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 
 	"cartero/internal/components"
@@ -61,11 +61,11 @@ func (t *Target) Publish(ctx context.Context, item *core.Item) (*core.PublishRes
 
 	err := t.feedStore.InsertEntry(ctx, item.ID, title, link, description, content, author, item.Source, item.Timestamp)
 	if err != nil {
-		log.Printf("Feed target %s: failed to insert entry %s: %v", t.name, item.ID, err)
+		slog.Error("Feed target failed to insert entry", "target", t.name, "item_id", item.ID, "error", err)
 		return nil, err
 	}
 
-	log.Printf("Feed target %s: inserted entry %s", t.name, item.ID)
+	slog.Debug("Feed target inserted entry", "target", t.name, "item_id", item.ID)
 
 	return &core.PublishResult{
 		Success:   true,

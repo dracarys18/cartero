@@ -5,7 +5,7 @@ import (
 	"cartero/internal/utils"
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"math"
 	"sync"
 	"time"
@@ -63,7 +63,7 @@ func (p *Pipeline) AddProcessorWithConfig(processor Processor, config ProcessorC
 }
 
 func (p *Pipeline) Initialize(ctx context.Context) error {
-	log.Printf("Initializing pipeline with %d routes", len(p.routes))
+	slog.Info("Initializing pipeline", "routes", len(p.routes))
 
 	if err := p.processorExecutor.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize processor executor: %w", err)
@@ -73,7 +73,7 @@ func (p *Pipeline) Initialize(ctx context.Context) error {
 	defer p.mu.Unlock()
 
 	for _, route := range p.routes {
-		log.Printf("Initializing source: %s", route.Source.Name())
+		slog.Info("Initializing source", "source", route.Source.Name())
 		if err := route.Source.Initialize(ctx); err != nil {
 			return fmt.Errorf("failed to initialize source %s: %w", route.Source.Name(), err)
 		}
@@ -83,7 +83,7 @@ func (p *Pipeline) Initialize(ctx context.Context) error {
 				continue
 			}
 
-			log.Printf("Initializing target: %s for source: %s", target.Name(), route.Source.Name())
+			slog.Info("Initializing target", "target", target.Name(), "source", route.Source.Name())
 			if err := target.Initialize(ctx); err != nil {
 				return fmt.Errorf("failed to initialize target %s: %w", target.Name(), err)
 			}
@@ -92,7 +92,7 @@ func (p *Pipeline) Initialize(ctx context.Context) error {
 		}
 	}
 
-	log.Printf("Pipeline initialization complete")
+	slog.Info("Pipeline initialization complete")
 	return nil
 }
 
@@ -105,26 +105,26 @@ func (p *Pipeline) Run(ctx context.Context) error {
 	p.running = true
 	p.mu.Unlock()
 
-	log.Printf("Starting pipeline execution with %d sources", len(p.routes))
+	slog.Info("Starting pipeline execution", "sources", len(p.routes))
 
 	defer func() {
 		p.mu.Lock()
 		p.running = false
 		p.mu.Unlock()
-		log.Printf("Pipeline execution completed")
+		slog.Info("Pipeline execution completed")
 	}()
 
 	var wg sync.WaitGroup
 
 	for _, route := range p.routes {
 		wg.Add(1)
-		log.Printf("Launching goroutine for source: %s", route.Source.Name())
+		slog.Debug("Launching goroutine for source", "source", route.Source.Name())
 		go func(r SourceRoute) {
 			defer wg.Done()
 			if err := p.processSource(ctx, r); err != nil {
-				log.Printf("Error processing source %s: %v", r.Source.Name(), err)
+				slog.Error("Error processing source", "source", r.Source.Name(), "error", err)
 			} else {
-				log.Printf("Source %s completed successfully", r.Source.Name())
+				slog.Info("Source completed successfully", "source", r.Source.Name())
 			}
 		}(route)
 	}
@@ -134,7 +134,7 @@ func (p *Pipeline) Run(ctx context.Context) error {
 }
 
 func (p *Pipeline) processSource(ctx context.Context, route SourceRoute) error {
-	log.Printf("Source %s: starting to fetch items", route.Source.Name())
+	slog.Debug("Source starting to fetch items", "source", route.Source.Name())
 	itemChan, errChan := route.Source.Fetch(ctx)
 
 	itemCount := 0
@@ -148,7 +148,7 @@ func (p *Pipeline) processSource(ctx context.Context, route SourceRoute) error {
 			}
 		case item, ok := <-itemChan:
 			if !ok {
-				log.Printf("Source %s: finished processing %d items", route.Source.Name(), itemCount)
+				slog.Info("Source finished processing items", "source", route.Source.Name(), "count", itemCount)
 				return nil
 			}
 
@@ -159,10 +159,10 @@ func (p *Pipeline) processSource(ctx context.Context, route SourceRoute) error {
 			}
 			if !exists {
 				if err := p.itemStore.Store(ctx, item); err != nil {
-					log.Printf("Source %s: error storing item %s: %v", route.Source.Name(), item.ID, err)
+					slog.Error("Error storing item", "source", route.Source.Name(), "item_id", item.ID, "error", err)
 					return err
 				}
-				log.Printf("Source %s: stored new item %s", route.Source.Name(), item.ID)
+				slog.Debug("Stored new item", "source", route.Source.Name(), "item_id", item.ID)
 			}
 
 			if err := p.processItem(ctx, item, route); err != nil {
@@ -176,11 +176,11 @@ func (p *Pipeline) processItem(ctx context.Context, item *Item, route SourceRout
 	filterFunc := func(target Target) bool {
 		published, err := p.itemStore.IsPublished(ctx, item.ID, target.Name())
 		if err != nil {
-			log.Printf("Error checking if item %s published to %s: %v", item.ID, target.Name(), err)
+			slog.Error("Error checking if item published", "item_id", item.ID, "target", target.Name(), "error", err)
 			return false
 		}
 		if published {
-			log.Printf("Item %s already published to target %s, skipping", item.ID, target.Name())
+			slog.Debug("Item already published to target, skipping", "item_id", item.ID, "target", target.Name())
 			return false
 		}
 		return true
@@ -188,19 +188,19 @@ func (p *Pipeline) processItem(ctx context.Context, item *Item, route SourceRout
 	route.Targets = utils.FilterArray(route.Targets, filterFunc)
 
 	if len(route.Targets) == 0 {
-		log.Printf("item %s: no targets to publish to after filtering published targets", item.ID)
+		slog.Debug("No targets to publish to after filtering published targets", "item_id", item.ID)
 		return nil
 	}
 
-	log.Printf("Item %s: Running %d processors", item.ID, len(p.processors))
+	slog.Debug("Running processors", "item_id", item.ID, "count", len(p.processors))
 
 	err := p.processorExecutor.ExecuteProcessors(ctx, item)
 	if err != nil {
-		log.Printf("Item %s: filtered out during processing: %v", item.ID, err)
+		slog.Debug("Item filtered out during processing", "item_id", item.ID, "error", err)
 		return nil
 	}
 
-	log.Printf("Item %s: All processors completed! Publishing to %d targets", item.ID, len(route.Targets))
+	slog.Debug("All processors completed, publishing to targets", "item_id", item.ID, "targets", len(route.Targets))
 	return p.publishToTargets(ctx, item, route)
 }
 
@@ -209,7 +209,7 @@ func (p *Pipeline) publishToTargets(ctx context.Context, item *Item, route Sourc
 	errChan := make(chan error, len(route.Targets))
 
 	for i, target := range route.Targets {
-		log.Printf("Queuing item %s for target %s", item.ID, target.Name())
+		slog.Debug("Queuing item for target", "item_id", item.ID, "target", target.Name())
 		wg.Add(1)
 		go func(t Target, idx int) {
 			defer wg.Done()
@@ -223,15 +223,15 @@ func (p *Pipeline) publishToTargets(ctx context.Context, item *Item, route Sourc
 			}
 
 			if err := p.publishWithRetry(ctx, t, item); err != nil {
-				log.Printf("Failed to publish item %s to target %s after retries: %v", item.ID, t.Name(), err)
+				slog.Error("Failed to publish item to target after retries", "item_id", item.ID, "target", t.Name(), "error", err)
 				errChan <- err
 				return
 			}
 
-			log.Printf("Successfully published item %s to target %s", item.ID, t.Name())
+			slog.Info("Successfully published item to target", "item_id", item.ID, "target", t.Name())
 
 			if err := p.itemStore.MarkPublished(ctx, item.ID, t.Name()); err != nil {
-				log.Printf("Error marking item %s as published to %s: %v", item.ID, t.Name(), err)
+				slog.Error("Error marking item as published", "item_id", item.ID, "target", t.Name(), "error", err)
 				errChan <- err
 			}
 		}(target, i)
@@ -256,7 +256,7 @@ func (p *Pipeline) publishWithRetry(ctx context.Context, target Target, item *It
 	var lastErr error
 
 	if attempt := 0; attempt == 0 {
-		log.Printf("Publishing item %s to target %s", item.ID, target.Name())
+		slog.Debug("Publishing item to target", "item_id", item.ID, "target", target.Name())
 	}
 
 	for attempt := 0; attempt <= maxRetries; attempt++ {
@@ -264,7 +264,7 @@ func (p *Pipeline) publishWithRetry(ctx context.Context, target Target, item *It
 
 		if err == nil && result.Success {
 			if attempt > 0 {
-				log.Printf("Target %s: item %s published successfully on attempt %d", target.Name(), item.ID, attempt+1)
+				slog.Info("Item published successfully on retry", "target", target.Name(), "item_id", item.ID, "attempt", attempt+1)
 			}
 			return nil
 		}
@@ -284,8 +284,7 @@ func (p *Pipeline) publishWithRetry(ctx context.Context, target Target, item *It
 				}
 			}
 
-			log.Printf("Target %s: attempt %d/%d failed, retrying in %v: %v",
-				target.Name(), attempt+1, maxRetries+1, waitDuration, lastErr)
+			slog.Warn("Publish attempt failed, retrying", "target", target.Name(), "attempt", attempt+1, "max_attempts", maxRetries+1, "wait_duration", waitDuration, "error", lastErr)
 
 			select {
 			case <-ctx.Done():
@@ -300,23 +299,23 @@ func (p *Pipeline) publishWithRetry(ctx context.Context, target Target, item *It
 }
 
 func (p *Pipeline) Shutdown(ctx context.Context) error {
-	log.Printf("Shutting down pipeline")
+	slog.Info("Shutting down pipeline")
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	var errs []error
 
 	for _, route := range p.routes {
-		log.Printf("Shutting down source: %s", route.Source.Name())
+		slog.Debug("Shutting down source", "source", route.Source.Name())
 		if err := route.Source.Shutdown(ctx); err != nil {
-			log.Printf("Error shutting down source %s: %v", route.Source.Name(), err)
+			slog.Error("Error shutting down source", "source", route.Source.Name(), "error", err)
 			errs = append(errs, fmt.Errorf("source %s shutdown error: %w", route.Source.Name(), err))
 		}
 
 		for _, target := range route.Targets {
-			log.Printf("Shutting down target: %s", target.Name())
+			slog.Debug("Shutting down target", "target", target.Name())
 			if err := target.Shutdown(ctx); err != nil {
-				log.Printf("Error shutting down target %s: %v", target.Name(), err)
+				slog.Error("Error shutting down target", "target", target.Name(), "error", err)
 				errs = append(errs, fmt.Errorf("target %s shutdown error: %w", target.Name(), err))
 			}
 		}
@@ -326,7 +325,7 @@ func (p *Pipeline) Shutdown(ctx context.Context) error {
 		return fmt.Errorf("shutdown errors: %v", errs)
 	}
 
-	log.Printf("Pipeline shutdown complete")
+	slog.Info("Pipeline shutdown complete")
 	return nil
 }
 

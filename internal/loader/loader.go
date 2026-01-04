@@ -3,7 +3,7 @@ package loader
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"cartero/internal/components"
@@ -27,7 +27,7 @@ func NewLoader(cfg *config.Config) *Loader {
 
 func (l *Loader) Initialize(ctx context.Context) (*state.State, error) {
 	registry := components.NewRegistry()
-	log.Printf("[Loader] Initializing all components")
+	slog.Info("Initializing all components")
 
 	storageComp := components.NewStorageComponent(l.config.Storage.Path)
 	if err := registry.Register(storageComp); err != nil {
@@ -63,7 +63,7 @@ func (l *Loader) Initialize(ctx context.Context) (*state.State, error) {
 		return nil, fmt.Errorf("component initialization failed: %w", err)
 	}
 
-	log.Printf("[Loader] All components initialized successfully")
+	slog.Info("All components initialized successfully")
 
 	pipeline, err := l.buildPipeline(ctx, registry)
 	appState := state.NewState(l.config, registry, pipeline)
