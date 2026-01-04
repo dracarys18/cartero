@@ -97,13 +97,11 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, item *core.Item) e
 	stemmedContent := analyzeText(content)
 
 	contentMatches := make(map[string]bool)
-	titleMatches := make(map[string]bool)
 	totalTitleMatches := 0
 
 	for token := range maps.Keys(k.stemmedKeywords) {
 		if _, exists := stemmmedTitle[token]; exists {
 			totalTitleMatches++
-			titleMatches[token] = true
 		}
 
 		if _, exists := stemmedContent[token]; exists {
@@ -112,32 +110,26 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, item *core.Item) e
 	}
 
 	contentScore := float64(len(contentMatches)) / float64(totalInterestCount)
-	score := contentScore
-	if len(titleMatches) > 0 {
-		score = score * 0.10 * float64(len(titleMatches))
-	}
-
-	matches := score >= k.threshold
-	titleDensity := float64(len(stemmmedTitle)) / float64(totalTitleMatches)
-
-	if titleDensity > 0.30 && totalTitleMatches >= 2 {
+	matches := contentScore >= k.threshold
+	if totalTitleMatches >= 1 {
 		matches = true
+		slog.Info("KeywordFilterProcessor item matched due to title keyword presence", "processor", k.name, "item_id", item.ID, "title_matches", totalTitleMatches)
 	}
 
 	switch k.mode {
 	case "include":
 		if !matches {
 			return fmt.Errorf("KeywordFilterProcessor %s: item %s coverage %.2f%% is below threshold %.2f%%",
-				k.name, item.ID, score*100, k.threshold*100)
+				k.name, item.ID, contentScore*100, k.threshold*100)
 		}
 	case "exclude":
 		if matches {
 			return fmt.Errorf("KeywordFilterProcessor %s: item %s coverage %.2f%% exceeds exclusion threshold",
-				k.name, item.ID, score*100)
+				k.name, item.ID, contentScore*100)
 		}
 	}
 
-	slog.Debug("KeywordFilterProcessor item coverage", "processor", k.name, "item_id", item.ID, "coverage", score*100)
+	slog.Debug("KeywordFilterProcessor item coverage", "processor", k.name, "item_id", item.ID, "coverage", contentScore*100)
 	return nil
 }
 
