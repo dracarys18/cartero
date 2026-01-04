@@ -222,7 +222,7 @@ func (l *Loader) createProcessor(name string, cfg config.ProcessorConfig, regist
 
 	case "filter_keyword":
 		s := cfg.Settings.KeywordFilterSettings
-		return processors.NewKeywordFilterProcessor(name, s.Keywords, s.Mode), nil
+		return processors.NewKeywordFilterProcessor(name, s.Keywords, s.Mode, s.KeywordThreshold), nil
 
 	case "dedupe":
 		s := cfg.Settings.DedupeSettings

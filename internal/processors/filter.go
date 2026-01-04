@@ -17,7 +17,6 @@ var (
 	NewKeywordFilterProcessor  = filters.NewKeywordFilterProcessor
 	NewMetadataFilterProcessor = filters.NewMetadataFilterProcessor
 	MinScoreFilter             = filters.MinScoreFilter
-	KeywordFilter              = filters.KeywordFilter
 	MetadataFilter             = filters.MetadataFilter
 	NewDedupeProcessor         = filters.NewDedupeProcessor
 	NewContentDedupeProcessor  = filters.NewContentDedupeProcessor

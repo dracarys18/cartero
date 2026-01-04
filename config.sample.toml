@@ -68,6 +68,7 @@ order = 3
 [processors.keyword_filter.settings]
 keywords = ["AI", "Go", "Rust", "Encryption", "Database"]
 mode = "include"
+keyword_threshold = 0.15
 
 [processors.rate_limiter]
 type = "rate_limit"
