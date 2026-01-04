@@ -19,6 +19,7 @@ type Store struct {
 func New(dbPath string) (*Store, error) {
 	slog.Info("Initializing storage", "path", dbPath)
 
+	dbPath = fmt.Sprintf("file:%s?cache=shared&mode=rwc&_journal_mode=WAL", dbPath)
 	conn, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
