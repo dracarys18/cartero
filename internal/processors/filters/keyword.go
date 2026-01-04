@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"strings"
 
+	"cartero/internal/config"
 	"cartero/internal/core"
 	"cartero/internal/processors/names"
 
@@ -26,26 +28,36 @@ func init() {
 }
 
 type KeywordFilterProcessor struct {
-	name            string
-	stemmedKeywords map[string]bool
-	mode            string
-	threshold       float64
+	name                 string
+	stemmedKeywords      map[string]bool
+	stemmedExactKeywords map[string]bool
+	mode                 string
+	threshold            float64
 }
 
-func NewKeywordFilterProcessor(name string, keywords []string, mode string, threshold float64) *KeywordFilterProcessor {
-	stemmedKeywords := make(map[string]bool, len(keywords))
-	for _, kw := range keywords {
+func NewKeywordFilterProcessor(name string, s config.KeywordFilterSettings) *KeywordFilterProcessor {
+	stemmedKeywords := make(map[string]bool, len(s.Keywords))
+	stemmedExactKeywords := make(map[string]bool, len(s.ExactKeyword))
+	for _, kw := range s.Keywords {
 		tokens := analyzeText(strings.ToLower(kw))
-		for _, token := range tokens {
+		for token := range maps.Keys(tokens) {
 			stemmedKeywords[token] = true
 		}
 	}
 
+	for _, kw := range s.ExactKeyword {
+		tokens := analyzeText(strings.ToLower(kw))
+		for token := range maps.Keys(tokens) {
+			stemmedExactKeywords[token] = true
+		}
+	}
+
 	return &KeywordFilterProcessor{
-		name:            name,
-		stemmedKeywords: stemmedKeywords,
-		mode:            mode,
-		threshold:       threshold,
+		name:                 name,
+		stemmedKeywords:      stemmedKeywords,
+		mode:                 s.Mode,
+		stemmedExactKeywords: stemmedExactKeywords,
+		threshold:            s.KeywordThreshold,
 	}
 }
 
@@ -75,19 +87,28 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, item *core.Item) e
 	content := item.TextContent
 	stemmedContent := analyzeText(content)
 
-	contentMatches := make(map[string]bool)
-	for _, token := range stemmedContent {
-		if _, exists := k.stemmedKeywords[token]; exists {
-			contentMatches[token] = true
+	for token := range maps.Keys(k.stemmedExactKeywords) {
+		_, tileExist := stemmmedTitle[token]
+		_, contentExists := stemmedContent[token]
+
+		if tileExist || contentExists {
+			slog.Debug("KeywordFilterProcessor item matched with the exact keyword", "processor", k.name, "item_id", item.ID)
+			return nil
 		}
 	}
 
+	contentMatches := make(map[string]bool)
 	titleMatches := make(map[string]bool)
 	totalTitleMatches := 0
-	for _, token := range stemmmedTitle {
-		if _, exists := k.stemmedKeywords[token]; exists {
+
+	for token := range maps.Keys(k.stemmedKeywords) {
+		if _, exists := stemmmedTitle[token]; exists {
 			totalTitleMatches++
 			titleMatches[token] = true
+		}
+
+		if _, exists := stemmedContent[token]; exists {
+			contentMatches[token] = true
 		}
 	}
 
@@ -121,16 +142,16 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, item *core.Item) e
 	return nil
 }
 
-func analyzeText(text string) []string {
+func analyzeText(text string) map[string]bool {
 	if text == "" {
 		return nil
 	}
 
 	tokenStream := analyzer.Analyze([]byte(text))
 
-	tokens := make([]string, 0, len(tokenStream))
+	tokens := make(map[string]bool, len(tokenStream))
 	for _, token := range tokenStream {
-		tokens = append(tokens, string(token.Term))
+		tokens[string(token.Term)] = true
 	}
 
 	return tokens

@@ -67,6 +67,7 @@ enabled = false
 order = 3
 [processors.keyword_filter.settings]
 keywords = ["AI", "Go", "Rust", "Encryption", "Database"]
+exact_keywords = ["Show HN"]
 mode = "include"
 keyword_threshold = 0.15
 

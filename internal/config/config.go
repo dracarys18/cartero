@@ -117,6 +117,7 @@ type ScoreFilterSettings struct {
 
 type KeywordFilterSettings struct {
 	Keywords         []string `toml:"keywords"`
+	ExactKeyword     []string `toml:"exact_keywords"`
 	Mode             string   `toml:"mode"`
 	KeywordThreshold float64  `toml:"keyword_threshold"`
 }
