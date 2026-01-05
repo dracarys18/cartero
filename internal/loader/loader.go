@@ -229,10 +229,6 @@ func (l *Loader) createProcessor(name string, cfg config.ProcessorConfig, regist
 		ttl := config.ParseDuration(s.TTL, 24*time.Hour)
 		return processors.NewDedupeProcessor(name, ttl), nil
 
-	case "dedupe_content":
-		s := cfg.Settings.ContentDedupeSettings
-		return processors.NewContentDedupeProcessor(name, s.Field), nil
-
 	case "rate_limit":
 		s := cfg.Settings.RateLimitSettings
 		window := config.ParseDuration(s.Window, 1*time.Minute)

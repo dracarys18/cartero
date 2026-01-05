@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"cartero/internal/utils"
+	"cartero/internal/utils/hash"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -19,7 +19,14 @@ func newItemStore(db *sql.DB) ItemStore {
 }
 
 func (s *itemStore) Store(ctx context.Context, item Item) error {
-	hash := computeHash(item)
+	data := map[string]interface{}{
+		"id":      item.GetID(),
+		"source":  item.GetSource(),
+		"content": item.GetContent(),
+	}
+
+	jsonData, _ := json.Marshal(data)
+	hash := hash.NewHash(jsonData).ComputeHash()
 
 	query := `
 		INSERT INTO items (id, hash, source, timestamp)
@@ -92,15 +99,4 @@ func (s *itemStore) DeleteOlderThan(ctx context.Context, age time.Duration) erro
 	}
 
 	return nil
-}
-
-func computeHash(item Item) string {
-	data := map[string]interface{}{
-		"id":      item.GetID(),
-		"source":  item.GetSource(),
-		"content": item.GetContent(),
-	}
-
-	jsonData, _ := json.Marshal(data)
-	return utils.ComputeHash(jsonData)
 }

@@ -2,13 +2,13 @@ package filters
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
 	"cartero/internal/core"
+	"cartero/internal/utils/hash"
 )
 
 type DedupeProcessor struct {
@@ -64,10 +64,10 @@ func (d *DedupeProcessor) Process(ctx context.Context, item *core.Item) error {
 func (d *DedupeProcessor) hashItem(item *core.Item) string {
 	data, _ := json.Marshal(map[string]interface{}{
 		"id":      item.ID,
+		"source":  item.Source,
 		"content": item.Content,
 	})
-	hash := sha256.Sum256(data)
-	return fmt.Sprintf("%x", hash)
+	return hash.NewHash(data).ComputeHash()
 }
 
 func (d *DedupeProcessor) cleanup() {
@@ -93,57 +93,4 @@ func (d *DedupeProcessor) cleanup() {
 
 func (d *DedupeProcessor) Stop() {
 	close(d.cleanupCh)
-}
-
-type ContentDedupeProcessor struct {
-	name      string
-	seen      map[string]bool
-	mu        sync.RWMutex
-	fieldName string
-}
-
-func NewContentDedupeProcessor(name string, fieldName string) *ContentDedupeProcessor {
-	return &ContentDedupeProcessor{
-		name:      name,
-		seen:      make(map[string]bool),
-		fieldName: fieldName,
-	}
-}
-
-func (c *ContentDedupeProcessor) Name() string {
-	return c.name
-}
-
-func (c *ContentDedupeProcessor) DependsOn() []string {
-	return []string{}
-}
-
-func (c *ContentDedupeProcessor) Process(ctx context.Context, item *core.Item) error {
-	var content string
-	if c.fieldName != "" {
-		if val, ok := item.Metadata[c.fieldName]; ok {
-			content = fmt.Sprintf("%v", val)
-		}
-	} else {
-		data, _ := json.Marshal(item.Content)
-		content = string(data)
-	}
-
-	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(content)))
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if c.seen[hash] {
-		return fmt.Errorf("ContentDedupeProcessor %s: duplicate content detected for item %s", c.name, item.ID)
-	}
-
-	c.seen[hash] = true
-	return nil
-}
-
-func (c *ContentDedupeProcessor) Reset() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.seen = make(map[string]bool)
 }

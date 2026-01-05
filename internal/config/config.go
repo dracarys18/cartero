@@ -99,16 +99,11 @@ type ProcessorSettings struct {
 	SummarySettings
 	ExtractFieldsSettings
 	TemplateSettings
-	ContentDedupeSettings
 	ExtractTextSettings
 }
 
 type DedupeSettings struct {
 	TTL string `toml:"ttl"`
-}
-
-type ContentDedupeSettings struct {
-	Field string `toml:"field"`
 }
 
 type ScoreFilterSettings struct {

@@ -2,7 +2,6 @@ package names
 
 const (
 	Dedupe              = "dedupe"
-	ContentDedupe       = "dedupe_content"
 	ScoreFilter         = "filter_score"
 	KeywordFilter       = "filter_keyword"
 	ExtractText         = "extract_text"
