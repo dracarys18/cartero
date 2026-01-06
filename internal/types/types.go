@@ -102,7 +102,7 @@ type PublishResult struct {
 type Source interface {
 	Name() string
 	Initialize(ctx context.Context) error
-	Fetch(ctx context.Context) (<-chan *Item, <-chan error)
+	Fetch(ctx context.Context, state StateAccessor) (<-chan *Item, <-chan error)
 	Shutdown(ctx context.Context) error
 }
 
@@ -144,7 +144,7 @@ type StateAccessor interface {
 }
 
 type ProcessorChain interface {
-	Execute(ctx context.Context, item *Item) error
+	Execute(ctx context.Context, state StateAccessor, item *Item) error
 	With(name string, processor Processor) ProcessorChain
 	WithMultiple(procs map[string]Processor) ProcessorChain
 }

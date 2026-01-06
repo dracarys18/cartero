@@ -39,10 +39,19 @@ func (d *DedupeProcessor) DependsOn() []string {
 }
 
 func (d *DedupeProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
-	hash := d.hashItem(item)
-
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	hash := d.hashItem(item)
+	store := st.GetStorage().Items()
+
+	exists, err := store.Exists(ctx, item.ID)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		return fmt.Errorf("DedupeProcessor %s: duplicate item %s (exists in storage)", d.name, item.ID)
+	}
 
 	if lastSeen, exists := d.seen[hash]; exists {
 		return fmt.Errorf("DedupeProcessor %s: duplicate item %s (first seen: %v)", d.name, item.ID, lastSeen)

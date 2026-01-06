@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"maps"
 	"sync"
 
 	"cartero/internal/types"
@@ -37,6 +38,7 @@ func (pc *ProcessorChain) WithMultiple(procs map[string]types.Processor) types.P
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
 
+	maps.Copy(pc.processors, procs)
 	for name, proc := range procs {
 		pc.processors[name] = proc
 	}
@@ -44,15 +46,19 @@ func (pc *ProcessorChain) WithMultiple(procs map[string]types.Processor) types.P
 	return pc
 }
 
-func (pc *ProcessorChain) Execute(ctx context.Context, item *types.Item) error {
+func (pc *ProcessorChain) Execute(ctx context.Context, state types.StateAccessor, item *types.Item) error {
+	logger := state.GetLogger()
 	order, err := pc.getExecutionOrder()
 	if err != nil {
 		return err
 	}
 
+	logger.Info("Processor execution order", "order", order)
 	for _, name := range order {
 		processor := pc.processors[name]
+		logger.Info("Executing processor", "processor", name)
 		if err := processor.Process(ctx, pc.state, item); err != nil {
+			logger.Error("Processor failed", "processor", name, "error", err)
 			return fmt.Errorf("processor %s failed: %w", name, err)
 		}
 	}

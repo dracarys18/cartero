@@ -8,59 +8,18 @@ import (
 )
 
 func ProcessCore(ctx context.Context, state types.StateAccessor) error {
-	pipelineIface := state.GetPipeline()
-	pipeline := pipelineIface.(*Pipeline)
-
-	chainIface := state.GetChain()
-	chain := chainIface.(types.ProcessorChain)
+	logger := state.GetLogger()
+	pipeline := state.GetPipeline().(*Pipeline)
 
 	registry := state.GetRegistry()
 
+	logger.Info("Initializing components...")
 	if err := registry.InitializeAll(ctx); err != nil {
 		return fmt.Errorf("component initialization failed: %w", err)
 	}
 
-	for _, route := range pipeline.GetRoutes() {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
+	logger.Info("Initializing pipeline...")
 
-		items, errs := route.Source.Fetch(ctx)
-
-		for {
-			select {
-			case item, ok := <-items:
-				if !ok {
-					items = nil
-					continue
-				}
-
-				if err := chain.Execute(ctx, item); err != nil {
-					continue
-				}
-
-				for _, target := range route.Targets {
-					target.Publish(ctx, item)
-				}
-
-			case err, ok := <-errs:
-				if !ok {
-					errs = nil
-					break
-				}
-				_ = err
-
-			case <-ctx.Done():
-				return ctx.Err()
-			}
-
-			if items == nil && errs == nil {
-				break
-			}
-		}
-	}
-
+	pipeline.Run(ctx, state)
 	return nil
 }

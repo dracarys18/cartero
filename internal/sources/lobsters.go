@@ -62,7 +62,7 @@ func (l *LobstersSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (l *LobstersSource) Fetch(ctx context.Context) (<-chan *types.Item, <-chan error) {
+func (l *LobstersSource) Fetch(ctx context.Context, state types.StateAccessor) (<-chan *types.Item, <-chan error) {
 	itemChan := make(chan *types.Item)
 	errChan := make(chan error, 1)
 

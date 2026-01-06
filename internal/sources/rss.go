@@ -43,7 +43,7 @@ func (r *RSSSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (r *RSSSource) Fetch(ctx context.Context) (<-chan *types.Item, <-chan error) {
+func (r *RSSSource) Fetch(ctx context.Context, state types.StateAccessor) (<-chan *types.Item, <-chan error) {
 	itemChan := make(chan *types.Item)
 	errChan := make(chan error, 1)
 

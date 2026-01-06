@@ -1,7 +1,6 @@
 package core
 
 import (
-	"cartero/internal/storage"
 	"cartero/internal/types"
 	"cartero/internal/utils"
 	"context"
@@ -22,7 +21,6 @@ type Pipeline struct {
 	processors         []types.Processor
 	processorConfigs   map[string]types.ProcessorConfig
 	processorExecutor  *ProcessorExecutor
-	itemStore          storage.ItemStore
 	initializedTargets map[string]bool
 	mu                 sync.RWMutex
 	running            bool
@@ -36,13 +34,12 @@ func (p *Pipeline) GetRoutes() []SourceRoute {
 	return p.routes
 }
 
-func NewPipeline(itemStore storage.ItemStore) *Pipeline {
+func NewPipeline() *Pipeline {
 	return &Pipeline{
 		routes:             make([]SourceRoute, 0),
 		processors:         make([]types.Processor, 0),
 		processorConfigs:   make(map[string]types.ProcessorConfig),
 		processorExecutor:  NewProcessorExecutor(),
-		itemStore:          itemStore,
 		initializedTargets: make(map[string]bool),
 		running:            false,
 	}
@@ -105,7 +102,7 @@ func (p *Pipeline) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (p *Pipeline) Run(ctx context.Context) error {
+func (p *Pipeline) Run(ctx context.Context, state types.StateAccessor) error {
 	p.mu.Lock()
 	if p.running {
 		p.mu.Unlock()
@@ -130,7 +127,7 @@ func (p *Pipeline) Run(ctx context.Context) error {
 		slog.Debug("Launching goroutine for source", "source", route.Source.Name())
 		go func(r SourceRoute) {
 			defer wg.Done()
-			if err := p.processSource(ctx, r); err != nil {
+			if err := p.processSource(ctx, r, state); err != nil {
 				slog.Error("Error processing source", "source", r.Source.Name(), "error", err)
 			} else {
 				slog.Info("Source completed successfully", "source", r.Source.Name())
@@ -142,10 +139,9 @@ func (p *Pipeline) Run(ctx context.Context) error {
 	return nil
 }
 
-func (p *Pipeline) processSource(ctx context.Context, route SourceRoute) error {
+func (p *Pipeline) processSource(ctx context.Context, route SourceRoute, state types.StateAccessor) error {
 	slog.Debug("Source starting to fetch items", "source", route.Source.Name())
-	itemChan, errChan := route.Source.Fetch(ctx)
-
+	itemChan, errChan := route.Source.Fetch(ctx, state)
 	itemCount := 0
 	for {
 		select {
@@ -162,28 +158,21 @@ func (p *Pipeline) processSource(ctx context.Context, route SourceRoute) error {
 			}
 
 			itemCount++
-			exists, err := p.itemStore.Exists(ctx, item.ID)
-			if err != nil {
-				return err
-			}
-			if !exists {
-				if err := p.itemStore.Store(ctx, item); err != nil {
-					slog.Error("Error storing item", "source", route.Source.Name(), "item_id", item.ID, "error", err)
-					return err
-				}
-				slog.Debug("Stored new item", "source", route.Source.Name(), "item_id", item.ID)
-			}
 
-			if err := p.processItem(ctx, item, route); err != nil {
+			if err := p.processItem(ctx, state, item, route); err != nil {
 				return err
 			}
 		}
 	}
 }
 
-func (p *Pipeline) processItem(ctx context.Context, item *types.Item, route SourceRoute) error {
+func (p *Pipeline) processItem(ctx context.Context, state types.StateAccessor, item *types.Item, route SourceRoute) error {
+	store := state.GetStorage()
+	chain := state.GetChain()
+	logger := state.GetLogger()
+
 	filterFunc := func(target types.Target) bool {
-		published, err := p.itemStore.IsPublished(ctx, item.ID, target.Name())
+		published, err := store.Items().IsPublished(ctx, item.ID, target.Name())
 		if err != nil {
 			slog.Error("Error checking if item published", "item_id", item.ID, "target", target.Name(), "error", err)
 			return false
@@ -201,21 +190,26 @@ func (p *Pipeline) processItem(ctx context.Context, item *types.Item, route Sour
 		return nil
 	}
 
-	slog.Debug("Running processors", "item_id", item.ID, "count", len(p.processors))
+	logger.Info("Running processors", "item_id", item.ID, "count", len(p.processors))
 
-	err := p.processorExecutor.ExecuteProcessors(ctx, item)
-	if err != nil {
-		slog.Debug("Item filtered out during processing", "item_id", item.ID, "error", err)
-		return nil
+	fmt.Printf("%v", chain)
+	error := chain.Execute(ctx, state, item)
+	if error != nil {
+		if err := store.Items().Store(ctx, item); err != nil {
+			slog.Error("Error storing item", "source", route.Source.Name(), "item_id", item.ID, "error", err)
+			return err
+		}
+		slog.Debug("Stored new item", "source", route.Source.Name(), "item_id", item.ID)
 	}
 
 	slog.Debug("All processors completed, publishing to targets", "item_id", item.ID, "targets", len(route.Targets))
-	return p.publishToTargets(ctx, item, route)
+	return p.publishToTargets(ctx, state, item, route)
 }
 
-func (p *Pipeline) publishToTargets(ctx context.Context, item *types.Item, route SourceRoute) error {
+func (p *Pipeline) publishToTargets(ctx context.Context, state types.StateAccessor, item *types.Item, route SourceRoute) error {
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(route.Targets))
+	store := state.GetStorage()
 
 	for i, target := range route.Targets {
 		slog.Debug("Queuing item for target", "item_id", item.ID, "target", target.Name())
@@ -239,7 +233,7 @@ func (p *Pipeline) publishToTargets(ctx context.Context, item *types.Item, route
 
 			slog.Info("Successfully published item to target", "item_id", item.ID, "target", t.Name())
 
-			if err := p.itemStore.MarkPublished(ctx, item.ID, t.Name()); err != nil {
+			if err := store.Items().MarkPublished(ctx, item.ID, t.Name()); err != nil {
 				slog.Error("Error marking item as published", "item_id", item.ID, "target", t.Name(), "error", err)
 				errChan <- err
 			}

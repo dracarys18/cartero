@@ -122,7 +122,7 @@ func (s *State) buildPlatformComponent() *components.PlatformComponent {
 }
 
 func (s *State) buildPipeline(ctx context.Context) (*core.Pipeline, error) {
-	pipeline := core.NewPipeline(s.Storage.Items())
+	pipeline := core.NewPipeline()
 
 	for sourceName, sourceCfg := range s.Config.Sources {
 		if !sourceCfg.Enabled {
@@ -173,6 +173,7 @@ func (s *State) buildPipeline(ctx context.Context) (*core.Pipeline, error) {
 func (s *State) buildProcessorChain(ctx context.Context) types.ProcessorChain {
 	chain := middleware.New(s)
 
+	fmt.Println("Building processor chain... %v", s.Config.Processors)
 	for name, procCfg := range s.Config.Processors {
 		if !procCfg.Enabled {
 			continue

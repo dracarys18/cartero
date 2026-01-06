@@ -58,7 +58,7 @@ func (h *HackerNewsSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (h *HackerNewsSource) Fetch(ctx context.Context) (<-chan *types.Item, <-chan error) {
+func (h *HackerNewsSource) Fetch(ctx context.Context, state types.StateAccessor) (<-chan *types.Item, <-chan error) {
 	itemChan := make(chan *types.Item)
 	errChan := make(chan error, 1)
 
