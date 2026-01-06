@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"cartero/internal/core"
+	"cartero/internal/types"
 )
 
 type LobstersSource struct {
@@ -62,8 +62,8 @@ func (l *LobstersSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (l *LobstersSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan error) {
-	itemChan := make(chan *core.Item)
+func (l *LobstersSource) Fetch(ctx context.Context) (<-chan *types.Item, <-chan error) {
+	itemChan := make(chan *types.Item)
 	errChan := make(chan error, 1)
 
 	go func() {
@@ -101,7 +101,7 @@ func (l *LobstersSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan e
 
 				createdAt, _ := time.Parse(time.RFC3339, post.CreatedAt)
 
-				item := &core.Item{
+				item := &types.Item{
 					ID:        fmt.Sprintf("lobsters_%s", post.ShortID),
 					Content:   post,
 					Source:    l.name,

@@ -1,6 +1,7 @@
-package storage
+package sqlite
 
 import (
+	"cartero/internal/storage"
 	"context"
 	"database/sql"
 	"fmt"
@@ -12,7 +13,7 @@ type feedStore struct {
 	db *sql.DB
 }
 
-func newFeedStore(db *sql.DB) FeedStore {
+func newFeedStore(db *sql.DB) storage.FeedStore {
 	return &feedStore{db: db}
 }
 
@@ -33,7 +34,7 @@ func (s *feedStore) InsertEntry(ctx context.Context, id, title, link, descriptio
 	return nil
 }
 
-func (s *feedStore) ListRecentEntries(ctx context.Context, limit int) ([]FeedEntry, error) {
+func (s *feedStore) ListRecentEntries(ctx context.Context, limit int) ([]storage.FeedEntry, error) {
 	query := `
 		SELECT id, title, link, description, content, author, source, published_at, created_at
 		FROM feed_entries
@@ -47,9 +48,9 @@ func (s *feedStore) ListRecentEntries(ctx context.Context, limit int) ([]FeedEnt
 	}
 	defer rows.Close()
 
-	entries := make([]FeedEntry, 0)
+	entries := make([]storage.FeedEntry, 0, limit)
 	for rows.Next() {
-		var entry FeedEntry
+		var entry storage.FeedEntry
 		var publishedAt sql.NullTime
 
 		err := rows.Scan(

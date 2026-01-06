@@ -2,6 +2,7 @@ package core
 
 import (
 	"cartero/internal/storage"
+	"cartero/internal/types"
 	"cartero/internal/utils"
 	"context"
 	"fmt"
@@ -12,14 +13,14 @@ import (
 )
 
 type SourceRoute struct {
-	Source  Source
-	Targets []Target
+	Source  types.Source
+	Targets []types.Target
 }
 
 type Pipeline struct {
 	routes             []SourceRoute
-	processors         []Processor
-	processorConfigs   map[string]ProcessorConfig
+	processors         []types.Processor
+	processorConfigs   map[string]types.ProcessorConfig
 	processorExecutor  *ProcessorExecutor
 	itemStore          storage.ItemStore
 	initializedTargets map[string]bool
@@ -27,11 +28,19 @@ type Pipeline struct {
 	running            bool
 }
 
+var Routes []SourceRoute
+
+func (p *Pipeline) GetRoutes() []SourceRoute {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	return p.routes
+}
+
 func NewPipeline(itemStore storage.ItemStore) *Pipeline {
 	return &Pipeline{
 		routes:             make([]SourceRoute, 0),
-		processors:         make([]Processor, 0),
-		processorConfigs:   make(map[string]ProcessorConfig),
+		processors:         make([]types.Processor, 0),
+		processorConfigs:   make(map[string]types.ProcessorConfig),
 		processorExecutor:  NewProcessorExecutor(),
 		itemStore:          itemStore,
 		initializedTargets: make(map[string]bool),
@@ -46,14 +55,14 @@ func (p *Pipeline) AddRoute(route SourceRoute) *Pipeline {
 	return p
 }
 
-func (p *Pipeline) AddProcessor(processor Processor) *Pipeline {
+func (p *Pipeline) AddProcessor(processor types.Processor) *Pipeline {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.processors = append(p.processors, processor)
 	return p
 }
 
-func (p *Pipeline) AddProcessorWithConfig(processor Processor, config ProcessorConfig) *Pipeline {
+func (p *Pipeline) AddProcessorWithConfig(processor types.Processor, config types.ProcessorConfig) *Pipeline {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.processors = append(p.processors, processor)
@@ -172,8 +181,8 @@ func (p *Pipeline) processSource(ctx context.Context, route SourceRoute) error {
 	}
 }
 
-func (p *Pipeline) processItem(ctx context.Context, item *Item, route SourceRoute) error {
-	filterFunc := func(target Target) bool {
+func (p *Pipeline) processItem(ctx context.Context, item *types.Item, route SourceRoute) error {
+	filterFunc := func(target types.Target) bool {
 		published, err := p.itemStore.IsPublished(ctx, item.ID, target.Name())
 		if err != nil {
 			slog.Error("Error checking if item published", "item_id", item.ID, "target", target.Name(), "error", err)
@@ -204,14 +213,14 @@ func (p *Pipeline) processItem(ctx context.Context, item *Item, route SourceRout
 	return p.publishToTargets(ctx, item, route)
 }
 
-func (p *Pipeline) publishToTargets(ctx context.Context, item *Item, route SourceRoute) error {
+func (p *Pipeline) publishToTargets(ctx context.Context, item *types.Item, route SourceRoute) error {
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(route.Targets))
 
 	for i, target := range route.Targets {
 		slog.Debug("Queuing item for target", "item_id", item.ID, "target", target.Name())
 		wg.Add(1)
-		go func(t Target, idx int) {
+		go func(t types.Target, idx int) {
 			defer wg.Done()
 
 			if idx > 0 {
@@ -251,7 +260,7 @@ func (p *Pipeline) publishToTargets(ctx context.Context, item *Item, route Sourc
 	return nil
 }
 
-func (p *Pipeline) publishWithRetry(ctx context.Context, target Target, item *Item) error {
+func (p *Pipeline) publishWithRetry(ctx context.Context, target types.Target, item *types.Item) error {
 	maxRetries := 3
 	var lastErr error
 

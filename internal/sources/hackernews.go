@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"cartero/internal/core"
+	"cartero/internal/types"
 )
 
 type HackerNewsSource struct {
@@ -58,8 +58,8 @@ func (h *HackerNewsSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (h *HackerNewsSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan error) {
-	itemChan := make(chan *core.Item)
+func (h *HackerNewsSource) Fetch(ctx context.Context) (<-chan *types.Item, <-chan error) {
+	itemChan := make(chan *types.Item)
 	errChan := make(chan error, 1)
 
 	go func() {
@@ -95,7 +95,7 @@ func (h *HackerNewsSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan
 					continue
 				}
 
-				item := &core.Item{
+				item := &types.Item{
 					ID:        fmt.Sprintf("hn_%d", story.ID),
 					Source:    h.name,
 					Timestamp: time.Unix(story.Time, 0),

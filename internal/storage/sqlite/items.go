@@ -1,6 +1,7 @@
-package storage
+package sqlite
 
 import (
+	"cartero/internal/storage"
 	"cartero/internal/utils/hash"
 	"context"
 	"database/sql"
@@ -14,11 +15,11 @@ type itemStore struct {
 	db *sql.DB
 }
 
-func newItemStore(db *sql.DB) ItemStore {
+func newItemStore(db *sql.DB) storage.ItemStore {
 	return &itemStore{db: db}
 }
 
-func (s *itemStore) Store(ctx context.Context, item Item) error {
+func (s *itemStore) Store(ctx context.Context, item storage.Item) error {
 	data := map[string]interface{}{
 		"id":      item.GetID(),
 		"source":  item.GetSource(),

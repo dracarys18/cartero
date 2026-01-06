@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"cartero/internal/core"
+	"cartero/internal/types"
 )
 
 type LessWrongSource struct {
@@ -69,8 +69,8 @@ func (l *LessWrongSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (l *LessWrongSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan error) {
-	itemChan := make(chan *core.Item)
+func (l *LessWrongSource) Fetch(ctx context.Context) (<-chan *types.Item, <-chan error) {
+	itemChan := make(chan *types.Item)
 	errChan := make(chan error, 1)
 
 	go func() {
@@ -99,7 +99,7 @@ func (l *LessWrongSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan 
 					postURL = fmt.Sprintf("https://www.lesswrong.com/posts/%s/%s", post.ID, post.Slug)
 				}
 
-				item := &core.Item{
+				item := &types.Item{
 					ID:        fmt.Sprintf("lw_%s", post.ID),
 					Source:    l.name,
 					Timestamp: post.PostedAt,

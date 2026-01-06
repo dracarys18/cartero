@@ -1,8 +1,8 @@
 package processors
 
 import (
-	"cartero/internal/core"
 	"cartero/internal/processors/names"
+	"cartero/internal/types"
 	"cartero/internal/utils"
 	"context"
 	"fmt"
@@ -10,14 +10,12 @@ import (
 )
 
 type ExtractText struct {
-	name  string
-	limit int
+	name string
 }
 
-func NewExtractProcessor(name string, limit int) *ExtractText {
+func NewExtractProcessor(name string) *ExtractText {
 	return &ExtractText{
-		name:  name,
-		limit: limit,
+		name: name,
 	}
 }
 
@@ -31,7 +29,10 @@ func (e *ExtractText) DependsOn() []string {
 	}
 }
 
-func (e *ExtractText) Process(ctx context.Context, item *core.Item) error {
+func (e *ExtractText) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
+	cfg := st.GetConfig().Processors[e.name].Settings.ExtractTextSettings
+	limit := cfg.Limit
+
 	url, exists := item.GetMetadata("url")
 	if !exists {
 		return nil
@@ -54,7 +55,7 @@ func (e *ExtractText) Process(ctx context.Context, item *core.Item) error {
 		req.Header.Set("Sec-Fetch-Site", "cross-site")
 	}
 
-	article, err := utils.GetArticleText(urlStr, e.limit, httpMod)
+	article, err := utils.GetArticleText(urlStr, limit, httpMod)
 	if err != nil {
 		return fmt.Errorf("failed to extract article text: %w", err)
 	}

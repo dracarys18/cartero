@@ -7,11 +7,12 @@ import (
 	"sync"
 
 	"cartero/internal/graph"
+	"cartero/internal/types"
 )
 
 type ProcessorNode struct {
 	Name      string
-	Processor Processor
+	Processor types.Processor
 	DependsOn []string
 }
 
@@ -35,7 +36,7 @@ func NewProcessorExecutor() *ProcessorExecutor {
 	}
 }
 
-func (pe *ProcessorExecutor) AddProcessor(typ string, processor Processor) {
+func (pe *ProcessorExecutor) AddProcessor(typ string, processor types.Processor) {
 	pe.mu.Lock()
 	defer pe.mu.Unlock()
 
@@ -69,7 +70,7 @@ func (pe *ProcessorExecutor) Initialize() error {
 	return nil
 }
 
-func (pe *ProcessorExecutor) ExecuteProcessors(ctx context.Context, item *Item) error {
+func (pe *ProcessorExecutor) ExecuteProcessors(ctx context.Context, item *types.Item) error {
 	pe.mu.RLock()
 	executionOrder := pe.executionOrder
 	nodes := make(map[string]*ProcessorNode)
@@ -80,7 +81,7 @@ func (pe *ProcessorExecutor) ExecuteProcessors(ctx context.Context, item *Item) 
 		node := nodes[processorName]
 		slog.Debug("Executing processor", "processor", node.Name, "depends_on", node.DependsOn)
 
-		err := node.Processor.Process(ctx, item)
+		err := node.Processor.Process(ctx, nil, item)
 		if err != nil {
 			slog.Warn("Processor stopped processing for item", "processor", node.Name, "item_id", item.ID, "error", err)
 			return err

@@ -5,13 +5,14 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"cartero/internal/core"
-	"cartero/internal/loader"
+	"cartero/internal/state"
 )
 
 var (
@@ -42,28 +43,37 @@ func main() {
 func run(ctx context.Context) error {
 	fmt.Printf("Loading configuration from: %s\n", *configPath)
 
-	state, err := loader.LoadAndBuild(ctx, *configPath)
-	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+	appState := state.New(slog.Default())
+	if err := appState.Initialize(ctx, *configPath); err != nil {
+		return fmt.Errorf("failed to initialize state: %w", err)
 	}
 
-	interval, err := time.ParseDuration(state.Config.Bot.Interval)
+	cfg := appState.GetConfig()
+	registry := appState.GetRegistry()
+	pipeline := appState.GetPipeline().(*core.Pipeline)
+	st := appState.GetStorage()
+
+	interval, err := time.ParseDuration(cfg.Bot.Interval)
 	if err != nil {
 		return fmt.Errorf("invalid bot interval: %w", err)
 	}
 
 	shutdownFn := func() error {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-		return state.Registry.CloseAll(shutdownCtx)
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer shutdownCancel()
+		if err := registry.CloseAll(shutdownCtx); err != nil {
+			return err
+		}
+		return st.Close(shutdownCtx)
 	}
 
 	bot := core.NewBot(core.BotConfig{
-		Name:       state.Config.Bot.Name,
-		Pipeline:   state.Pipeline,
+		Name:       cfg.Bot.Name,
+		Pipeline:   pipeline,
 		Interval:   interval,
-		RunOnce:    state.Config.Bot.RunOnce,
+		RunOnce:    cfg.Bot.RunOnce,
 		ShutdownFn: shutdownFn,
+		State:      appState,
 	})
 
 	fmt.Printf("Starting bot: %s\n", bot.Name())

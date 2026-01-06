@@ -1,6 +1,7 @@
-package storage
+package sqlite
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log/slog"
@@ -9,15 +10,22 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pressly/goose/v3"
+
+	"cartero/internal/storage"
 )
 
-type Store struct {
-	items ItemStore
-	feeds FeedStore
+func init() {
+	storage.RegisterFactory("sqlite", New)
 }
 
-func New(dbPath string) (*Store, error) {
-	slog.Info("Initializing storage", "path", dbPath)
+type SQLiteStorage struct {
+	conn  *sql.DB
+	items storage.ItemStore
+	feeds storage.FeedStore
+}
+
+func New(dbPath string) (storage.StorageInterface, error) {
+	slog.Info("Initializing SQLite storage", "path", dbPath)
 
 	dbPath = fmt.Sprintf("file:%s?cache=shared&mode=rwc&_journal_mode=WAL", dbPath)
 	conn, err := sql.Open("sqlite3", dbPath)
@@ -37,7 +45,8 @@ func New(dbPath string) (*Store, error) {
 
 	slog.Info("Storage initialized successfully")
 
-	return &Store{
+	return &SQLiteStorage{
+		conn:  conn,
 		items: newItemStore(conn),
 		feeds: newFeedStore(conn),
 	}, nil
@@ -67,10 +76,21 @@ func runMigrations(conn *sql.DB) error {
 	return nil
 }
 
-func (s *Store) Items() ItemStore {
+func (s *SQLiteStorage) GetConnection() *sql.DB {
+	return s.conn
+}
+
+func (s *SQLiteStorage) Items() storage.ItemStore {
 	return s.items
 }
 
-func (s *Store) Feed() FeedStore {
+func (s *SQLiteStorage) Feed() storage.FeedStore {
 	return s.feeds
+}
+
+func (s *SQLiteStorage) Close(ctx context.Context) error {
+	if s.conn != nil {
+		return s.conn.Close()
+	}
+	return nil
 }

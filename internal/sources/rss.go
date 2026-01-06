@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"cartero/internal/core"
+	"cartero/internal/types"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/mmcdole/gofeed"
@@ -43,8 +43,8 @@ func (r *RSSSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (r *RSSSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan error) {
-	itemChan := make(chan *core.Item)
+func (r *RSSSource) Fetch(ctx context.Context) (<-chan *types.Item, <-chan error) {
+	itemChan := make(chan *types.Item)
 	errChan := make(chan error, 1)
 
 	go func() {
@@ -93,7 +93,7 @@ func (r *RSSSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan error)
 	return itemChan, errChan
 }
 
-func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *core.Item {
+func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *types.Item {
 	timestamp := time.Now()
 	if feedItem.PublishedParsed != nil {
 		timestamp = *feedItem.PublishedParsed
@@ -149,7 +149,7 @@ func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *core.Item {
 		}
 	}
 
-	return &core.Item{
+	return &types.Item{
 		ID:        fmt.Sprintf("rss_%s", sanitizeID(itemID)),
 		Content:   feedItem,
 		Source:    r.name,

@@ -1,7 +1,11 @@
-package core
+package types
 
 import (
+	"cartero/internal/components"
+	"cartero/internal/config"
+	"cartero/internal/storage"
 	"context"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -104,7 +108,7 @@ type Source interface {
 
 type Processor interface {
 	Name() string
-	Process(ctx context.Context, item *Item) error
+	Process(ctx context.Context, s StateAccessor, item *Item) error
 	DependsOn() []string
 }
 
@@ -128,4 +132,19 @@ type Storage interface {
 	MarkPublished(ctx context.Context, itemID, target string) error
 	IsPublished(ctx context.Context, itemID, target string) (bool, error)
 	Close() error
+}
+
+type StateAccessor interface {
+	GetConfig() *config.Config
+	GetStorage() storage.StorageInterface
+	GetRegistry() *components.Registry
+	GetLogger() *slog.Logger
+	GetPipeline() interface{}
+	GetChain() ProcessorChain
+}
+
+type ProcessorChain interface {
+	Execute(ctx context.Context, item *Item) error
+	With(name string, processor Processor) ProcessorChain
+	WithMultiple(procs map[string]Processor) ProcessorChain
 }

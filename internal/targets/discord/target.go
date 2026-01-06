@@ -3,8 +3,8 @@ package discord
 import (
 	"bytes"
 	"cartero/internal/components"
-	"cartero/internal/core"
 	"cartero/internal/platforms"
+	"cartero/internal/types"
 	"cartero/internal/utils"
 	"context"
 	"encoding/json"
@@ -57,7 +57,7 @@ func (d *Target) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (d *Target) Publish(ctx context.Context, item *core.Item) (*core.PublishResult, error) {
+func (d *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishResult, error) {
 	slog.Debug("Discord target publishing item", "target", d.name, "item_id", item.ID, "channel_type", d.channelType, "channel_id", d.channelID)
 
 	var messageID string
@@ -73,7 +73,7 @@ func (d *Target) Publish(ctx context.Context, item *core.Item) (*core.PublishRes
 	}
 
 	if err != nil {
-		return &core.PublishResult{
+		return &types.PublishResult{
 			Success:   false,
 			Target:    d.name,
 			ItemID:    item.ID,
@@ -82,7 +82,7 @@ func (d *Target) Publish(ctx context.Context, item *core.Item) (*core.PublishRes
 		}, err
 	}
 
-	return &core.PublishResult{
+	return &types.PublishResult{
 		Success:   true,
 		Target:    d.name,
 		ItemID:    item.ID,
@@ -94,7 +94,7 @@ func (d *Target) Publish(ctx context.Context, item *core.Item) (*core.PublishRes
 	}, nil
 }
 
-func (d *Target) createForumThread(item *core.Item) (string, error) {
+func (d *Target) createForumThread(item *types.Item) (string, error) {
 	title := "Untitled"
 	if t, ok := item.Metadata["title"].(string); ok {
 		title = t
@@ -180,7 +180,7 @@ func (d *Target) createForumThread(item *core.Item) (string, error) {
 	return thread.ID, nil
 }
 
-func (d *Target) sendMessage(item *core.Item) (string, error) {
+func (d *Target) sendMessage(item *types.Item) (string, error) {
 	embed, err := d.buildEmbed(item)
 	if err != nil {
 		return "", fmt.Errorf("failed to build embed: %w", err)
@@ -196,7 +196,7 @@ func (d *Target) sendMessage(item *core.Item) (string, error) {
 	return msg.ID, nil
 }
 
-func (d *Target) buildEmbed(item *core.Item) (*discordgo.MessageEmbed, error) {
+func (d *Target) buildEmbed(item *types.Item) (*discordgo.MessageEmbed, error) {
 	var buf bytes.Buffer
 	if err := d.template.Execute(&buf, item); err != nil {
 		return nil, fmt.Errorf("template execution error: %w", err)

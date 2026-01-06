@@ -6,23 +6,20 @@ import (
 	"sync"
 	"time"
 
-	"cartero/internal/core"
+	"cartero/internal/config"
+	"cartero/internal/types"
 )
 
 type RateLimitProcessor struct {
 	name        string
-	limit       int
-	window      time.Duration
 	counter     int
 	windowStart time.Time
 	mu          sync.Mutex
 }
 
-func NewRateLimitProcessor(name string, limit int, window time.Duration) *RateLimitProcessor {
+func NewRateLimitProcessor(name string) *RateLimitProcessor {
 	return &RateLimitProcessor{
 		name:        name,
-		limit:       limit,
-		window:      window,
 		counter:     0,
 		windowStart: time.Now(),
 	}
@@ -36,19 +33,23 @@ func (r *RateLimitProcessor) DependsOn() []string {
 	return []string{}
 }
 
-func (r *RateLimitProcessor) Process(ctx context.Context, item *core.Item) error {
+func (r *RateLimitProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
+	cfg := st.GetConfig().Processors[r.name].Settings.RateLimitSettings
+	window := config.ParseDuration(cfg.Window, 1*time.Minute)
+	limit := cfg.Limit
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	now := time.Now()
 
-	if now.Sub(r.windowStart) >= r.window {
+	if now.Sub(r.windowStart) >= window {
 		r.counter = 0
 		r.windowStart = now
 	}
 
-	if r.counter >= r.limit {
-		return fmt.Errorf("RateLimitProcessor %s: rate limit exceeded (%d/%d)", r.name, r.counter, r.limit)
+	if r.counter >= limit {
+		return fmt.Errorf("RateLimitProcessor %s: rate limit exceeded (%d/%d)", r.name, r.counter, limit)
 	}
 
 	r.counter++
@@ -57,19 +58,14 @@ func (r *RateLimitProcessor) Process(ctx context.Context, item *core.Item) error
 
 type TokenBucketProcessor struct {
 	name       string
-	capacity   int
 	tokens     int
-	refillRate time.Duration
 	lastRefill time.Time
 	mu         sync.Mutex
 }
 
-func NewTokenBucketProcessor(name string, capacity int, refillRate time.Duration) *TokenBucketProcessor {
+func NewTokenBucketProcessor(name string) *TokenBucketProcessor {
 	return &TokenBucketProcessor{
 		name:       name,
-		capacity:   capacity,
-		tokens:     capacity,
-		refillRate: refillRate,
 		lastRefill: time.Now(),
 	}
 }
@@ -82,21 +78,24 @@ func (t *TokenBucketProcessor) DependsOn() []string {
 	return []string{}
 }
 
-func (t *TokenBucketProcessor) Process(ctx context.Context, item *core.Item) error {
+func (t *TokenBucketProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
+	cfg := st.GetConfig().Processors[t.name].Settings.TokenBucketSettings
+	capacity := cfg.Capacity
+	refillRate := config.ParseDuration(cfg.RefillRate, 1*time.Second)
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	now := time.Now()
 	elapsed := now.Sub(t.lastRefill)
 
-	tokensToAdd := int(elapsed / t.refillRate)
+	tokensToAdd := int(elapsed / refillRate)
 	if tokensToAdd > 0 {
-		t.tokens = min(t.capacity, t.tokens+tokensToAdd)
+		t.tokens = min(capacity, t.tokens+tokensToAdd)
 		t.lastRefill = now
 	}
 
 	if t.tokens <= 0 {
-		// No tokens available, filter it out
 		return fmt.Errorf("TokenBucketProcessor %s: no tokens available (tokens: %d)", t.name, t.tokens)
 	}
 

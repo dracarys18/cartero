@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"cartero/internal/components"
-	"cartero/internal/core"
 	"cartero/internal/storage"
+	"cartero/internal/types"
 )
 
 type Target struct {
@@ -31,7 +31,7 @@ func (t *Target) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (t *Target) Publish(ctx context.Context, item *core.Item) (*core.PublishResult, error) {
+func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishResult, error) {
 	title := "Untitled"
 	if t, ok := item.Metadata["title"].(string); ok {
 		title = t
@@ -67,7 +67,7 @@ func (t *Target) Publish(ctx context.Context, item *core.Item) (*core.PublishRes
 
 	slog.Debug("Feed target inserted entry", "target", t.name, "item_id", item.ID)
 
-	return &core.PublishResult{
+	return &types.PublishResult{
 		Success:   true,
 		Target:    t.name,
 		ItemID:    item.ID,
