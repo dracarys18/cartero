@@ -3,7 +3,6 @@ package feed
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"sort"
 	"time"
@@ -57,14 +56,11 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 
 	go func() {
-		slog.Info("Feed server starting on port", "server", s.name, "port", s.config.Port)
 		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("Feed server error", "server", s.name, "error", err)
 		}
 	}()
 
 	time.Sleep(100 * time.Millisecond)
-	slog.Info("Feed server listening", "server", s.name, "url", fmt.Sprintf("http://localhost:%s", s.config.Port))
 	return nil
 }
 
@@ -73,7 +69,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 		if err := s.server.Shutdown(shutdownCtx); err != nil {
-			slog.Error("Feed server shutdown error", "server", s.name, "error", err)
 		}
 	}
 	return nil
@@ -82,7 +77,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 func (s *Server) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
 	entries, err := s.feedStore.ListRecentEntries(r.Context(), s.config.FeedSize)
 	if err != nil {
-		slog.Error("Feed server failed to list entries", "server", s.name, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Error: %v", err)
 		return
@@ -91,7 +85,6 @@ func (s *Server) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
 	feed := s.buildFeed(entries)
 	rss, err := feed.ToRss()
 	if err != nil {
-		slog.Error("Feed server failed to generate RSS", "server", s.name, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -104,7 +97,6 @@ func (s *Server) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleAtomFeed(w http.ResponseWriter, r *http.Request) {
 	entries, err := s.feedStore.ListRecentEntries(r.Context(), s.config.FeedSize)
 	if err != nil {
-		slog.Error("Feed server failed to list entries", "server", s.name, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Error: %v", err)
 		return
@@ -113,7 +105,6 @@ func (s *Server) handleAtomFeed(w http.ResponseWriter, r *http.Request) {
 	feed := s.buildFeed(entries)
 	atom, err := feed.ToAtom()
 	if err != nil {
-		slog.Error("Feed server failed to generate Atom", "server", s.name, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -126,7 +117,6 @@ func (s *Server) handleAtomFeed(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleJSONFeed(w http.ResponseWriter, r *http.Request) {
 	entries, err := s.feedStore.ListRecentEntries(r.Context(), s.config.FeedSize)
 	if err != nil {
-		slog.Error("Feed server failed to list entries", "server", s.name, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Error: %v", err)
 		return
@@ -135,7 +125,6 @@ func (s *Server) handleJSONFeed(w http.ResponseWriter, r *http.Request) {
 	feed := s.buildFeed(entries)
 	jsonStr, err := feed.ToJSON()
 	if err != nil {
-		slog.Error("Feed server failed to generate JSON", "server", s.name, "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

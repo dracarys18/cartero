@@ -3,7 +3,6 @@ package filters
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"maps"
 	"slices"
 	"strings"
@@ -51,6 +50,7 @@ func (k *KeywordFilterProcessor) DependsOn() []string {
 func (k *KeywordFilterProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
 	stateConfig := st.GetConfig()
 	cfg := stateConfig.Processors[k.name].Settings.KeywordFilterSettings
+	logger := st.GetLogger()
 
 	stemmedKeywords := make(map[string]bool, len(cfg.Keywords))
 	for _, kw := range cfg.Keywords {
@@ -80,7 +80,7 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, st types.StateAcce
 
 	for exactKeyword := range slices.Values(exactKeywords) {
 		if strings.Contains(title, exactKeyword) || strings.Contains(content, exactKeyword) {
-			slog.Debug("KeywordFilterProcessor item matched with the exact keyword", "processor", k.name, "item_id", item.ID, "keyword", exactKeyword)
+			logger.Debug("KeywordFilterProcessor item matched with the exact keyword", "processor", k.name, "item_id", item.ID, "keyword", exactKeyword)
 			return nil
 		}
 	}
@@ -105,7 +105,7 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, st types.StateAcce
 	matches := contentScore >= cfg.KeywordThreshold
 	if totalTitleMatches >= 1 {
 		matches = true
-		slog.Info("KeywordFilterProcessor item matched due to title keyword presence", "processor", k.name, "item_id", item.ID, "title_matches", totalTitleMatches)
+		logger.Info("KeywordFilterProcessor item matched due to title keyword presence", "processor", k.name, "item_id", item.ID, "title_matches", totalTitleMatches)
 	}
 
 	switch cfg.Mode {
@@ -121,7 +121,7 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, st types.StateAcce
 		}
 	}
 
-	slog.Debug("KeywordFilterProcessor item coverage", "processor", k.name, "item_id", item.ID, "coverage", contentScore*100)
+	logger.Debug("KeywordFilterProcessor item coverage", "processor", k.name, "item_id", item.ID, "coverage", contentScore*100)
 	return nil
 }
 

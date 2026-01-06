@@ -6,7 +6,6 @@ import (
 	"cartero/internal/types"
 	"context"
 	"fmt"
-	"log/slog"
 	"sync"
 
 	"github.com/ollama/ollama/api"
@@ -56,21 +55,22 @@ func (d *SummaryProcessor) Process(ctx context.Context, st types.StateAccessor, 
 		return nil
 	}
 
+	logger := st.GetLogger()
 	err := ollamaClient.Generate(ctx, req, respFunc)
 	if err != nil {
-		slog.Warn("Couldn't generate summary, publishing without summary", "processor", d.name, "error", err)
+		logger.Warn("Couldn't generate summary, publishing without summary", "processor", d.name, "error", err)
 		return nil
 	}
 
 	if len(summary) == 0 {
-		slog.Warn("Generated empty summary for item, publishing without summary", "processor", d.name, "item_id", item.ID)
+		logger.Warn("Generated empty summary for item, publishing without summary", "processor", d.name, "item_id", item.ID)
 		return nil
 	}
 
 	if err := item.AddMetadata("summary", summary); err != nil {
 		return err
 	}
-	slog.Debug("Generated summary for item", "processor", d.name, "item_id", item.ID, "summary", summary)
+	logger.Debug("Generated summary for item", "processor", d.name, "item_id", item.ID, "summary", summary)
 
 	return nil
 }

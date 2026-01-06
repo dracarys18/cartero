@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"log/slog"
 	"maps"
 	"sync"
 
@@ -66,7 +65,6 @@ func (pe *ProcessorExecutor) Initialize() error {
 	}
 
 	pe.executionOrder = order
-	slog.Info("Pipeline: Processor execution order", "order", pe.executionOrder)
 	return nil
 }
 
@@ -79,15 +77,11 @@ func (pe *ProcessorExecutor) ExecuteProcessors(ctx context.Context, item *types.
 
 	for _, processorName := range executionOrder {
 		node := nodes[processorName]
-		slog.Debug("Executing processor", "processor", node.Name, "depends_on", node.DependsOn)
 
 		err := node.Processor.Process(ctx, nil, item)
 		if err != nil {
-			slog.Warn("Processor stopped processing for item", "processor", node.Name, "item_id", item.ID, "error", err)
 			return err
 		}
-
-		slog.Debug("Processor completed successfully", "processor", node.Name)
 	}
 
 	return nil

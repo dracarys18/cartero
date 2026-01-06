@@ -42,8 +42,8 @@ func main() {
 
 func run(ctx context.Context) error {
 	fmt.Printf("Loading configuration from: %s\n", *configPath)
-	log := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	appState := state.New(log)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	appState := state.New(logger)
 	if err := appState.Initialize(ctx, *configPath); err != nil {
 		return fmt.Errorf("failed to initialize state: %w", err)
 	}

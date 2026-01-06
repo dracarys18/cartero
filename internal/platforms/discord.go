@@ -4,7 +4,6 @@ import (
 	"cartero/internal/config"
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -54,7 +53,6 @@ func (p *DiscordPlatform) Initialize(ctx context.Context) error {
 		return fmt.Errorf("failed to open discord session: %w", err)
 	}
 
-	slog.Info("Discord platform bot is now online")
 	return nil
 }
 
@@ -62,7 +60,6 @@ func (p *DiscordPlatform) Close(ctx context.Context) error {
 	if p.session != nil {
 		p.session.Close()
 	}
-	slog.Info("Discord platform shutting down")
 	return nil
 }
 

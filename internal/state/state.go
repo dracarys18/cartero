@@ -3,7 +3,6 @@ package state
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"cartero/internal/components"
 	"cartero/internal/config"
@@ -15,6 +14,7 @@ import (
 	_ "cartero/internal/storage/sqlite"
 	"cartero/internal/targets"
 	"cartero/internal/types"
+	"log/slog"
 )
 
 type State struct {
