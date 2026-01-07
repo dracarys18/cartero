@@ -55,10 +55,23 @@ func (pc *ProcessorChain) Build() {
 
 func (pc *ProcessorChain) Execute(ctx context.Context, state types.StateAccessor, item *types.Item) error {
 	logger := state.GetLogger()
-	order := pc.getExecutionOrder()
 
-	logger.Info("Starting processor chain execution", "processor_count", len(order), "order", order)
-	for _, name := range order {
+	pc.mu.RLock()
+	order := pc.order
+	if order == nil {
+		pc.mu.RUnlock()
+		panic("processor order not initialized")
+	}
+	orderCopy := make([]string, len(order))
+	copy(orderCopy, order)
+	pc.mu.RUnlock()
+
+	logger.Info("Starting processor chain execution", "processor_count", len(orderCopy), "order", orderCopy)
+
+	pc.mu.RLock()
+	defer pc.mu.RUnlock()
+
+	for _, name := range orderCopy {
 		processor := pc.processors[name]
 		logger.Info("Executing processor", "processor", name)
 		if err := processor.Process(ctx, pc.state, item); err != nil {
@@ -77,12 +90,14 @@ func (pc *ProcessorChain) Execute(ctx context.Context, state types.StateAccessor
 }
 
 func (pc *ProcessorChain) getExecutionOrder() []string {
+	pc.mu.RLock()
+	defer pc.mu.RUnlock()
+
 	if pc.order == nil {
 		panic("processor order not initialized")
 	}
 
 	return pc.order
-
 }
 
 func (pc *ProcessorChain) topologicalSort() ([]string, error) {

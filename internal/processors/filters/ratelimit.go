@@ -60,16 +60,19 @@ func (r *RateLimitProcessor) Process(ctx context.Context, st types.StateAccessor
 }
 
 type TokenBucketProcessor struct {
-	name       string
-	tokens     int
-	lastRefill time.Time
-	mu         sync.Mutex
+	name        string
+	tokens      int
+	lastRefill  time.Time
+	initialized bool
+	mu          sync.Mutex
 }
 
 func NewTokenBucketProcessor(name string) *TokenBucketProcessor {
 	return &TokenBucketProcessor{
-		name:       name,
-		lastRefill: time.Now(),
+		name:        name,
+		tokens:      0,
+		lastRefill:  time.Now(),
+		initialized: false,
 	}
 }
 
@@ -89,6 +92,12 @@ func (t *TokenBucketProcessor) Process(ctx context.Context, st types.StateAccess
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
+	if !t.initialized {
+		t.tokens = capacity
+		t.initialized = true
+		t.lastRefill = time.Now()
+	}
 
 	now := time.Now()
 	elapsed := now.Sub(t.lastRefill)
