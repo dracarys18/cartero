@@ -5,7 +5,6 @@ import (
 	"cartero/internal/types"
 	"cartero/internal/utils"
 	"context"
-	"fmt"
 	"net/http"
 )
 
@@ -60,7 +59,7 @@ func (e *ExtractText) Process(ctx context.Context, st types.StateAccessor, item 
 	article, err := utils.GetArticleText(urlStr, limit, httpMod)
 	if err != nil {
 		logger.Error("ExtractText processor failed to extract article text", "processor", e.name, "item_id", item.ID, "error", err)
-		return fmt.Errorf("failed to extract article text: %w", err)
+		return nil
 	}
 
 	if err := item.SetTextContent(article); err != nil {
