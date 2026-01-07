@@ -109,10 +109,3 @@ func (t *TokenBucketProcessor) Process(ctx context.Context, st types.StateAccess
 	t.tokens--
 	return nil
 }
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
