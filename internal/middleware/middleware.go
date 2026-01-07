@@ -58,10 +58,12 @@ func (pc *ProcessorChain) Execute(ctx context.Context, state types.StateAccessor
 
 	pc.mu.RLock()
 	order := pc.order
+
 	if order == nil {
 		pc.mu.RUnlock()
 		panic("processor order not initialized")
 	}
+
 	orderCopy := make([]string, len(order))
 	copy(orderCopy, order)
 	pc.mu.RUnlock()
@@ -87,17 +89,6 @@ func (pc *ProcessorChain) Execute(ctx context.Context, state types.StateAccessor
 
 	logger.Info("Processor chain execution completed successfully")
 	return nil
-}
-
-func (pc *ProcessorChain) getExecutionOrder() []string {
-	pc.mu.RLock()
-	defer pc.mu.RUnlock()
-
-	if pc.order == nil {
-		panic("processor order not initialized")
-	}
-
-	return pc.order
 }
 
 func (pc *ProcessorChain) topologicalSort() ([]string, error) {
