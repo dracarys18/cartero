@@ -1,4 +1,4 @@
 bin/
 output/
-*.db
+*.db*
 config.toml

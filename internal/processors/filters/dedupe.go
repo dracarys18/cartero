@@ -43,6 +43,7 @@ func (d *DedupeProcessor) Process(ctx context.Context, st types.StateAccessor, i
 	defer d.mu.Unlock()
 	hash := d.hashItem(item)
 	store := st.GetStorage().Items()
+	logger := st.GetLogger()
 
 	exists, err := store.Exists(ctx, item.ID)
 	if err != nil {
@@ -50,10 +51,12 @@ func (d *DedupeProcessor) Process(ctx context.Context, st types.StateAccessor, i
 	}
 
 	if exists {
+		logger.Info("DedupeProcessor rejected item", "processor", d.name, "item_id", item.ID, "reason", "exists in storage")
 		return fmt.Errorf("DedupeProcessor %s: duplicate item %s (exists in storage)", d.name, item.ID)
 	}
 
 	if lastSeen, exists := d.seen[hash]; exists {
+		logger.Info("DedupeProcessor rejected item", "processor", d.name, "item_id", item.ID, "reason", "seen in current session", "first_seen", lastSeen)
 		return fmt.Errorf("DedupeProcessor %s: duplicate item %s (first seen: %v)", d.name, item.ID, lastSeen)
 	}
 

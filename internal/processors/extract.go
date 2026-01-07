@@ -32,6 +32,7 @@ func (e *ExtractText) DependsOn() []string {
 func (e *ExtractText) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
 	cfg := st.GetConfig().Processors[e.name].Settings.ExtractTextSettings
 	limit := cfg.Limit
+	logger := st.GetLogger()
 
 	url, exists := item.GetMetadata("url")
 	if !exists {
@@ -40,6 +41,7 @@ func (e *ExtractText) Process(ctx context.Context, st types.StateAccessor, item 
 
 	urlStr, ok := url.(string)
 	if !ok {
+		logger.Info("ExtractText processor rejected item", "processor", e.name, "item_id", item.ID, "reason", "url metadata is not a string")
 		return fmt.Errorf("url metadata is not a string")
 	}
 
@@ -57,6 +59,7 @@ func (e *ExtractText) Process(ctx context.Context, st types.StateAccessor, item 
 
 	article, err := utils.GetArticleText(urlStr, limit, httpMod)
 	if err != nil {
+		logger.Info("ExtractText processor rejected item", "processor", e.name, "item_id", item.ID, "reason", "failed to extract article text", "error", err)
 		return fmt.Errorf("failed to extract article text: %w", err)
 	}
 

@@ -31,9 +31,11 @@ func (t *TransformProcessor) DependsOn() []string {
 }
 
 func (t *TransformProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
+	logger := st.GetLogger()
 	if t.transformFn != nil {
 		transformed, err := t.transformFn(item)
 		if err != nil {
+			logger.Info("TransformProcessor rejected item", "processor", t.name, "item_id", item.ID, "reason", "transform failed", "error", err)
 			return fmt.Errorf("transform failed: %w", err)
 		}
 		if err := item.ModifyContent(func() interface{} { return transformed }); err != nil {

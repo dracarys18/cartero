@@ -147,4 +147,5 @@ type ProcessorChain interface {
 	Execute(ctx context.Context, state StateAccessor, item *Item) error
 	With(name string, processor Processor) ProcessorChain
 	WithMultiple(procs map[string]Processor) ProcessorChain
+	Build()
 }

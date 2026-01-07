@@ -30,10 +30,12 @@ func (s *ScoreFilterProcessor) DependsOn() []string {
 
 func (s *ScoreFilterProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
 	cfg := st.GetConfig().Processors[s.name].Settings.ScoreFilterSettings
+	logger := st.GetLogger()
 	minScore := cfg.MinScore
 
 	if score, ok := item.Metadata["score"].(int); ok {
 		if score < minScore {
+			logger.Info("ScoreFilterProcessor rejected item", "processor", s.name, "item_id", item.ID, "score", score, "min_score", minScore)
 			return fmt.Errorf("ScoreFilterProcessor %s: item %s score %d is below minimum %d", s.name, item.ID, score, minScore)
 		}
 	}

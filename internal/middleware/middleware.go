@@ -39,21 +39,27 @@ func (pc *ProcessorChain) WithMultiple(procs map[string]types.Processor) types.P
 	defer pc.mu.Unlock()
 
 	maps.Copy(pc.processors, procs)
-	for name, proc := range procs {
-		pc.processors[name] = proc
-	}
 	pc.order = nil
 	return pc
 }
 
-func (pc *ProcessorChain) Execute(ctx context.Context, state types.StateAccessor, item *types.Item) error {
-	logger := state.GetLogger()
-	order, err := pc.getExecutionOrder()
+func (pc *ProcessorChain) Build() {
+	pc.mu.Lock()
+	defer pc.mu.Unlock()
+
+	order, err := pc.topologicalSort()
 	if err != nil {
-		return err
+		panic(fmt.Sprintf("failed to build processor chain: %v", err))
 	}
 
-	logger.Info("Processor execution order", "order", order)
+	pc.order = order
+}
+
+func (pc *ProcessorChain) Execute(ctx context.Context, state types.StateAccessor, item *types.Item) error {
+	logger := state.GetLogger()
+	order := pc.getExecutionOrder()
+
+	logger.Info("Starting processor chain execution", "processor_count", len(order), "order", order)
 	for _, name := range order {
 		processor := pc.processors[name]
 		logger.Info("Executing processor", "processor", name)
@@ -61,29 +67,23 @@ func (pc *ProcessorChain) Execute(ctx context.Context, state types.StateAccessor
 			logger.Error("Processor failed", "processor", name, "error", err)
 			return fmt.Errorf("processor %s failed: %w", name, err)
 		}
+		logger.Debug("Processor completed successfully", "processor", name)
 	}
 
+	logger.Info("Processor chain execution completed successfully")
 	return nil
 }
 
-func (pc *ProcessorChain) getExecutionOrder() ([]string, error) {
+func (pc *ProcessorChain) getExecutionOrder() []string {
 	pc.mu.RLock()
-	if pc.order != nil {
-		defer pc.mu.RUnlock()
-		return pc.order, nil
-	}
-	pc.mu.RUnlock()
+	defer pc.mu.RUnlock()
 
-	order, err := pc.topologicalSort()
-	if err != nil {
-		return nil, err
+	if pc.order == nil {
+		panic("processor order not initialized")
 	}
 
-	pc.mu.Lock()
-	pc.order = order
-	pc.mu.Unlock()
+	return pc.order
 
-	return order, nil
 }
 
 func (pc *ProcessorChain) topologicalSort() ([]string, error) {
