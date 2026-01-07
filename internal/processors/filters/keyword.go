@@ -6,7 +6,6 @@ import (
 	"slices"
 	"strings"
 
-	"cartero/internal/config"
 	"cartero/internal/processors/names"
 	"cartero/internal/types"
 
