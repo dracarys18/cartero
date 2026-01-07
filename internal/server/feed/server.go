@@ -23,6 +23,7 @@ type Server struct {
 	config    Config
 	feedStore storage.FeedStore
 	server    *http.Server
+	startCh   chan error
 }
 
 func New(name string, config Config, feedStore storage.FeedStore) *Server {
@@ -40,6 +41,7 @@ func New(name string, config Config, feedStore storage.FeedStore) *Server {
 		name:      name,
 		config:    config,
 		feedStore: feedStore,
+		startCh:   make(chan error, 1),
 	}
 }
 
@@ -48,7 +50,7 @@ func (s *Server) Start(ctx context.Context) error {
 	mux.HandleFunc("/feed.rss", s.handleRSSFeed)
 	mux.HandleFunc("/feed.atom", s.handleAtomFeed)
 	mux.HandleFunc("/feed.json", s.handleJSONFeed)
-	mux.HandleFunc("/health", s.handleHealth)
+	mux.HandleFunc("/feed.health", s.handleHealth)
 
 	s.server = &http.Server{
 		Addr:    ":" + s.config.Port,
@@ -56,22 +58,31 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 
 	go func() {
-		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		err := s.server.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			s.startCh <- err
 			fmt.Printf("Feed server error: %v\n", err)
 		}
 	}()
 
-	time.Sleep(100 * time.Millisecond)
-	return nil
+	select {
+	case err := <-s.startCh:
+		return fmt.Errorf("failed to start feed server on port %s: %w", s.config.Port, err)
+	case <-time.After(1 * time.Second):
+		return nil
+	}
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
 	if s.server != nil {
-		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
-		if err := s.server.Shutdown(shutdownCtx); err != nil {
+
+		if err := s.server.Shutdown(shutdownCtx); err != nil && err != context.Canceled && err != http.ErrServerClosed {
 			fmt.Printf("Feed server shutdown error: %v\n", err)
 		}
+
+		time.Sleep(2 * time.Second)
 	}
 	return nil
 }

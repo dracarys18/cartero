@@ -73,8 +73,9 @@ func (sr *SourceRoute) processItem(ctx context.Context, state types.StateAccesso
 			return err
 		}
 		logger.Debug("Stored new item", "source", sr.Source.Name(), "item_id", item.ID)
+		logger.Debug("All processors completed, publishing to targets", "item_id", item.ID, "targets", len(filteredTargets))
+		return filteredTargets.Process(ctx, state, item, logger)
 	}
 
-	logger.Debug("All processors completed, publishing to targets", "item_id", item.ID, "targets", len(filteredTargets))
-	return filteredTargets.Process(ctx, state, item, logger)
+	return error
 }

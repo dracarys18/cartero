@@ -16,8 +16,6 @@ type ProcessorChain struct {
 	mu         sync.RWMutex
 }
 
-var _ types.ProcessorChain = (*ProcessorChain)(nil)
-
 func New(s types.StateAccessor) types.ProcessorChain {
 	return &ProcessorChain{
 		state:      s,
