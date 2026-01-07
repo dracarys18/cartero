@@ -2,21 +2,18 @@ package filters
 
 import (
 	"context"
-	"fmt"
 
-	"cartero/internal/core"
 	"cartero/internal/processors/names"
+	"cartero/internal/types"
 )
 
 type ScoreFilterProcessor struct {
-	name     string
-	minScore int
+	name string
 }
 
-func NewScoreFilterProcessor(name string, minScore int) *ScoreFilterProcessor {
+func NewScoreFilterProcessor(name string) *ScoreFilterProcessor {
 	return &ScoreFilterProcessor{
-		name:     name,
-		minScore: minScore,
+		name: name,
 	}
 }
 
@@ -30,15 +27,22 @@ func (s *ScoreFilterProcessor) DependsOn() []string {
 	}
 }
 
-func (s *ScoreFilterProcessor) Process(ctx context.Context, item *core.Item) error {
+func (s *ScoreFilterProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
+	cfg := st.GetConfig().Processors[s.name].Settings.ScoreFilterSettings
+	logger := st.GetLogger()
+	minScore := cfg.MinScore
+
 	if score, ok := item.Metadata["score"].(int); ok {
-		if score < s.minScore {
-			return fmt.Errorf("ScoreFilterProcessor %s: item %s score %d is below minimum %d", s.name, item.ID, score, s.minScore)
+		if score < minScore {
+			logger.Info("ScoreFilterProcessor rejected item", "processor", s.name, "item_id", item.ID, "score", score, "min_score", minScore)
+			return types.NewFilteredError(s.name, item.ID, "score below minimum").
+				WithDetail("score", score).
+				WithDetail("min_score", minScore)
 		}
 	}
 	return nil
 }
 
-func MinScoreFilter(name string, minScore int) *ScoreFilterProcessor {
-	return NewScoreFilterProcessor(name, minScore)
+func MinScoreFilter(name string) *ScoreFilterProcessor {
+	return NewScoreFilterProcessor(name)
 }

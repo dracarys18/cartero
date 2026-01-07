@@ -1,12 +1,12 @@
-package storage
+package sqlite
 
 import (
+	"cartero/internal/storage"
 	"cartero/internal/utils/hash"
 	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"time"
 )
 
@@ -14,11 +14,11 @@ type itemStore struct {
 	db *sql.DB
 }
 
-func newItemStore(db *sql.DB) ItemStore {
+func newItemStore(db *sql.DB) storage.ItemStore {
 	return &itemStore{db: db}
 }
 
-func (s *itemStore) Store(ctx context.Context, item Item) error {
+func (s *itemStore) Store(ctx context.Context, item storage.Item) error {
 	data := map[string]interface{}{
 		"id":      item.GetID(),
 		"source":  item.GetSource(),
@@ -88,14 +88,13 @@ func (s *itemStore) DeleteOlderThan(ctx context.Context, age time.Duration) erro
 	cutoff := time.Now().Add(-age)
 	query := `DELETE FROM items WHERE timestamp < ?`
 
-	slog.Debug("Deleting items older than cutoff", "age", age, "cutoff", cutoff.Format(time.RFC3339))
 	result, err := s.db.ExecContext(ctx, query, cutoff)
 	if err != nil {
 		return fmt.Errorf("failed to delete old items: %w", err)
 	}
 
 	if rows, err := result.RowsAffected(); err == nil {
-		slog.Debug("Deleted old items", "count", rows)
+		_ = rows
 	}
 
 	return nil

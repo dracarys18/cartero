@@ -2,8 +2,16 @@ package storage
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
+
+type StorageInterface interface {
+	GetConnection() *sql.DB
+	Items() ItemStore
+	Feed() FeedStore
+	Close(ctx context.Context) error
+}
 
 type Item interface {
 	GetID() string

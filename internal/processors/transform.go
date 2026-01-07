@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"strings"
 
-	"cartero/internal/core"
+	"cartero/internal/processors/names"
+	"cartero/internal/types"
 )
 
 type TransformProcessor struct {
 	name        string
-	transformFn func(*core.Item) (interface{}, error)
+	transformFn func(*types.Item) (interface{}, error)
 }
 
-type TransformFunc func(*core.Item) (interface{}, error)
+type TransformFunc func(*types.Item) (interface{}, error)
 
 func NewTransformProcessor(name string, transformFn TransformFunc) *TransformProcessor {
 	return &TransformProcessor{
@@ -27,13 +28,17 @@ func (t *TransformProcessor) Name() string {
 }
 
 func (t *TransformProcessor) DependsOn() []string {
-	return []string{}
+	return []string{
+		names.KeywordFilter,
+	}
 }
 
-func (t *TransformProcessor) Process(ctx context.Context, item *core.Item) error {
+func (t *TransformProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
+	logger := st.GetLogger()
 	if t.transformFn != nil {
 		transformed, err := t.transformFn(item)
 		if err != nil {
+			logger.Info("TransformProcessor rejected item", "processor", t.name, "item_id", item.ID, "reason", "transform failed", "error", err)
 			return fmt.Errorf("transform failed: %w", err)
 		}
 		if err := item.ModifyContent(func() interface{} { return transformed }); err != nil {
@@ -51,7 +56,7 @@ func (t *TransformProcessor) Process(ctx context.Context, item *core.Item) error
 }
 
 func FieldExtractor(name string, fields []string) *TransformProcessor {
-	return NewTransformProcessor(name, func(item *core.Item) (interface{}, error) {
+	return NewTransformProcessor(name, func(item *types.Item) (interface{}, error) {
 		result := make(map[string]interface{})
 
 		if item.Metadata != nil {
@@ -70,7 +75,7 @@ func FieldExtractor(name string, fields []string) *TransformProcessor {
 }
 
 func TemplateTransformer(name string, template string) *TransformProcessor {
-	return NewTransformProcessor(name, func(item *core.Item) (interface{}, error) {
+	return NewTransformProcessor(name, func(item *types.Item) (interface{}, error) {
 		output := template
 
 		replacements := map[string]string{
@@ -96,7 +101,7 @@ func TemplateTransformer(name string, template string) *TransformProcessor {
 }
 
 func EnrichTransformer(name string, enrichments map[string]interface{}) *TransformProcessor {
-	return NewTransformProcessor(name, func(item *core.Item) (interface{}, error) {
+	return NewTransformProcessor(name, func(item *types.Item) (interface{}, error) {
 		result := make(map[string]interface{})
 
 		if data, ok := item.Content.(map[string]interface{}); ok {
@@ -120,7 +125,7 @@ func EnrichTransformer(name string, enrichments map[string]interface{}) *Transfo
 }
 
 func MapTransformer(name string, mapper func(interface{}) (interface{}, error)) *TransformProcessor {
-	return NewTransformProcessor(name, func(item *core.Item) (interface{}, error) {
+	return NewTransformProcessor(name, func(item *types.Item) (interface{}, error) {
 		return mapper(item.Content)
 	})
 }
@@ -145,11 +150,11 @@ func (c *ChainTransformProcessor) DependsOn() []string {
 	return []string{}
 }
 
-func (c *ChainTransformProcessor) Process(ctx context.Context, item *core.Item) error {
+func (c *ChainTransformProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
 	currentData := item.Content
 
 	for _, transformer := range c.transformers {
-		tempItem := &core.Item{
+		tempItem := &types.Item{
 			ID:        item.ID,
 			Content:   currentData,
 			Metadata:  item.Metadata,
@@ -157,7 +162,7 @@ func (c *ChainTransformProcessor) Process(ctx context.Context, item *core.Item) 
 			Timestamp: item.Timestamp,
 		}
 
-		if err := transformer.Process(ctx, tempItem); err != nil {
+		if err := transformer.Process(ctx, st, tempItem); err != nil {
 			return fmt.Errorf("transformer %s failed: %w", transformer.Name(), err)
 		}
 

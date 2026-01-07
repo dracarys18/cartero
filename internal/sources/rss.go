@@ -4,11 +4,10 @@ import (
 	"context"
 	"fmt"
 	"html"
-	"log/slog"
 	"strings"
 	"time"
 
-	"cartero/internal/core"
+	"cartero/internal/types"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/mmcdole/gofeed"
@@ -39,34 +38,34 @@ func (r *RSSSource) Name() string {
 }
 
 func (r *RSSSource) Initialize(ctx context.Context) error {
-	slog.Info("RSS source initializing", "source", r.name, "feed_url", r.feedURL, "max_items", r.maxItems)
 	return nil
 }
 
-func (r *RSSSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan error) {
-	itemChan := make(chan *core.Item)
+func (r *RSSSource) Fetch(ctx context.Context, state types.StateAccessor) (<-chan *types.Item, <-chan error) {
+	itemChan := make(chan *types.Item)
 	errChan := make(chan error, 1)
 
 	go func() {
 		defer close(itemChan)
 		defer close(errChan)
 
-		slog.Debug("RSS source fetching feed", "source", r.name)
+		logger := state.GetLogger()
+
 		feed, err := r.parser.ParseURLWithContext(r.feedURL, ctx)
 		if err != nil {
-			slog.Error("RSS source error fetching feed", "source", r.name, "error", err)
+			logger.Error("RSS source error fetching feed", "source", r.name, "error", err)
 			errChan <- fmt.Errorf("failed to parse feed: %w", err)
 			return
 		}
 
-		slog.Debug("RSS source retrieved items", "source", r.name, "count", len(feed.Items))
+		logger.Debug("RSS source retrieved items", "source", r.name, "count", len(feed.Items))
 
 		limit := r.maxItems
 		if limit > len(feed.Items) {
 			limit = len(feed.Items)
 		}
 
-		slog.Debug("RSS source processing items", "source", r.name, "limit", limit)
+		logger.Debug("RSS source processing items", "source", r.name, "limit", limit)
 
 		for i := 0; i < limit; i++ {
 			select {
@@ -79,7 +78,7 @@ func (r *RSSSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan error)
 
 				select {
 				case itemChan <- item:
-					slog.Debug("RSS source sent item", "source", r.name, "index", i+1, "limit", limit, "item_id", item.ID)
+					logger.Debug("RSS source sent item", "source", r.name, "index", i+1, "limit", limit, "item_id", item.ID)
 				case <-ctx.Done():
 					errChan <- ctx.Err()
 					return
@@ -87,13 +86,13 @@ func (r *RSSSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan error)
 			}
 		}
 
-		slog.Debug("RSS source finished processing all items", "source", r.name)
+		logger.Debug("RSS source finished processing all items", "source", r.name)
 	}()
 
 	return itemChan, errChan
 }
 
-func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *core.Item {
+func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *types.Item {
 	timestamp := time.Now()
 	if feedItem.PublishedParsed != nil {
 		timestamp = *feedItem.PublishedParsed
@@ -149,7 +148,7 @@ func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *core.Item {
 		}
 	}
 
-	return &core.Item{
+	return &types.Item{
 		ID:        fmt.Sprintf("rss_%s", sanitizeID(itemID)),
 		Content:   feedItem,
 		Source:    r.name,
@@ -159,7 +158,6 @@ func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *core.Item {
 }
 
 func (r *RSSSource) Shutdown(ctx context.Context) error {
-	slog.Debug("RSS source shutting down", "source", r.name)
 	return nil
 }
 

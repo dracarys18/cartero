@@ -3,31 +3,24 @@ package filters
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"sync"
 	"time"
 
-	"cartero/internal/core"
+	"cartero/internal/types"
 	"cartero/internal/utils/hash"
 )
 
 type DedupeProcessor struct {
 	name      string
 	seen      map[string]time.Time
-	ttl       time.Duration
 	mu        sync.RWMutex
 	cleanupCh chan struct{}
 }
 
-func NewDedupeProcessor(name string, ttl time.Duration) *DedupeProcessor {
-	if ttl == 0 {
-		ttl = 24 * time.Hour
-	}
-
+func NewDedupeProcessor(name string) *DedupeProcessor {
 	d := &DedupeProcessor{
 		name:      name,
 		seen:      make(map[string]time.Time),
-		ttl:       ttl,
 		cleanupCh: make(chan struct{}),
 	}
 
@@ -44,24 +37,41 @@ func (d *DedupeProcessor) DependsOn() []string {
 	return []string{}
 }
 
-// Process implements the Processor interface
-func (d *DedupeProcessor) Process(ctx context.Context, item *core.Item) error {
+func (d *DedupeProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
 	hash := d.hashItem(item)
+	store := st.GetStorage().Items()
+	logger := st.GetLogger()
 
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	d.mu.RLock()
+	firstSeen, inSession := d.seen[hash]
+	d.mu.RUnlock()
 
-	if lastSeen, exists := d.seen[hash]; exists {
-		// Item is a duplicate, filter it out
-		return fmt.Errorf("DedupeProcessor %s: duplicate item %s (first seen: %v)", d.name, item.ID, lastSeen)
+	if inSession {
+		logger.Info("DedupeProcessor rejected item", "processor", d.name, "item_id", item.ID, "reason", "seen in current session", "first_seen", firstSeen)
+		return types.NewFilteredError(d.name, item.ID, "duplicate in session").
+			WithDetail("first_seen", firstSeen)
 	}
 
-	// Item is unique, mark as seen and allow processing
+	exists, err := store.Exists(ctx, item.ID)
+	if err != nil {
+		return err
+	}
+
+	if exists {
+		logger.Info("DedupeProcessor rejected item", "processor", d.name, "item_id", item.ID, "reason", "exists in storage")
+		return types.NewFilteredError(d.name, item.ID, "duplicate item").
+			WithDetail("location", "storage").
+			WithDetail("hash", hash)
+	}
+
+	d.mu.Lock()
 	d.seen[hash] = time.Now()
+	d.mu.Unlock()
+
 	return nil
 }
 
-func (d *DedupeProcessor) hashItem(item *core.Item) string {
+func (d *DedupeProcessor) hashItem(item *types.Item) string {
 	data, _ := json.Marshal(map[string]interface{}{
 		"id":      item.ID,
 		"source":  item.Source,
@@ -80,7 +90,7 @@ func (d *DedupeProcessor) cleanup() {
 			d.mu.Lock()
 			now := time.Now()
 			for hash, timestamp := range d.seen {
-				if now.Sub(timestamp) > d.ttl {
+				if now.Sub(timestamp) > 24*time.Hour {
 					delete(d.seen, hash)
 				}
 			}

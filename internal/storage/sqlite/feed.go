@@ -1,10 +1,10 @@
-package storage
+package sqlite
 
 import (
+	"cartero/internal/storage"
 	"context"
 	"database/sql"
 	"fmt"
-	"log/slog"
 	"time"
 )
 
@@ -12,7 +12,7 @@ type feedStore struct {
 	db *sql.DB
 }
 
-func newFeedStore(db *sql.DB) FeedStore {
+func newFeedStore(db *sql.DB) storage.FeedStore {
 	return &feedStore{db: db}
 }
 
@@ -33,7 +33,7 @@ func (s *feedStore) InsertEntry(ctx context.Context, id, title, link, descriptio
 	return nil
 }
 
-func (s *feedStore) ListRecentEntries(ctx context.Context, limit int) ([]FeedEntry, error) {
+func (s *feedStore) ListRecentEntries(ctx context.Context, limit int) ([]storage.FeedEntry, error) {
 	query := `
 		SELECT id, title, link, description, content, author, source, published_at, created_at
 		FROM feed_entries
@@ -47,9 +47,9 @@ func (s *feedStore) ListRecentEntries(ctx context.Context, limit int) ([]FeedEnt
 	}
 	defer rows.Close()
 
-	entries := make([]FeedEntry, 0)
+	entries := make([]storage.FeedEntry, 0, limit)
 	for rows.Next() {
-		var entry FeedEntry
+		var entry storage.FeedEntry
 		var publishedAt sql.NullTime
 
 		err := rows.Scan(
@@ -85,14 +85,13 @@ func (s *feedStore) DeleteOlderThan(ctx context.Context, age time.Duration) erro
 	cutoff := time.Now().Add(-age)
 	query := `DELETE FROM feed_entries WHERE created_at < ?`
 
-	slog.Debug("Deleting feed entries older than cutoff", "age", age, "cutoff", cutoff.Format(time.RFC3339))
 	result, err := s.db.ExecContext(ctx, query, cutoff)
 	if err != nil {
 		return fmt.Errorf("failed to delete old entries: %w", err)
 	}
 
 	if rows, err := result.RowsAffected(); err == nil {
-		slog.Debug("Deleted old feed entries", "count", rows)
+		_ = rows
 	}
 
 	return nil

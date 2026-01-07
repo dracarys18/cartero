@@ -5,11 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"time"
 
-	"cartero/internal/core"
+	"cartero/internal/types"
 )
 
 type HackerNewsSource struct {
@@ -54,34 +53,34 @@ func (h *HackerNewsSource) Name() string {
 }
 
 func (h *HackerNewsSource) Initialize(ctx context.Context) error {
-	slog.Info("HackerNews source initializing", "source", h.name, "type", h.storyType, "max_items", h.maxItems)
 	return nil
 }
 
-func (h *HackerNewsSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan error) {
-	itemChan := make(chan *core.Item)
+func (h *HackerNewsSource) Fetch(ctx context.Context, state types.StateAccessor) (<-chan *types.Item, <-chan error) {
+	itemChan := make(chan *types.Item)
 	errChan := make(chan error, 1)
 
 	go func() {
 		defer close(itemChan)
 		defer close(errChan)
 
-		slog.Debug("HackerNews source fetching story IDs", "source", h.name)
+		logger := state.GetLogger()
+
 		storyIDs, err := h.fetchStoryIDs(ctx)
 		if err != nil {
-			slog.Error("HackerNews source error fetching story IDs", "source", h.name, "error", err)
+			logger.Error("HackerNews source error fetching story IDs", "source", h.name, "error", err)
 			errChan <- err
 			return
 		}
 
-		slog.Debug("HackerNews source retrieved story IDs", "source", h.name, "count", len(storyIDs))
+		logger.Debug("HackerNews source retrieved story IDs", "source", h.name, "count", len(storyIDs))
 
 		limit := h.maxItems
 		if limit > len(storyIDs) {
 			limit = len(storyIDs)
 		}
 
-		slog.Debug("HackerNews source fetching stories", "source", h.name, "limit", limit)
+		logger.Debug("HackerNews source fetching stories", "source", h.name, "limit", limit)
 
 		for i := 0; i < limit; i++ {
 			select {
@@ -91,11 +90,11 @@ func (h *HackerNewsSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan
 			default:
 				story, err := h.fetchStory(ctx, storyIDs[i])
 				if err != nil {
-					slog.Warn("HackerNews source error fetching story", "source", h.name, "story_id", storyIDs[i], "error", err)
+					logger.Warn("HackerNews source error fetching story", "source", h.name, "story_id", storyIDs[i], "error", err)
 					continue
 				}
 
-				item := &core.Item{
+				item := &types.Item{
 					ID:        fmt.Sprintf("hn_%d", story.ID),
 					Source:    h.name,
 					Timestamp: time.Unix(story.Time, 0),
@@ -114,7 +113,7 @@ func (h *HackerNewsSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan
 
 				select {
 				case itemChan <- item:
-					slog.Debug("HackerNews source sent item", "source", h.name, "index", i+1, "limit", limit, "story_id", story.ID, "score", story.Score)
+					logger.Debug("HackerNews source sent item", "source", h.name, "index", i+1, "limit", limit, "story_id", story.ID, "score", story.Score)
 				case <-ctx.Done():
 					errChan <- ctx.Err()
 					return
@@ -122,7 +121,7 @@ func (h *HackerNewsSource) Fetch(ctx context.Context) (<-chan *core.Item, <-chan
 			}
 		}
 
-		slog.Debug("HackerNews source finished fetching all items", "source", h.name)
+		logger.Debug("HackerNews source finished fetching all items", "source", h.name)
 	}()
 
 	return itemChan, errChan
@@ -191,6 +190,5 @@ func (h *HackerNewsSource) fetchStory(ctx context.Context, id int64) (*HNStory, 
 }
 
 func (h *HackerNewsSource) Shutdown(ctx context.Context) error {
-	slog.Debug("HackerNews source shutting down", "source", h.name)
 	return nil
 }

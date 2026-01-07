@@ -2,15 +2,12 @@ package filters
 
 import (
 	"context"
-	"fmt"
-	"log/slog"
 	"maps"
 	"slices"
 	"strings"
 
-	"cartero/internal/config"
-	"cartero/internal/core"
 	"cartero/internal/processors/names"
+	"cartero/internal/types"
 
 	"github.com/blevesearch/bleve/v2/analysis"
 	"github.com/blevesearch/bleve/v2/analysis/lang/en"
@@ -29,34 +26,12 @@ func init() {
 }
 
 type KeywordFilterProcessor struct {
-	name            string
-	stemmedKeywords map[string]bool
-	exactKeywords   []string
-	mode            string
-	threshold       float64
+	name string
 }
 
-func NewKeywordFilterProcessor(name string, s config.KeywordFilterSettings) *KeywordFilterProcessor {
-	stemmedKeywords := make(map[string]bool, len(s.Keywords))
-	for _, kw := range s.Keywords {
-		tokens := analyzeText(strings.ToLower(kw))
-		for token := range maps.Keys(tokens) {
-			stemmedKeywords[token] = true
-		}
-	}
-
-	// Store exact keywords as lowercase strings (not stemmed)
-	exactKeywords := make([]string, len(s.ExactKeyword))
-	for i, kw := range s.ExactKeyword {
-		exactKeywords[i] = strings.ToLower(kw)
-	}
-
+func NewKeywordFilterProcessor(name string) *KeywordFilterProcessor {
 	return &KeywordFilterProcessor{
-		name:            name,
-		stemmedKeywords: stemmedKeywords,
-		mode:            s.Mode,
-		exactKeywords:   exactKeywords,
-		threshold:       s.KeywordThreshold,
+		name: name,
 	}
 }
 
@@ -70,10 +45,25 @@ func (k *KeywordFilterProcessor) DependsOn() []string {
 	}
 }
 
-// Filters if the title if more than 30% of the title is filled with the keywords. Or 15% of the content is filled with keywords.
-// Adds a special weight if keywords are found in the title.
-func (k *KeywordFilterProcessor) Process(ctx context.Context, item *core.Item) error {
-	totalInterestCount := len(k.stemmedKeywords)
+func (k *KeywordFilterProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
+	stateConfig := st.GetConfig()
+	cfg := stateConfig.Processors[k.name].Settings.KeywordFilterSettings
+	logger := st.GetLogger()
+
+	stemmedKeywords := make(map[string]bool, len(cfg.Keywords))
+	for _, kw := range cfg.Keywords {
+		tokens := analyzeText(strings.ToLower(kw))
+		for token := range maps.Keys(tokens) {
+			stemmedKeywords[token] = true
+		}
+	}
+
+	exactKeywords := make([]string, len(cfg.ExactKeyword))
+	for i, kw := range cfg.ExactKeyword {
+		exactKeywords[i] = strings.ToLower(kw)
+	}
+
+	totalInterestCount := len(stemmedKeywords)
 	if totalInterestCount == 0 {
 		return nil
 	}
@@ -86,21 +76,21 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, item *core.Item) e
 	title = strings.ToLower(title)
 	content := strings.ToLower(item.TextContent)
 
-	for exactKeyword := range slices.Values(k.exactKeywords) {
+	for exactKeyword := range slices.Values(exactKeywords) {
 		if strings.Contains(title, exactKeyword) || strings.Contains(content, exactKeyword) {
-			slog.Debug("KeywordFilterProcessor item matched with the exact keyword", "processor", k.name, "item_id", item.ID, "keyword", exactKeyword)
+			logger.Debug("KeywordFilterProcessor item matched with the exact keyword", "processor", k.name, "item_id", item.ID, "keyword", exactKeyword)
 			return nil
 		}
 	}
 
-	stemmmedTitle := analyzeText(title)
+	stemmedTitle := analyzeText(title)
 	stemmedContent := analyzeText(content)
 
 	contentMatches := make(map[string]bool)
 	totalTitleMatches := 0
 
-	for token := range maps.Keys(k.stemmedKeywords) {
-		if _, exists := stemmmedTitle[token]; exists {
+	for token := range maps.Keys(stemmedKeywords) {
+		if _, exists := stemmedTitle[token]; exists {
 			totalTitleMatches++
 		}
 
@@ -110,26 +100,29 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, item *core.Item) e
 	}
 
 	contentScore := float64(len(contentMatches)) / float64(totalInterestCount)
-	matches := contentScore >= k.threshold
+	matches := contentScore >= cfg.KeywordThreshold
 	if totalTitleMatches >= 1 {
 		matches = true
-		slog.Info("KeywordFilterProcessor item matched due to title keyword presence", "processor", k.name, "item_id", item.ID, "title_matches", totalTitleMatches)
+		logger.Info("KeywordFilterProcessor item matched due to title keyword presence", "processor", k.name, "item_id", item.ID, "title_matches", totalTitleMatches)
 	}
 
-	switch k.mode {
+	switch cfg.Mode {
 	case "include":
 		if !matches {
-			return fmt.Errorf("KeywordFilterProcessor %s: item %s coverage %.2f%% is below threshold %.2f%%",
-				k.name, item.ID, contentScore*100, k.threshold*100)
+			logger.Info("KeywordFilterProcessor rejected item", "processor", k.name, "item_id", item.ID, "coverage", contentScore*100, "threshold", cfg.KeywordThreshold*100)
+			return types.NewFilteredError(k.name, item.ID, "keyword coverage below threshold").
+				WithDetail("coverage_percentage", contentScore*100).
+				WithDetail("threshold_percentage", cfg.KeywordThreshold*100)
 		}
 	case "exclude":
 		if matches {
-			return fmt.Errorf("KeywordFilterProcessor %s: item %s coverage %.2f%% exceeds exclusion threshold",
-				k.name, item.ID, contentScore*100)
+			logger.Info("KeywordFilterProcessor rejected item", "processor", k.name, "item_id", item.ID, "coverage", contentScore*100)
+			return types.NewFilteredError(k.name, item.ID, "keyword coverage exceeds exclusion threshold").
+				WithDetail("coverage_percentage", contentScore*100)
 		}
 	}
 
-	slog.Debug("KeywordFilterProcessor item coverage", "processor", k.name, "item_id", item.ID, "coverage", contentScore*100)
+	logger.Debug("KeywordFilterProcessor item coverage", "processor", k.name, "item_id", item.ID, "coverage", contentScore*100)
 	return nil
 }
 

@@ -8,13 +8,12 @@ import (
 )
 
 type StorageComponent struct {
-	dbPath string
-	store  *storage.Store
+	store storage.StorageInterface
 }
 
-func NewStorageComponent(dbPath string) *StorageComponent {
+func NewStorageComponent(st storage.StorageInterface) *StorageComponent {
 	return &StorageComponent{
-		dbPath: dbPath,
+		store: st,
 	}
 }
 
@@ -27,26 +26,23 @@ func (c *StorageComponent) Dependencies() []string {
 }
 
 func (c *StorageComponent) Validate() error {
-	if c.dbPath == "" {
-		return fmt.Errorf("storage: database path is required")
+	if c.store == nil {
+		return fmt.Errorf("storage: storage interface is required")
 	}
 	return nil
 }
 
 func (c *StorageComponent) Initialize(ctx context.Context) error {
-	store, err := storage.New(c.dbPath)
-	if err != nil {
-		return fmt.Errorf("storage: failed to initialize store: %w", err)
-	}
-
-	c.store = store
 	return nil
 }
 
 func (c *StorageComponent) Close(ctx context.Context) error {
+	if c.store != nil {
+		return c.store.Close(ctx)
+	}
 	return nil
 }
 
-func (c *StorageComponent) Store() *storage.Store {
+func (c *StorageComponent) Store() storage.StorageInterface {
 	return c.store
 }

@@ -2,22 +2,17 @@ package filters
 
 import (
 	"context"
-	"fmt"
 
-	"cartero/internal/core"
+	"cartero/internal/types"
 )
 
 type MetadataFilterProcessor struct {
-	name  string
-	key   string
-	value interface{}
+	name string
 }
 
-func NewMetadataFilterProcessor(name string, key string, value interface{}) *MetadataFilterProcessor {
+func NewMetadataFilterProcessor(name string) *MetadataFilterProcessor {
 	return &MetadataFilterProcessor{
-		name:  name,
-		key:   key,
-		value: value,
+		name: name,
 	}
 }
 
@@ -29,21 +24,16 @@ func (m *MetadataFilterProcessor) DependsOn() []string {
 	return []string{}
 }
 
-func (m *MetadataFilterProcessor) Process(ctx context.Context, item *core.Item) error {
+func (m *MetadataFilterProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
 	if item.Metadata == nil {
-		return fmt.Errorf("MetadataFilterProcessor %s: item %s has no metadata", m.name, item.ID)
+		logger := st.GetLogger()
+		logger.Info("MetadataFilterProcessor rejected item", "processor", m.name, "item_id", item.ID, "reason", "no metadata")
+		return types.NewFilteredError(m.name, item.ID, "no metadata found")
 	}
 
-	if val, exists := item.Metadata[m.key]; exists {
-		if val != m.value {
-			return fmt.Errorf("MetadataFilterProcessor %s: item %s metadata[%s] = %v, expected %v", m.name, item.ID, m.key, val, m.value)
-		}
-		return nil
-	}
-
-	return fmt.Errorf("MetadataFilterProcessor %s: item %s does not have metadata key %s", m.name, item.ID, m.key)
+	return nil
 }
 
-func MetadataFilter(name string, key string, value interface{}) *MetadataFilterProcessor {
-	return NewMetadataFilterProcessor(name, key, value)
+func MetadataFilter(name string) *MetadataFilterProcessor {
+	return NewMetadataFilterProcessor(name)
 }
