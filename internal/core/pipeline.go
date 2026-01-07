@@ -17,8 +17,6 @@ type Pipeline struct {
 	running            bool
 }
 
-var Routes []SourceRoute
-
 func (p *Pipeline) GetRoutes() []SourceRoute {
 	p.mu.RLock()
 	defer p.mu.RUnlock()

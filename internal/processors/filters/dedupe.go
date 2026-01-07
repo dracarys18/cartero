@@ -38,11 +38,19 @@ func (d *DedupeProcessor) DependsOn() []string {
 }
 
 func (d *DedupeProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
 	hash := d.hashItem(item)
 	store := st.GetStorage().Items()
 	logger := st.GetLogger()
+
+	d.mu.RLock()
+	firstSeen, inSession := d.seen[hash]
+	d.mu.RUnlock()
+
+	if inSession {
+		logger.Info("DedupeProcessor rejected item", "processor", d.name, "item_id", item.ID, "reason", "seen in current session", "first_seen", firstSeen)
+		return types.NewFilteredError(d.name, item.ID, "duplicate in session").
+			WithDetail("first_seen", firstSeen)
+	}
 
 	exists, err := store.Exists(ctx, item.ID)
 	if err != nil {
@@ -56,13 +64,10 @@ func (d *DedupeProcessor) Process(ctx context.Context, st types.StateAccessor, i
 			WithDetail("hash", hash)
 	}
 
-	if lastSeen, exists := d.seen[hash]; exists {
-		logger.Info("DedupeProcessor rejected item", "processor", d.name, "item_id", item.ID, "reason", "seen in current session", "first_seen", lastSeen)
-		return types.NewFilteredError(d.name, item.ID, "duplicate in session").
-			WithDetail("first_seen", lastSeen)
-	}
-
+	d.mu.Lock()
 	d.seen[hash] = time.Now()
+	d.mu.Unlock()
+
 	return nil
 }
 
