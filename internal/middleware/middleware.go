@@ -62,7 +62,11 @@ func (pc *ProcessorChain) Execute(ctx context.Context, state types.StateAccessor
 		processor := pc.processors[name]
 		logger.Info("Executing processor", "processor", name)
 		if err := processor.Process(ctx, pc.state, item); err != nil {
-			logger.Error("Processor failed", "processor", name, "error", err)
+			if types.IsFiltered(err) {
+				logger.Info("Item filtered", "processor", name, "item_id", item.ID, "reason", err.Error())
+				return err
+			}
+			logger.Error("Processor failed with error", "processor", name, "item_id", item.ID, "error", err)
 			return fmt.Errorf("processor %s failed: %w", name, err)
 		}
 		logger.Debug("Processor completed successfully", "processor", name)

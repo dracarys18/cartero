@@ -66,16 +66,21 @@ func (sr *SourceRoute) processItem(ctx context.Context, state types.StateAccesso
 
 	logger.Info("Running processors", "item_id", item.ID)
 
-	error := chain.Execute(ctx, state, item)
-	if error != nil {
-		if err := store.Items().Store(ctx, item); err != nil {
-			logger.Error("Error storing item", "source", sr.Source.Name(), "item_id", item.ID, "error", err)
-			return err
+	err := chain.Execute(ctx, state, item)
+	if err != nil {
+		if types.IsFiltered(err) {
+			logger.Info("Item skipped due to filter", "item_id", item.ID, "filter_reason", err.Error())
+			return nil
 		}
-		logger.Debug("Stored new item", "source", sr.Source.Name(), "item_id", item.ID)
-		logger.Debug("All processors completed, publishing to targets", "item_id", item.ID, "targets", len(filteredTargets))
-		return filteredTargets.Process(ctx, state, item, logger)
+		logger.Error("Processing failed", "item_id", item.ID, "error", err)
+		return err
 	}
 
-	return error
+	if err := store.Items().Store(ctx, item); err != nil {
+		logger.Error("Error storing item", "source", sr.Source.Name(), "item_id", item.ID, "error", err)
+		return err
+	}
+	logger.Debug("Stored new item", "source", sr.Source.Name(), "item_id", item.ID)
+	logger.Debug("Publishing to targets", "item_id", item.ID, "target_count", len(filteredTargets))
+	return filteredTargets.Process(ctx, state, item, logger)
 }

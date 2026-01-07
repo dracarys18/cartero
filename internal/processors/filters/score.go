@@ -2,7 +2,6 @@ package filters
 
 import (
 	"context"
-	"fmt"
 
 	"cartero/internal/processors/names"
 	"cartero/internal/types"
@@ -36,7 +35,9 @@ func (s *ScoreFilterProcessor) Process(ctx context.Context, st types.StateAccess
 	if score, ok := item.Metadata["score"].(int); ok {
 		if score < minScore {
 			logger.Info("ScoreFilterProcessor rejected item", "processor", s.name, "item_id", item.ID, "score", score, "min_score", minScore)
-			return fmt.Errorf("ScoreFilterProcessor %s: item %s score %d is below minimum %d", s.name, item.ID, score, minScore)
+			return types.NewFilteredError(s.name, item.ID, "score below minimum").
+				WithDetail("score", score).
+				WithDetail("min_score", minScore)
 		}
 	}
 	return nil

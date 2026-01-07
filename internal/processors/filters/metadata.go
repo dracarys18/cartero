@@ -2,7 +2,6 @@ package filters
 
 import (
 	"context"
-	"fmt"
 
 	"cartero/internal/types"
 )
@@ -27,7 +26,9 @@ func (m *MetadataFilterProcessor) DependsOn() []string {
 
 func (m *MetadataFilterProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
 	if item.Metadata == nil {
-		return fmt.Errorf("MetadataFilterProcessor %s: item %s has no metadata", m.name, item.ID)
+		logger := st.GetLogger()
+		logger.Info("MetadataFilterProcessor rejected item", "processor", m.name, "item_id", item.ID, "reason", "no metadata")
+		return types.NewFilteredError(m.name, item.ID, "no metadata found")
 	}
 
 	return nil

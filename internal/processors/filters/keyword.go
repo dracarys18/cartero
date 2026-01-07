@@ -2,7 +2,6 @@ package filters
 
 import (
 	"context"
-	"fmt"
 	"maps"
 	"slices"
 	"strings"
@@ -111,13 +110,16 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, st types.StateAcce
 	switch cfg.Mode {
 	case "include":
 		if !matches {
-			return fmt.Errorf("KeywordFilterProcessor %s: item %s coverage %.2f%% is below threshold %.2f%%",
-				k.name, item.ID, contentScore*100, cfg.KeywordThreshold*100)
+			logger.Info("KeywordFilterProcessor rejected item", "processor", k.name, "item_id", item.ID, "coverage", contentScore*100, "threshold", cfg.KeywordThreshold*100)
+			return types.NewFilteredError(k.name, item.ID, "keyword coverage below threshold").
+				WithDetail("coverage_percentage", contentScore*100).
+				WithDetail("threshold_percentage", cfg.KeywordThreshold*100)
 		}
 	case "exclude":
 		if matches {
-			return fmt.Errorf("KeywordFilterProcessor %s: item %s coverage %.2f%% exceeds exclusion threshold",
-				k.name, item.ID, contentScore*100)
+			logger.Info("KeywordFilterProcessor rejected item", "processor", k.name, "item_id", item.ID, "coverage", contentScore*100)
+			return types.NewFilteredError(k.name, item.ID, "keyword coverage exceeds exclusion threshold").
+				WithDetail("coverage_percentage", contentScore*100)
 		}
 	}
 

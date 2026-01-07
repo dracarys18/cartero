@@ -42,7 +42,7 @@ func (e *ExtractText) Process(ctx context.Context, st types.StateAccessor, item 
 	urlStr, ok := url.(string)
 	if !ok {
 		logger.Info("ExtractText processor rejected item", "processor", e.name, "item_id", item.ID, "reason", "url metadata is not a string")
-		return fmt.Errorf("url metadata is not a string")
+		return types.NewFilteredError(e.name, item.ID, "url metadata is not a string")
 	}
 
 	httpMod := func(req *http.Request) {
@@ -59,7 +59,7 @@ func (e *ExtractText) Process(ctx context.Context, st types.StateAccessor, item 
 
 	article, err := utils.GetArticleText(urlStr, limit, httpMod)
 	if err != nil {
-		logger.Info("ExtractText processor rejected item", "processor", e.name, "item_id", item.ID, "reason", "failed to extract article text", "error", err)
+		logger.Error("ExtractText processor failed to extract article text", "processor", e.name, "item_id", item.ID, "error", err)
 		return fmt.Errorf("failed to extract article text: %w", err)
 	}
 

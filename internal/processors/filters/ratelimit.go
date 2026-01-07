@@ -2,7 +2,6 @@ package filters
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -51,7 +50,9 @@ func (r *RateLimitProcessor) Process(ctx context.Context, st types.StateAccessor
 
 	if r.counter >= limit {
 		logger.Info("RateLimitProcessor rejected item", "processor", r.name, "item_id", item.ID, "current_count", r.counter, "limit", limit)
-		return fmt.Errorf("RateLimitProcessor %s: rate limit exceeded (%d/%d)", r.name, r.counter, limit)
+		return types.NewFilteredError(r.name, item.ID, "rate limit exceeded").
+			WithDetail("current_count", r.counter).
+			WithDetail("limit", limit)
 	}
 
 	r.counter++
@@ -100,7 +101,9 @@ func (t *TokenBucketProcessor) Process(ctx context.Context, st types.StateAccess
 
 	if t.tokens <= 0 {
 		logger.Info("TokenBucketProcessor rejected item", "processor", t.name, "item_id", item.ID, "available_tokens", t.tokens, "capacity", capacity)
-		return fmt.Errorf("TokenBucketProcessor %s: no tokens available (tokens: %d)", t.name, t.tokens)
+		return types.NewFilteredError(t.name, item.ID, "no tokens available").
+			WithDetail("available_tokens", t.tokens).
+			WithDetail("capacity", capacity)
 	}
 
 	t.tokens--
