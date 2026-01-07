@@ -89,7 +89,7 @@ func (c *ServerComponent) startServer(ctx context.Context, cfg ServerConfig, fee
 func (c *ServerComponent) Close(ctx context.Context) error {
 	for _, server := range c.servers {
 		if err := server.Shutdown(ctx); err != nil {
-			_ = err
+			return err
 		}
 	}
 	return nil
