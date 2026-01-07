@@ -17,7 +17,7 @@ func (sr *SourceRoute) FilterTargets(ctx context.Context, state types.StateAcces
 
 	predicate := func(target types.Target) bool {
 		published, _ := items.IsPublished(ctx, item.ID, target.Name())
-		return published == false
+		return !published
 	}
 
 	return Targets(utils.FilterArray([]types.Target(sr.Targets), predicate))

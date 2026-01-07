@@ -20,6 +20,8 @@ func ProcessCore(ctx context.Context, state types.StateAccessor) error {
 
 	logger.Info("Initializing pipeline...")
 
-	pipeline.Run(ctx, state)
+	if err := pipeline.Run(ctx, state); err != nil {
+		return fmt.Errorf("pipeline execution failed: %w", err)
+	}
 	return nil
 }

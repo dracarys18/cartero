@@ -57,6 +57,7 @@ func (s *Server) Start(ctx context.Context) error {
 
 	go func() {
 		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			fmt.Printf("Feed server error: %v\n", err)
 		}
 	}()
 
@@ -69,6 +70,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 		if err := s.server.Shutdown(shutdownCtx); err != nil {
+			fmt.Printf("Feed server shutdown error: %v\n", err)
 		}
 	}
 	return nil
