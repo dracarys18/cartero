@@ -82,7 +82,6 @@ func (s *Server) Shutdown(ctx context.Context) error {
 			fmt.Printf("Feed server shutdown error: %v\n", err)
 		}
 
-		time.Sleep(2 * time.Second)
 	}
 	return nil
 }

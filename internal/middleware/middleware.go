@@ -77,9 +77,6 @@ func (pc *ProcessorChain) Execute(ctx context.Context, state types.StateAccessor
 }
 
 func (pc *ProcessorChain) getExecutionOrder() []string {
-	pc.mu.RLock()
-	defer pc.mu.RUnlock()
-
 	if pc.order == nil {
 		panic("processor order not initialized")
 	}

@@ -30,7 +30,7 @@ type KeywordFilterProcessor struct {
 	name string
 }
 
-func NewKeywordFilterProcessor(name string, s config.KeywordFilterSettings) *KeywordFilterProcessor {
+func NewKeywordFilterProcessor(name string) *KeywordFilterProcessor {
 	return &KeywordFilterProcessor{
 		name: name,
 	}

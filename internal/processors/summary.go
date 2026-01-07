@@ -18,7 +18,7 @@ type SummaryProcessor struct {
 	mu   sync.RWMutex
 }
 
-func NewSummaryProcessor(name string, registry *components.Registry) *SummaryProcessor {
+func NewSummaryProcessor(name string) *SummaryProcessor {
 	return &SummaryProcessor{
 		name: name,
 		mu:   sync.RWMutex{},

@@ -223,7 +223,7 @@ func (s *State) createSource(name string, cfg config.SourceConfig) types.Source 
 func (s *State) createProcessor(name string, cfg config.ProcessorConfig) types.Processor {
 	switch cfg.Type {
 	case "summary":
-		return processors.NewSummaryProcessor(name, s.Registry)
+		return processors.NewSummaryProcessor(name)
 
 	case "extract_fields":
 		fieldsCfg := cfg.Settings.ExtractFieldsSettings
@@ -240,8 +240,7 @@ func (s *State) createProcessor(name string, cfg config.ProcessorConfig) types.P
 		return processors.NewScoreFilterProcessor(name)
 
 	case "filter_keyword":
-		keywordCfg := cfg.Settings.KeywordFilterSettings
-		return processors.NewKeywordFilterProcessor(name, keywordCfg)
+		return processors.NewKeywordFilterProcessor(name)
 
 	case "dedupe":
 		return processors.NewDedupeProcessor(name)

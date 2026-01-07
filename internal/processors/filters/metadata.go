@@ -10,7 +10,7 @@ type MetadataFilterProcessor struct {
 	name string
 }
 
-func NewMetadataFilterProcessor(name string, key string, value interface{}) *MetadataFilterProcessor {
+func NewMetadataFilterProcessor(name string) *MetadataFilterProcessor {
 	return &MetadataFilterProcessor{
 		name: name,
 	}
@@ -34,6 +34,6 @@ func (m *MetadataFilterProcessor) Process(ctx context.Context, st types.StateAcc
 	return nil
 }
 
-func MetadataFilter(name string, key string, value interface{}) *MetadataFilterProcessor {
-	return NewMetadataFilterProcessor(name, key, value)
+func MetadataFilter(name string) *MetadataFilterProcessor {
+	return NewMetadataFilterProcessor(name)
 }
