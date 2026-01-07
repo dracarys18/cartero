@@ -6,8 +6,21 @@ import (
 	"maps"
 	"sync"
 
+	"cartero/internal/dag"
 	"cartero/internal/types"
 )
+
+type processorAdapter struct {
+	processor types.Processor
+}
+
+func (pa *processorAdapter) GetName() string {
+	return pa.processor.Name()
+}
+
+func (pa *processorAdapter) GetDependencies() []string {
+	return pa.processor.DependsOn()
+}
 
 type ProcessorChain struct {
 	state      types.StateAccessor
@@ -45,7 +58,12 @@ func (pc *ProcessorChain) Build() {
 	pc.mu.Lock()
 	defer pc.mu.Unlock()
 
-	order, err := pc.topologicalSort()
+	sorter := dag.NewTopologicalSorter()
+	for name, proc := range pc.processors {
+		sorter.AddNode(name, &processorAdapter{processor: proc})
+	}
+
+	order, err := sorter.Sort()
 	if err != nil {
 		panic(fmt.Sprintf("failed to build processor chain: %v", err))
 	}
@@ -89,50 +107,4 @@ func (pc *ProcessorChain) Execute(ctx context.Context, state types.StateAccessor
 
 	logger.Info("Processor chain execution completed successfully")
 	return nil
-}
-
-func (pc *ProcessorChain) topologicalSort() ([]string, error) {
-	inDegree := make(map[string]int)
-	adjList := make(map[string][]string)
-
-	for name, proc := range pc.processors {
-		if _, ok := inDegree[name]; !ok {
-			inDegree[name] = 0
-		}
-
-		for _, dep := range proc.DependsOn() {
-			if _, ok := pc.processors[dep]; !ok {
-				return nil, fmt.Errorf("processor %s depends on %s which doesn't exist", name, dep)
-			}
-			adjList[dep] = append(adjList[dep], name)
-			inDegree[name]++
-		}
-	}
-
-	queue := []string{}
-	for name, degree := range inDegree {
-		if degree == 0 {
-			queue = append(queue, name)
-		}
-	}
-
-	var result []string
-	for len(queue) > 0 {
-		node := queue[0]
-		queue = queue[1:]
-		result = append(result, node)
-
-		for _, neighbor := range adjList[node] {
-			inDegree[neighbor]--
-			if inDegree[neighbor] == 0 {
-				queue = append(queue, neighbor)
-			}
-		}
-	}
-
-	if len(result) != len(pc.processors) {
-		return nil, fmt.Errorf("circular dependency detected in processors")
-	}
-
-	return result, nil
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"cartero/internal/graph"
+	"cartero/internal/dag"
 )
 
 type IComponent interface {
@@ -45,12 +45,12 @@ func (r *Registry) Get(name string) IComponent {
 }
 
 func (r *Registry) InitializeAll(ctx context.Context) error {
-	nodes := make(map[string]graph.Node)
+	sorter := dag.NewTopologicalSorter()
 	for name, comp := range r.components {
-		nodes[name] = &componentNode{comp: comp}
+		sorter.AddNode(name, &componentAdapter{comp: comp})
 	}
 
-	order, err := graph.TopologicalSort(nodes)
+	order, err := sorter.Sort()
 	if err != nil {
 		return err
 	}
@@ -73,16 +73,16 @@ func (r *Registry) InitializeAll(ctx context.Context) error {
 	return nil
 }
 
-type componentNode struct {
+type componentAdapter struct {
 	comp IComponent
 }
 
-func (cn *componentNode) GetName() string {
-	return cn.comp.Name()
+func (ca *componentAdapter) GetName() string {
+	return ca.comp.Name()
 }
 
-func (cn *componentNode) GetDependencies() []string {
-	return cn.comp.Dependencies()
+func (ca *componentAdapter) GetDependencies() []string {
+	return ca.comp.Dependencies()
 }
 
 func (r *Registry) CloseAll(ctx context.Context) error {

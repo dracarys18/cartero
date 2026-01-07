@@ -173,7 +173,6 @@ func (s *State) buildPipeline(ctx context.Context) (*core.Pipeline, error) {
 func (s *State) buildProcessorChain(ctx context.Context) types.ProcessorChain {
 	chain := middleware.New(s)
 
-	fmt.Printf("Building processor chain... %v\n", s.Config.Processors)
 	for name, procCfg := range s.Config.Processors {
 		if !procCfg.Enabled {
 			continue

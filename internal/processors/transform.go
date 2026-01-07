@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"cartero/internal/processors/names"
 	"cartero/internal/types"
 )
 
@@ -27,7 +28,9 @@ func (t *TransformProcessor) Name() string {
 }
 
 func (t *TransformProcessor) DependsOn() []string {
-	return []string{}
+	return []string{
+		names.KeywordFilter,
+	}
 }
 
 func (t *TransformProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
