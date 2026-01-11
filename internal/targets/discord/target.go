@@ -9,8 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
 	"text/template"
 	"time"
@@ -101,70 +99,11 @@ func (d *Target) createForumThread(item *types.Item) (string, error) {
 		return "", fmt.Errorf("failed to build embed: %w", err)
 	}
 
-	dgEmbed := Embed{
-		Title:       embed.Title,
-		Description: embed.Description,
-		URL:         embed.URL,
-		Color:       embed.Color,
-		Timestamp:   embed.Timestamp,
-	}
+	thread, err := d.platform.Session().ForumThreadStartEmbed(d.channelID, title, 1440, embed)
 
-	if embed.Footer != nil {
-		dgEmbed.Footer = &EmbedFooter{Text: embed.Footer.Text}
-	}
-
-	for _, f := range embed.Fields {
-		dgEmbed.Fields = append(dgEmbed.Fields, EmbedField{
-			Name:   f.Name,
-			Value:  f.Value,
-			Inline: f.Inline,
-		})
-	}
-
-	payload := CreateThreadPayload{
-		Name:        title,
-		AutoArchive: 1440,
-		Message: Message{
-			Embeds: []Embed{dgEmbed},
-		},
-	}
-
-	body, err := json.Marshal(payload)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal payload: %w", err)
+		return "", fmt.Errorf("failed to create forum thread: %w", err)
 	}
-
-	url := fmt.Sprintf("https://discord.com/api/v10/channels/%s/threads", d.channelID)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bot %s", d.platform.BotToken()))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "DiscordBot (cartero, 1.0)")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusCreated {
-		return "", fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(respBody))
-	}
-
-	var thread Thread
-	if err := json.Unmarshal(respBody, &thread); err != nil {
-		return "", fmt.Errorf("failed to unmarshal response: %w", err)
-	}
-
-	time.Sleep(d.platform.SleepDuration())
 
 	return thread.ID, nil
 }
