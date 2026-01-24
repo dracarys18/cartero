@@ -20,7 +20,7 @@
     }
     {{- if index .Metadata "author" }},
     {
-      "text": " | "
+      "text": " | Author: "
     },
     {
       "text": {{ index .Metadata "author" | json }}

@@ -9,16 +9,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"text/template"
 	"time"
 
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/bluesky-social/indigo/lex/util"
-	"github.com/microcosm-cc/bluemonday"
-	"github.com/muesli/reflow/wordwrap"
-	"github.com/yuin/goldmark"
 )
 
 type Target struct {
@@ -136,60 +132,6 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 			Timestamp: time.Now(),
 			Error:     err,
 		}, err
-	}
-
-	if summary, ok := item.GetMetadata("summary"); ok {
-		if s, ok := summary.(string); ok && s != "" {
-			var buf bytes.Buffer
-			if err := goldmark.Convert([]byte(s), &buf); err != nil {
-				fmt.Printf("failed to convert markdown to html: %v\n", err)
-				buf.WriteString(s)
-			}
-
-			p := bluemonday.StrictPolicy()
-			plainText := p.Sanitize(buf.String())
-
-			wrapped := wordwrap.String(plainText, 300)
-			chunks := strings.Split(wrapped, "\n")
-
-			rootRef := &atproto.RepoStrongRef{
-				Uri: resp.Uri,
-				Cid: resp.Cid,
-			}
-			parentRef := rootRef
-
-			for _, chunkText := range chunks {
-				if strings.TrimSpace(chunkText) == "" {
-					continue
-				}
-
-				reply := &bsky.FeedPost{
-					CreatedAt: time.Now().Format(time.RFC3339),
-					Langs:     t.languages,
-					Text:      chunkText,
-					Reply: &bsky.FeedPost_ReplyRef{
-						Root:   rootRef,
-						Parent: parentRef,
-					},
-				}
-
-				replyResp, err := atproto.RepoCreateRecord(ctx, t.platform.Client(), &atproto.RepoCreateRecord_Input{
-					Collection: "app.bsky.feed.post",
-					Repo:       t.platform.Client().Auth.Did,
-					Record:     &util.LexiconTypeDecoder{Val: reply},
-				})
-
-				if err != nil {
-					fmt.Printf("failed to post summary reply chunk: %v\n", err)
-					break
-				}
-
-				parentRef = &atproto.RepoStrongRef{
-					Uri: replyResp.Uri,
-					Cid: replyResp.Cid,
-				}
-			}
-		}
 	}
 
 	return &types.PublishResult{
