@@ -9,12 +9,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"text/template"
 	"time"
 
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/bluesky-social/indigo/lex/util"
+	"github.com/microcosm-cc/bluemonday"
+	"github.com/muesli/reflow/wordwrap"
+	"github.com/yuin/goldmark"
 )
 
 type Target struct {
@@ -136,20 +140,28 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 
 	if summary, ok := item.GetMetadata("summary"); ok {
 		if s, ok := summary.(string); ok && s != "" {
-			runes := []rune(s)
+			var buf bytes.Buffer
+			if err := goldmark.Convert([]byte(s), &buf); err != nil {
+				fmt.Printf("failed to convert markdown to html: %v\n", err)
+				buf.WriteString(s)
+			}
+
+			p := bluemonday.StrictPolicy()
+			plainText := p.Sanitize(buf.String())
+
+			wrapped := wordwrap.String(plainText, 300)
+			chunks := strings.Split(wrapped, "\n")
+
 			rootRef := &atproto.RepoStrongRef{
 				Uri: resp.Uri,
 				Cid: resp.Cid,
 			}
 			parentRef := rootRef
 
-			const chunkSize = 300
-			for i := 0; i < len(runes); i += chunkSize {
-				end := i + chunkSize
-				if end > len(runes) {
-					end = len(runes)
+			for _, chunkText := range chunks {
+				if strings.TrimSpace(chunkText) == "" {
+					continue
 				}
-				chunkText := string(runes[i:end])
 
 				reply := &bsky.FeedPost{
 					CreatedAt: time.Now().Format(time.RFC3339),
