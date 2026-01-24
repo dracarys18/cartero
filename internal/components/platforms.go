@@ -10,6 +10,7 @@ import (
 type PlatformComponent struct {
 	config          map[string]config.PlatformConfig
 	discordPlatform *platforms.DiscordPlatform
+	blueskyPlatform *platforms.BlueskyPlatform
 	ollamaPlatforms map[string]*platforms.OllamaPlatform
 }
 
@@ -46,18 +47,39 @@ func (c *PlatformComponent) Initialize(ctx context.Context) error {
 		}
 		c.discordPlatform = discord
 	}
+
+	if blueskyCfg, exists := c.config["bluesky"]; exists && blueskyCfg.Enabled {
+		bluesky, err := platforms.NewBlueskyPlatform(&blueskyCfg.Settings.BlueskyPlatformSettings)
+		if err != nil {
+			return fmt.Errorf("failed to create bluesky platform: %w", err)
+		}
+		if err := bluesky.Validate(); err != nil {
+			return fmt.Errorf("bluesky platform validation failed: %w", err)
+		}
+		if err := bluesky.Initialize(ctx); err != nil {
+			return fmt.Errorf("bluesky platform initialization failed: %w", err)
+		}
+		c.blueskyPlatform = bluesky
+	}
 	return nil
 }
 
 func (c *PlatformComponent) Close(ctx context.Context) error {
 	if c.discordPlatform != nil {
-		return c.discordPlatform.Close(ctx)
+		c.discordPlatform.Close(ctx)
+	}
+	if c.blueskyPlatform != nil {
+		c.blueskyPlatform.Close(ctx)
 	}
 	return nil
 }
 
 func (c *PlatformComponent) Discord() *platforms.DiscordPlatform {
 	return c.discordPlatform
+}
+
+func (c *PlatformComponent) Bluesky() *platforms.BlueskyPlatform {
+	return c.blueskyPlatform
 }
 
 func (c *PlatformComponent) OllamaPlatform(model string) *platforms.OllamaPlatform {

@@ -1,0 +1,35 @@
+{
+  "segments": [
+    {
+      "text": {{ index .Metadata "title" | json }}
+    },
+    {
+      "text": "\n"
+    }
+    {{- if index .Metadata "comments" }},
+    {
+      "text": "Discussion",
+      "uri": {{ index .Metadata "comments" | json }}
+    },
+    {
+      "text": " | "
+    }
+    {{- end }},
+    {
+      "text": {{ .Source | json }}
+    }
+    {{- if index .Metadata "author" }},
+    {
+      "text": " | "
+    },
+    {
+      "text": {{ index .Metadata "author" | json }}
+    }
+    {{- end }}
+  ],
+  "embed": {
+    "uri": {{ index .Metadata "url" | json }},
+    "title": {{ index .Metadata "title" | json }},
+    "description": {{ index .Metadata "description" | json }}
+  }
+}

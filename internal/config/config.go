@@ -39,6 +39,7 @@ type PlatformConfig struct {
 type PlatformSettings struct {
 	DiscordPlatformSettings
 	OllamaPlatformSettings
+	BlueskyPlatformSettings
 }
 
 type DiscordPlatformSettings struct {
@@ -48,6 +49,11 @@ type DiscordPlatformSettings struct {
 
 type OllamaPlatformSettings struct {
 	Model string `toml:"model"`
+}
+
+type BlueskyPlatformSettings struct {
+	Identifier string `toml:"identifier"`
+	Password   string `toml:"password"`
 }
 
 type SourceConfig struct {
@@ -153,6 +159,7 @@ type TargetConfig struct {
 type TargetSettings struct {
 	DiscordTargetSettings
 	FeedTargetSettings
+	BlueskyTargetSettings
 }
 
 type DiscordTargetSettings struct {
@@ -164,6 +171,10 @@ type FeedTargetSettings struct {
 	Port     string `toml:"port"`
 	FeedSize int    `toml:"feed_size"`
 	MaxItems int    `toml:"max_items"`
+}
+
+type BlueskyTargetSettings struct {
+	Languages []string `toml:"languages"`
 }
 
 func Load(path string) (*Config, error) {

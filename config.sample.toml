@@ -14,6 +14,13 @@ sleep = "1s"
 bot_token = "YOUR_BOT_TOKEN_HERE"
 timeout = "60s"
 
+[platforms.bluesky]
+type = "bluesky"
+enabled = false
+[platforms.bluesky.settings]
+identifier = "your-handle.bsky.social"
+password = "your-app-password"
+
 [sources.hackernews]
 type = "hackernews"
 enabled = true
@@ -102,6 +109,13 @@ platform = "discord"
 [targets.discord_rss.settings]
 channel_id = "YOUR_CHANNEL_ID_HERE"
 channel_type = "text"
+
+[targets.bluesky_example]
+type = "bluesky"
+enabled = false
+platform = "bluesky"
+[targets.bluesky_example.settings]
+languages = ["en"]
 
 [targets.feed_target]
 type = "feed"

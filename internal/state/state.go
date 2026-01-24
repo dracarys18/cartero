@@ -270,6 +270,10 @@ func (s *State) createTarget(name string, cfg config.TargetConfig) types.Target 
 	case "feed":
 		return targets.NewFeedTarget(name, s.Registry)
 
+	case "bluesky":
+		bskyCfg := cfg.Settings.BlueskyTargetSettings
+		return targets.NewBlueskyTarget(name, bskyCfg.Languages, s.Registry)
+
 	default:
 		return nil
 	}
