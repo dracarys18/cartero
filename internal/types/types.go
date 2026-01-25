@@ -61,6 +61,18 @@ func (i *Item) GetArticle() *Article {
 	return i.TextContent
 }
 
+func (i *Item) GetThumbnail() string {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	if i.TextContent != nil {
+		if i.TextContent.Image != "" {
+			return i.TextContent.Image
+		}
+	}
+	return ""
+}
+
 func (i *Item) ModifyContent(fn func() interface{}) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()

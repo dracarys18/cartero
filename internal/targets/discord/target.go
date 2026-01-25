@@ -142,6 +142,9 @@ func (d *Target) buildEmbed(item *types.Item) (*discordgo.MessageEmbed, error) {
 		URL:         embed.URL,
 		Color:       embed.Color,
 		Timestamp:   embed.Timestamp,
+		Thumbnail: &discordgo.MessageEmbedThumbnail{
+			URL: item.GetThumbnail(),
+		},
 	}
 
 	for _, field := range embed.Fields {

@@ -109,7 +109,7 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 		Facets:    facets,
 	}
 
-	var imgURL string
+	imgURL := item.GetThumbnail()
 	if output.Embed.URI != "" {
 		description := output.Embed.Description
 		if len(description) > 300 {
@@ -120,10 +120,6 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 			Title:       output.Embed.Title,
 			Description: description,
 			Uri:         output.Embed.URI,
-		}
-
-		if article := item.GetArticle(); article != nil {
-			imgURL = article.Image
 		}
 
 		post.Embed = &bsky.FeedPost_Embed{
