@@ -4,22 +4,23 @@ import (
 	"fmt"
 	"time"
 
+	"cartero/internal/types"
 	readability "codeberg.org/readeck/go-readability/v2"
 	"codeberg.org/readeck/go-readability/v2/render"
 )
 
-func GetArticleText(u string, limit int, mod ...readability.RequestWith) (string, error) {
+func GetArticle(u string, limit int, mod ...readability.RequestWith) (*types.Article, error) {
 	if limit <= 0 {
 		limit = 20000
 	}
 	if u == "" {
-		return "", fmt.Errorf("URL is empty")
+		return nil, fmt.Errorf("URL is empty")
 	}
 
 	article, err := readability.FromURL(u, 30*time.Second)
 
 	if err != nil || article.Node == nil {
-		return "", fmt.Errorf("failed to extract content: %v", err)
+		return nil, fmt.Errorf("failed to extract content: %v", err)
 	}
 
 	textContent := render.InnerText(article.Node)
@@ -28,5 +29,10 @@ func GetArticleText(u string, limit int, mod ...readability.RequestWith) (string
 		textContent = textContent[:limit] + "..."
 	}
 
-	return textContent, nil
+	res := &types.Article{
+		Text:  textContent,
+		Image: article.ImageURL(),
+	}
+
+	return res, nil
 }

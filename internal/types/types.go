@@ -15,9 +15,14 @@ type Item struct {
 	Content     interface{}
 	Metadata    map[string]interface{}
 	Source      string
-	TextContent string
+	TextContent *Article
 	Timestamp   time.Time
 	mu          sync.RWMutex
+}
+
+type Article struct {
+	Text  string
+	Image string
 }
 
 func (i *Item) GetID() string {
@@ -48,7 +53,7 @@ func (i *Item) GetTimestamp() time.Time {
 	return i.Timestamp
 }
 
-func (i *Item) GetTextContent() string {
+func (i *Item) GetArticle() *Article {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 
@@ -83,10 +88,10 @@ func (i *Item) AddMetadata(key string, value any) error {
 	return nil
 }
 
-func (i *Item) SetTextContent(text string) error {
+func (i *Item) SetArticle(article *Article) error {
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	i.TextContent = text
+	i.TextContent = article
 	return nil
 }
 

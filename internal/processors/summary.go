@@ -41,7 +41,7 @@ func (d *SummaryProcessor) Process(ctx context.Context, st types.StateAccessor, 
 	pc := registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
 	ollamaClient := pc.OllamaPlatform(model)
 
-	content := item.GetTextContent()
+	content := item.GetArticle().Text
 	prompt := fmt.Sprintf("%s%s", Prompt, content)
 
 	req := &api.GenerateRequest{

@@ -74,7 +74,7 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, st types.StateAcce
 	}
 
 	title = strings.ToLower(title)
-	content := strings.ToLower(item.TextContent)
+	content := strings.ToLower(item.TextContent.Text)
 
 	for exactKeyword := range slices.Values(exactKeywords) {
 		if strings.Contains(title, exactKeyword) || strings.Contains(content, exactKeyword) {

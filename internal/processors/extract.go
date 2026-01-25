@@ -56,13 +56,13 @@ func (e *ExtractText) Process(ctx context.Context, st types.StateAccessor, item 
 		req.Header.Set("Sec-Fetch-Site", "cross-site")
 	}
 
-	article, err := utils.GetArticleText(urlStr, limit, httpMod)
+	article, err := utils.GetArticle(urlStr, limit, httpMod)
 	if err != nil {
 		logger.Error("ExtractText processor failed to extract article text", "processor", e.name, "item_id", item.ID, "error", err)
 		return nil
 	}
 
-	if err := item.SetTextContent(article); err != nil {
+	if err := item.SetArticle(article); err != nil {
 		return err
 	}
 
