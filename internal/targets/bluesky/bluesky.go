@@ -113,7 +113,7 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 	if output.Embed.URI != "" {
 		embedExternal := &bsky.EmbedExternal_External{
 			Title:       output.Embed.Title,
-			Description: output.Embed.Description,
+			Description: output.Embed.Description[:1000000],
 			Uri:         output.Embed.URI,
 		}
 
