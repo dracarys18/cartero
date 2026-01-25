@@ -9,6 +9,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"text/template"
 	"time"
 
@@ -107,14 +109,21 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 		Facets:    facets,
 	}
 
+	var imgURL string
 	if output.Embed.URI != "" {
+		embedExternal := &bsky.EmbedExternal_External{
+			Title:       output.Embed.Title,
+			Description: output.Embed.Description,
+			Uri:         output.Embed.URI,
+		}
+
+		if article := item.GetArticle(); article != nil {
+			imgURL = article.Image
+		}
+
 		post.Embed = &bsky.FeedPost_Embed{
 			EmbedExternal: &bsky.EmbedExternal{
-				External: &bsky.EmbedExternal_External{
-					Title:       output.Embed.Title,
-					Description: output.Embed.Description,
-					Uri:         output.Embed.URI,
-				},
+				External: embedExternal,
 			},
 		}
 	}
@@ -122,6 +131,12 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 	var resp *atproto.RepoCreateRecord_Output
 	err := t.platform.Do(ctx, func(c *xrpc.Client) error {
 		var err error
+		blob, blobErr := t.uploadBlob(ctx, c, imgURL)
+
+		if blobErr != nil {
+			post.Embed.EmbedExternal.External.Thumb = blob
+		}
+
 		resp, err = atproto.RepoCreateRecord(ctx, c, &atproto.RepoCreateRecord_Input{
 			Collection: "app.bsky.feed.post",
 			Repo:       c.Auth.Did,
@@ -150,6 +165,38 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 			"cid": resp.Cid,
 		},
 	}, nil
+}
+
+func (p *Target) uploadBlob(ctx context.Context, c *xrpc.Client, url string) (*util.LexBlob, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, reqErr := http.DefaultClient.Do(req)
+	if reqErr != nil {
+		return nil, reqErr
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to fetch image: %s", resp.Status)
+	}
+
+	data, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		return nil, readErr
+	}
+
+	var blob *util.LexBlob
+
+	blobResp, blobErr := atproto.RepoUploadBlob(ctx, c, bytes.NewReader(data))
+	if blobErr != nil {
+		return nil, blobErr
+	}
+
+	blob = blobResp.Blob
+	return blob, nil
 }
 
 func (t *Target) Shutdown(ctx context.Context) error {
