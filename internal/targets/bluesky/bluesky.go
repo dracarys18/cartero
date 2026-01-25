@@ -15,6 +15,7 @@ import (
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
 	"github.com/bluesky-social/indigo/lex/util"
+	"github.com/bluesky-social/indigo/xrpc"
 )
 
 type Target struct {
@@ -118,10 +119,15 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 		}
 	}
 
-	resp, err := atproto.RepoCreateRecord(ctx, t.platform.Client(), &atproto.RepoCreateRecord_Input{
-		Collection: "app.bsky.feed.post",
-		Repo:       t.platform.Client().Auth.Did,
-		Record:     &util.LexiconTypeDecoder{Val: post},
+	var resp *atproto.RepoCreateRecord_Output
+	err := t.platform.Do(ctx, func(c *xrpc.Client) error {
+		var err error
+		resp, err = atproto.RepoCreateRecord(ctx, c, &atproto.RepoCreateRecord_Input{
+			Collection: "app.bsky.feed.post",
+			Repo:       c.Auth.Did,
+			Record:     &util.LexiconTypeDecoder{Val: post},
+		})
+		return err
 	})
 
 	if err != nil {

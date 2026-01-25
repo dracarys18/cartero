@@ -4,6 +4,8 @@ import (
 	"cartero/internal/config"
 	"context"
 	"fmt"
+	"strings"
+	"sync"
 
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/xrpc"
@@ -13,6 +15,7 @@ type BlueskyPlatform struct {
 	identifier string
 	password   string
 	client     *xrpc.Client
+	mu         sync.RWMutex
 }
 
 func NewBlueskyPlatform(settings *config.BlueskyPlatformSettings) (*BlueskyPlatform, error) {
@@ -30,12 +33,16 @@ func NewBlueskyPlatform(settings *config.BlueskyPlatformSettings) (*BlueskyPlatf
 }
 
 func (p *BlueskyPlatform) Initialize(ctx context.Context) error {
-	// Create a new XRPC client pointing to the Bluesky social PDS
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.createSession(ctx)
+}
+
+func (p *BlueskyPlatform) createSession(ctx context.Context) error {
 	client := &xrpc.Client{
 		Host: "https://bsky.social",
 	}
 
-	// Attempt to create a session (login)
 	auth, err := atproto.ServerCreateSession(ctx, client, &atproto.ServerCreateSession_Input{
 		Identifier: p.identifier,
 		Password:   p.password,
@@ -44,7 +51,6 @@ func (p *BlueskyPlatform) Initialize(ctx context.Context) error {
 		return fmt.Errorf("failed to authenticate with bluesky: %w", err)
 	}
 
-	// Attach authentication info to the client for future requests
 	client.Auth = &xrpc.AuthInfo{
 		AccessJwt:  auth.AccessJwt,
 		RefreshJwt: auth.RefreshJwt,
@@ -53,16 +59,39 @@ func (p *BlueskyPlatform) Initialize(ctx context.Context) error {
 	}
 
 	p.client = client
-
 	return nil
 }
 
-func (p *BlueskyPlatform) Client() *xrpc.Client {
-	return p.client
+func (p *BlueskyPlatform) Do(ctx context.Context, fn func(c *xrpc.Client) error) error {
+	p.mu.RLock()
+	client := p.client
+	p.mu.RUnlock()
+
+	if client == nil {
+		return fmt.Errorf("bluesky platform not initialized")
+	}
+
+	err := fn(client)
+	if err != nil && strings.Contains(err.Error(), "ExpiredToken") {
+		p.mu.Lock()
+
+		if p.client == client {
+			if err := p.createSession(ctx); err != nil {
+				p.mu.Unlock()
+				return fmt.Errorf("failed to refresh session: %w", err)
+			}
+		}
+
+		client = p.client
+		p.mu.Unlock()
+
+		return fn(client)
+	}
+
+	return err
 }
 
 func (p *BlueskyPlatform) Close(ctx context.Context) error {
-	// No specific cleanup needed for the stateless HTTP client
 	return nil
 }
 
