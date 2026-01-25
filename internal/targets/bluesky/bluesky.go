@@ -111,9 +111,14 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 
 	var imgURL string
 	if output.Embed.URI != "" {
+		description := output.Embed.Description
+		if len(description) > 300 {
+			description = description[:297] + "..."
+		}
+
 		embedExternal := &bsky.EmbedExternal_External{
 			Title:       output.Embed.Title,
-			Description: output.Embed.Description[:1000000],
+			Description: description,
 			Uri:         output.Embed.URI,
 		}
 
@@ -131,10 +136,11 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 	var resp *atproto.RepoCreateRecord_Output
 	err := t.platform.Do(ctx, func(c *xrpc.Client) error {
 		var err error
-		blob, blobErr := t.uploadBlob(ctx, c, imgURL)
-
-		if blobErr != nil {
-			post.Embed.EmbedExternal.External.Thumb = blob
+		if imgURL != "" {
+			blob, blobErr := t.uploadBlob(ctx, c, imgURL)
+			if blobErr == nil {
+				post.Embed.EmbedExternal.External.Thumb = blob
+			}
 		}
 
 		resp, err = atproto.RepoCreateRecord(ctx, c, &atproto.RepoCreateRecord_Input{
@@ -167,11 +173,14 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 	}, nil
 }
 
-func (p *Target) uploadBlob(ctx context.Context, c *xrpc.Client, url string) (*util.LexBlob, error) {
+func (t *Target) uploadBlob(ctx context.Context, c *xrpc.Client, url string) (*util.LexBlob, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
+
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
 
 	resp, reqErr := http.DefaultClient.Do(req)
 	if reqErr != nil {
