@@ -1,7 +1,6 @@
 {
   "title": {{ index .Metadata "title" | json }},
   "url": {{ index .Metadata "url" | json }},
-  "description": {{ index .Metadata "description" | json }},
   "color": 3447003,
   "timestamp": {{ .Timestamp.Format "2006-01-02T15:04:05Z07:00" | json }},
   "fields": [

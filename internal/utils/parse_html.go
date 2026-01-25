@@ -30,8 +30,9 @@ func GetArticle(u string, limit int, mod ...readability.RequestWith) (*types.Art
 	}
 
 	res := &types.Article{
-		Text:  textContent,
-		Image: article.ImageURL(),
+		Text:        textContent,
+		Image:       article.ImageURL(),
+		Description: article.Excerpt(),
 	}
 
 	return res, nil

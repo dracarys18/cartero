@@ -21,8 +21,9 @@ type Item struct {
 }
 
 type Article struct {
-	Text  string
-	Image string
+	Text        string
+	Image       string
+	Description string
 }
 
 func (i *Item) GetID() string {
