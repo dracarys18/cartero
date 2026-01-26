@@ -31,34 +31,15 @@ func (t *Target) Initialize(ctx context.Context) error {
 }
 
 func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishResult, error) {
-	title := "Untitled"
-	if t, ok := item.Metadata["title"].(string); ok {
-		title = t
-	}
+	// From[*types.Item] - Convert Item to FeedItem
+	var feedItem FeedItem
+	feedItem.From(item)
 
-	link := ""
-	if l, ok := item.Metadata["url"].(string); ok {
-		link = l
-	} else if l, ok := item.Metadata["link"].(string); ok {
-		link = l
-	}
+	// Create FeedEntry with metadata
+	entry := NewFeedEntry(item.ID, feedItem, item.Source, item.Timestamp)
 
-	description := ""
-	if d, ok := item.Metadata["description"].(string); ok {
-		description = d
-	}
-
-	author := ""
-	if a, ok := item.Metadata["author"].(string); ok {
-		author = a
-	}
-
-	content := ""
-	if s, ok := item.Metadata["summary"].(string); ok {
-		content = s
-	}
-
-	err := t.feedStore.InsertEntry(ctx, item.ID, title, link, description, content, author, item.Source, item.Timestamp)
+	// Insert into storage
+	err := InsertIntoStore(ctx, t.feedStore, entry)
 	if err != nil {
 		return nil, err
 	}

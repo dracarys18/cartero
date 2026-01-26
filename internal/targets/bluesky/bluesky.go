@@ -7,10 +7,7 @@ import (
 	"cartero/internal/types"
 	"cartero/internal/utils"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"text/template"
 	"time"
 
@@ -57,92 +54,39 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 		return nil, fmt.Errorf("template execution error: %w", err)
 	}
 
-	var output struct {
-		Segments []struct {
-			Text string `json:"text"`
-			URI  string `json:"uri"`
-		} `json:"segments"`
-		Embed struct {
-			URI         string `json:"uri"`
-			Title       string `json:"title"`
-			Description string `json:"description"`
-		} `json:"embed"`
+	var post Post
+	if err := post.TryFrom(buf.Bytes()); err != nil {
+		return nil, err
 	}
 
-	if err := json.Unmarshal(buf.Bytes(), &output); err != nil {
-		return nil, fmt.Errorf("failed to parse template output: %w", err)
-	}
+	richText := post.Into()
 
-	var text string
-	var facets []*bsky.RichtextFacet
-
-	for _, seg := range output.Segments {
-		if seg.Text == "" {
-			continue
-		}
-
-		start := int64(len(text))
-		text += seg.Text
-		end := int64(len(text))
-
-		if seg.URI != "" {
-			facets = append(facets, &bsky.RichtextFacet{
-				Index: &bsky.RichtextFacet_ByteSlice{
-					ByteStart: start,
-					ByteEnd:   end,
-				},
-				Features: []*bsky.RichtextFacet_Features_Elem{
-					{
-						RichtextFacet_Link: &bsky.RichtextFacet_Link{
-							Uri: seg.URI,
-						},
-					},
-				},
-			})
+	var embedExternal *bsky.EmbedExternal_External
+	if post.Embed != nil {
+		var err error
+		embedExternal, err = post.Embed.TryInto()
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	post := &bsky.FeedPost{
-		CreatedAt: time.Now().Format(time.RFC3339),
-		Langs:     t.languages,
-		Text:      text,
-		Facets:    facets,
-	}
-
-	imgURL := item.GetThumbnail()
-	if output.Embed.URI != "" {
-		description := output.Embed.Description
-		if len(description) > 300 {
-			description = description[:297] + "..."
-		}
-
-		embedExternal := &bsky.EmbedExternal_External{
-			Title:       output.Embed.Title,
-			Description: description,
-			Uri:         output.Embed.URI,
-		}
-
-		post.Embed = &bsky.FeedPost_Embed{
-			EmbedExternal: &bsky.EmbedExternal{
-				External: embedExternal,
-			},
-		}
-	}
+	bskyPost := BuildPost(richText, embedExternal, t.languages)
 
 	var resp *atproto.RepoCreateRecord_Output
 	err := t.platform.Do(ctx, func(c *xrpc.Client) error {
-		var err error
+		imgURL := item.GetThumbnail()
 		if imgURL != "" {
-			blob, blobErr := t.uploadBlob(ctx, c, imgURL)
+			blob, blobErr := UploadBlob(ctx, c, imgURL)
 			if blobErr == nil {
-				post.Embed.EmbedExternal.External.Thumb = blob
+				AttachThumbnail(bskyPost, blob)
 			}
 		}
 
+		var err error
 		resp, err = atproto.RepoCreateRecord(ctx, c, &atproto.RepoCreateRecord_Input{
 			Collection: "app.bsky.feed.post",
 			Repo:       c.Auth.Did,
-			Record:     &util.LexiconTypeDecoder{Val: post},
+			Record:     &util.LexiconTypeDecoder{Val: bskyPost},
 		})
 		return err
 	})
@@ -167,41 +111,6 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 			"cid": resp.Cid,
 		},
 	}, nil
-}
-
-func (t *Target) uploadBlob(ctx context.Context, c *xrpc.Client, url string) (*util.LexBlob, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36")
-	req.Header.Set("Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8")
-
-	resp, reqErr := http.DefaultClient.Do(req)
-	if reqErr != nil {
-		return nil, reqErr
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to fetch image: %s", resp.Status)
-	}
-
-	data, readErr := io.ReadAll(resp.Body)
-	if readErr != nil {
-		return nil, readErr
-	}
-
-	var blob *util.LexBlob
-
-	blobResp, blobErr := atproto.RepoUploadBlob(ctx, c, bytes.NewReader(data))
-	if blobErr != nil {
-		return nil, blobErr
-	}
-
-	blob = blobResp.Blob
-	return blob, nil
 }
 
 func (t *Target) Shutdown(ctx context.Context) error {
