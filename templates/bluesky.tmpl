@@ -30,6 +30,7 @@
   "embed": {
     "uri": {{ index .Metadata "url" | json }},
     "title": {{ index .Metadata "title" | json }},
-    "description": {{ if .TextContent }}{{ .TextContent.Description | json }}{{ else }}""{{ end }}
+    "description": {{ if .TextContent }}{{ .TextContent.Description | json }}{{ else }}""{{ end }},
+    "thumbnail_url": {{ if .TextContent }}{{ .TextContent.Image | json }}{{ else }}""{{ end }}
   }
 }

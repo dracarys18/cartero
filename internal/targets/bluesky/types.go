@@ -27,9 +27,10 @@ type Segment struct {
 }
 
 type EmbedData struct {
-	URI         string `json:"uri"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
+	URI          string `json:"uri"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	ThumbnailURL string `json:"thumbnail_url,omitempty"`
 }
 
 type RichText struct {

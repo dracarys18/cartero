@@ -74,7 +74,7 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 
 	var resp *atproto.RepoCreateRecord_Output
 	err := t.platform.Do(ctx, func(c *xrpc.Client) error {
-		imgURL := item.GetThumbnail()
+		imgURL := post.Embed.ThumbnailURL
 		if imgURL != "" {
 			blob, blobErr := UploadBlob(ctx, c, imgURL)
 			if blobErr == nil {
