@@ -2,6 +2,7 @@
   "title": {{ index .Metadata "title" | json }},
   "url": {{ index .Metadata "url" | json }},
   "color": 3447003,
+  "thumbnail_url": {{ if .TextContent }}{{ .TextContent.Image | json }}{{ else }}""{{ end }},
   "timestamp": {{ .Timestamp.Format "2006-01-02T15:04:05Z07:00" | json }},
   "fields": [
     {{- if index .Metadata "score" }}

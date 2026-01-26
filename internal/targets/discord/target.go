@@ -7,6 +7,7 @@ import (
 	"cartero/internal/types"
 	"cartero/internal/utils"
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"text/template"
@@ -129,17 +130,13 @@ func (d *Target) buildEmbed(item *types.Item) (*discordgo.MessageEmbed, error) {
 		return nil, fmt.Errorf("template execution error: %w", err)
 	}
 
-	var payload Payload
+	var embed Embed
 	output := strings.TrimSpace(buf.String())
-	if err := payload.TryFrom([]byte(output)); err != nil {
-		return nil, err
+	if err := json.Unmarshal([]byte(output), &embed); err != nil {
+		return nil, fmt.Errorf("failed to parse template output: %w", err)
 	}
 
-	if len(payload.Embeds) == 0 {
-		return nil, fmt.Errorf("template did not produce any embeds")
-	}
-
-	dgEmbed := payload.Embeds[0].Into()
+	dgEmbed := embed.Into()
 
 	return dgEmbed, nil
 }
