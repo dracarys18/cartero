@@ -30,7 +30,7 @@
     {{- if index .Metadata "summary" }}
     {
       "name": "Summary",
-      "value": {{ index .Metadata "summary" | json }},
+      "value": {{ slice (index .Metadata "summary") 0 1020 | printf "%s ..." | json }},
       "inline": false
     }
     {{- end }}
