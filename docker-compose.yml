@@ -21,6 +21,18 @@ services:
     networks:
       - cartero-network
 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflare-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    networks:
+      - cartero-network
+    profiles:
+      - tunnel
+
 networks:
   cartero-network:
     driver: bridge
