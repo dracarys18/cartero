@@ -9,4 +9,3 @@ func FilterArray[T any](input []T, predicate func(T) bool) []T {
 	}
 	return filtered
 }
-
