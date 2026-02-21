@@ -37,12 +37,13 @@ type FeedEntry struct {
 	Content     string
 	Author      string
 	Source      string
+	ImageURL    string
 	PublishedAt time.Time
 	CreatedAt   time.Time
 }
 
 type FeedStore interface {
-	InsertEntry(ctx context.Context, id, title, link, description, content, author, source string, publishedAt time.Time) error
+	InsertEntry(ctx context.Context, id, title, link, description, content, author, source, imageURL string, publishedAt time.Time) error
 	ListRecentEntries(ctx context.Context, limit int) ([]FeedEntry, error)
 	DeleteOlderThan(ctx context.Context, age time.Duration) error
 }

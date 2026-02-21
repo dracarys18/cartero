@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #000;
+            --bg-secondary: #111111;
+            --text-primary: #dbdbdb;
+            --text-secondary: #888;
+            --border-color: #444;
+            --border-light: #333;
+            --hover-bg: #333;
+            --max-width: 800px;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: "Source Code Pro", monospace;
+            line-height: 1.6;
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 20px;
+            font-size: 16px;
+        }
+        a {
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .header {
+            border-top: 1px dashed var(--border-color);
+            border-bottom: 1px dashed var(--border-color);
+            padding: 10px 0;
+            margin: 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            overflow: hidden;
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+        }
+        .nav-link {
+            margin-left: 10px;
+        }
+        .social-icon {
+            margin-left: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            vertical-align: middle;
+        }
+        .social-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--text-primary);
+        }
+        .social-icon:hover svg {
+            fill: var(--text-secondary);
+        }
+        .social-icon span {
+            font-size: 12px;
+        }
+        .content {
+            margin: 30px 0;
+        }
+        .title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+        .story {
+            padding: 20px 0;
+            border-bottom: 1px dashed var(--border-light);
+            position: relative;
+            padding-left: 140px;
+            min-height: 80px;
+        }
+        .story:last-child {
+            border-bottom: none;
+        }
+        .story-image {
+            position: absolute;
+            left: 0;
+            top: 20px;
+            width: 130px;
+            height: 75px;
+            object-fit: cover;
+            border-radius: 2px;
+            border: 1px solid var(--border-light);
+            background-color: var(--bg-secondary);
+            background-image: url('/assets/default-thumbnail.png');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: cover;
+        }
+        .story-image-placeholder {
+            position: absolute;
+            left: 0;
+            top: 20px;
+            width: 130px;
+            height: 75px;
+            border-radius: 2px;
+            border: 1px solid var(--border-light);
+            background-image: url('/assets/default-thumbnail.png');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: cover;
+        }
+        .story-content {
+            width: 100%;
+        }
+        .story-title {
+            font-size: 18px;
+            line-height: 1.4;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        .story-title a {
+            color: var(--text-primary);
+        }
+        .story-title a:hover {
+            color: var(--text-primary);
+            text-decoration: underline;
+        }
+        .story-meta {
+            font-size: 14px;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        .story-meta span {
+            display: inline-block;
+        }
+        .source-tag {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+        .story-description {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            line-height: 1.6;
+        }
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+        .footer {
+            border-top: 1px dashed var(--border-color);
+            border-bottom: 1px dashed var(--border-color);
+            padding: 10px 0;
+            margin: 40px 0 20px 0;
+            text-align: right;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <nav class="nav-links">
+            <a href="/" class="nav-link">/ cartero</a>
+            <a href="/feed.rss" class="nav-link">/ rss</a>
+            <a href="/feed.atom" class="nav-link">/ atom</a>
+            <a href="/feed.json" class="nav-link">/ json</a>
+        </nav>
+        <div class="social-links">
+            <a href="https://bsky.app/profile/news.karthihegde.dev" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="Follow us on Bluesky">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 1024 1024">
+                    <path d="M351.121 315.106C416.241 363.994 486.281 463.123 512 516.315C537.719 463.123 607.759 363.994 672.879 315.106C719.866 279.83 796 252.536 796 339.388C796 356.734 786.055 485.101 780.222 505.943C759.947 578.396 686.067 596.876 620.347 585.691C735.222 605.242 764.444 670.002 701.333 734.762C581.473 857.754 529.061 703.903 515.631 664.481C513.169 657.254 512.017 653.873 512 656.748C511.983 653.873 510.831 657.254 508.369 664.481C494.939 703.903 442.527 857.754 322.667 734.762C259.556 670.002 288.778 605.242 403.653 585.691C337.933 596.876 264.053 578.396 243.778 505.943C237.945 485.101 228 356.734 228 339.388C228 252.536 304.134 279.83 351.121 315.106Z"></path>
+                </svg>
+                <span>Follow on Bluesky</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="title">
+            <h1>Latest Stories</h1>
+        </div>
+
+        {{if .Entries}}
+            {{range .Entries}}
+            <div class="story">
+                {{if .ImageURL}}
+                <img src="{{.ImageURL}}" alt="{{.Title}}" class="story-image" loading="lazy" onerror="this.src='/assets/default-thumbnail.png'">
+                {{else}}
+                <img src="/assets/default-thumbnail.png" alt="Placeholder" class="story-image-placeholder">
+                {{end}}
+                <div class="story-content">
+                    <div class="story-title">
+                        <a href="{{.Link}}" target="_blank" rel="noopener">{{.Title}}</a>
+                    </div>
+                    <div class="story-meta">
+                        <span class="source-tag">[{{.Source}}]</span>
+                        {{if .Author}}<span>by {{.Author}}</span>{{end}}
+                        <span>{{timeAgo .CreatedAt}}</span>
+                    </div>
+                    {{if .Description}}
+                    <div class="story-description">{{.Description}}</div>
+                    {{end}}
+                </div>
+            </div>
+            {{end}}
+        {{else}}
+            <div class="empty">
+                <p>No stories yet. Check back soon!</p>
+            </div>
+        {{end}}
+    </div>
+
+    <div class="footer">
+        <p>last updated: {{.Now.Format "Jan 2, 2006 15:04:05 MST"}}</p>
+    </div>
+</body>
+</html>

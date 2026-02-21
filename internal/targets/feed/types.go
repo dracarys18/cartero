@@ -15,6 +15,7 @@ type FeedItem struct {
 	Description string `json:"description,omitempty"`
 	Content     string `json:"content,omitempty"`
 	Author      string `json:"author,omitempty"`
+	ImageURL    string `json:"image_url,omitempty"`
 	Published   string `json:"published"`
 }
 
@@ -57,6 +58,10 @@ func (f *FeedItem) From(item *types.Item) {
 		f.Content = summary
 	}
 
+	if item.TextContent != nil && item.TextContent.Image != "" {
+		f.ImageURL = item.TextContent.Image
+	}
+
 	f.Published = item.Timestamp.Format(time.RFC3339)
 }
 
@@ -71,6 +76,7 @@ func (e *FeedEntry) Into() storage.FeedEntry {
 		Content:     e.Item.Content,
 		Author:      e.Item.Author,
 		Source:      e.Source,
+		ImageURL:    e.Item.ImageURL,
 		PublishedAt: publishedAt,
 		CreatedAt:   time.Now(),
 	}
@@ -108,6 +114,7 @@ func InsertIntoStore(ctx context.Context, store storage.FeedStore, entry FeedEnt
 		entry.Item.Content,
 		entry.Item.Author,
 		entry.Source,
+		entry.Item.ImageURL,
 		publishedAt,
 	)
 }

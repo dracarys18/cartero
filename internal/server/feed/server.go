@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"cartero/internal/storage"
+	"cartero/internal/template"
 
 	"github.com/gorilla/feeds"
 )
@@ -19,11 +20,12 @@ type Config struct {
 }
 
 type Server struct {
-	name      string
-	config    Config
-	feedStore storage.FeedStore
-	server    *http.Server
-	startCh   chan error
+	name         string
+	config       Config
+	feedStore    storage.FeedStore
+	server       *http.Server
+	startCh      chan error
+	htmlTemplate *template.Template
 }
 
 func New(name string, config Config, feedStore storage.FeedStore) *Server {
@@ -37,20 +39,31 @@ func New(name string, config Config, feedStore storage.FeedStore) *Server {
 		config.MaxItems = 50
 	}
 
+	tmpl := &template.Template{}
+	if err := tmpl.Load("templates/homepage.gotmpl", true, nil); err != nil {
+		panic(err.Error())
+	}
+
 	return &Server{
-		name:      name,
-		config:    config,
-		feedStore: feedStore,
-		startCh:   make(chan error, 1),
+		name:         name,
+		config:       config,
+		feedStore:    feedStore,
+		startCh:      make(chan error, 1),
+		htmlTemplate: tmpl,
 	}
 }
 
 func (s *Server) Start(ctx context.Context) error {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/", s.handleHomepage)
 	mux.HandleFunc("/feed.rss", s.handleRSSFeed)
 	mux.HandleFunc("/feed.atom", s.handleAtomFeed)
 	mux.HandleFunc("/feed.json", s.handleJSONFeed)
 	mux.HandleFunc("/feed.health", s.handleHealth)
+
+	// Serve static assets
+	fileServer := http.FileServer(http.Dir("assets"))
+	mux.Handle("/assets/", http.StripPrefix("/assets/", fileServer))
 
 	s.server = &http.Server{
 		Addr:    ":" + s.config.Port,
@@ -101,7 +114,8 @@ func (s *Server) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
+	w.Header().Set("Content-Type", "text/xml; charset=utf-8")
+	w.Header().Set("Content-Disposition", "inline")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	fmt.Fprint(w, rss)
 }
@@ -121,7 +135,8 @@ func (s *Server) handleAtomFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/atom+xml; charset=utf-8")
+	w.Header().Set("Content-Type", "text/xml; charset=utf-8")
+	w.Header().Set("Content-Disposition", "inline")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	fmt.Fprint(w, atom)
 }
@@ -141,7 +156,8 @@ func (s *Server) handleJSONFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/feed+json; charset=utf-8")
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Content-Disposition", "inline")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
 	fmt.Fprint(w, jsonStr)
 }
@@ -182,5 +198,35 @@ func (s *Server) buildFeed(entries []storage.FeedEntry) *feeds.Feed {
 		Author:      &feeds.Author{Name: "Cartero"},
 		Created:     time.Now().UTC(),
 		Items:       items,
+	}
+}
+
+func (s *Server) handleHomepage(w http.ResponseWriter, r *http.Request) {
+	entries, err := s.feedStore.ListRecentEntries(r.Context(), s.config.FeedSize)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Error: %v", err)
+		return
+	}
+
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].CreatedAt.After(entries[j].CreatedAt)
+	})
+
+	if len(entries) > s.config.MaxItems {
+		entries = entries[:s.config.MaxItems]
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=300")
+
+	data := map[string]interface{}{
+		"Title":   fmt.Sprintf("Cartero - %s", s.name),
+		"Entries": entries,
+		"Now":     time.Now(),
+	}
+
+	if err := s.htmlTemplate.HTMLTemplate().Execute(w, data); err != nil {
+		fmt.Printf("Template error: %v\n", err)
 	}
 }
