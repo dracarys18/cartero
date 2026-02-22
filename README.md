@@ -5,6 +5,12 @@
 
 Cartero (Spanish for "postman") is a content aggregation and distribution bot written in Go.
 
+## Live Instance
+
+Check out Cartero in action:
+- **Bluesky**: [@news.karthihegde.dev](https://bsky.app/profile/news.karthihegde.dev)
+- **Web Feed**: [news.karthihegde.dev](https://news.karthihegde.dev)
+
 ## The Problem
 I enjoy reading tech news on HackerNews, Lobsters, and hundreds of RSS feeds I’ve curated over the years. However, they often have too much content, and not all of it matches my interests. So, I built Cartero—a personal curator that aggregates content from different sources, filters it based on my interests and quality, and pushes it into a single feed.
 
