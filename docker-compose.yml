@@ -2,9 +2,7 @@ version: "3.8"
 
 services:
   cartero:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/dracarys18/cartero:latest
     container_name: cartero
     restart: unless-stopped
     volumes:
@@ -18,6 +16,19 @@ services:
     ports:
       - "8034:8080"
     command: ["-config", "/app/config.toml"]
+    networks:
+      - cartero-network
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=300
+      - WATCHTOWER_INCLUDE_RESTARTING=true
     networks:
       - cartero-network
 
