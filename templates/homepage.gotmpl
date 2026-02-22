@@ -124,14 +124,10 @@
             top: 20px;
             width: 130px;
             height: 75px;
-            object-fit: cover;
+            object-fit: contain;
             border-radius: 2px;
             border: 1px solid var(--border-light);
             background-color: var(--bg-secondary);
-            background-image: url('/assets/default-thumbnail.png');
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: cover;
         }
         .story-image-placeholder {
             position: absolute;
@@ -141,10 +137,11 @@
             height: 75px;
             border-radius: 2px;
             border: 1px solid var(--border-light);
+            background-color: var(--bg-secondary);
             background-image: url('/assets/default-thumbnail.png');
             background-repeat: no-repeat;
             background-position: center;
-            background-size: cover;
+            background-size: contain;
         }
         .story-content {
             width: 100%;
