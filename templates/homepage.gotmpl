@@ -42,69 +42,71 @@
             text-decoration: underline;
         }
         .header {
-            border-top: 1px dashed var(--border-color);
             border-bottom: 1px dashed var(--border-color);
-            padding: 10px 0;
-            margin: 20px 0;
+            padding: 15px 0;
+            margin-bottom: 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 20px;
-            flex-wrap: wrap;
-            overflow: hidden;
         }
-        .nav-links {
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+        .logo:hover {
+            text-decoration: none;
+        }
+        .header-center {
             display: flex;
-            align-items: center;
-        }
-        .nav-link {
-            margin-left: 10px;
+            gap: 15px;
         }
         .date-filter {
             display: flex;
-            align-items: center;
-            gap: 8px;
+            gap: 15px;
         }
         .filter-link {
             color: var(--text-secondary);
             font-size: 14px;
-            padding: 4px 8px;
         }
         .filter-link.active {
             color: var(--text-primary);
             font-weight: 700;
         }
-        .separator {
-            color: var(--text-secondary);
+        .filter-link:hover {
+            color: var(--text-primary);
         }
-        .social-links {
-            margin-left: auto;
+        .header-right {
+            display: flex;
+            align-items: center;
         }
         .social-icon {
-            margin-left: 15px;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            vertical-align: middle;
+            gap: 6px;
+            color: var(--text-secondary);
+            font-size: 13px;
         }
         .social-icon svg {
-            width: 24px;
-            height: 24px;
-            fill: var(--text-primary);
-        }
-        .social-icon:hover svg {
+            width: 16px;
+            height: 16px;
             fill: var(--text-secondary);
         }
-        .social-icon span {
-            font-size: 12px;
+        .social-icon:hover {
+            color: var(--text-primary);
+            text-decoration: none;
+        }
+        .social-icon:hover svg {
+            fill: var(--text-primary);
         }
         .content {
             margin: 30px 0;
         }
         .title {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 700;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
+            color: var(--text-secondary);
         }
         .story {
             padding: 20px 0;
@@ -188,12 +190,24 @@
         }
         .footer {
             border-top: 1px dashed var(--border-color);
-            border-bottom: 1px dashed var(--border-color);
-            padding: 10px 0;
-            margin: 40px 0 20px 0;
-            text-align: right;
+            padding: 15px 0;
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             font-size: 14px;
             color: var(--text-secondary);
+        }
+        .footer-links {
+            display: flex;
+            gap: 15px;
+        }
+        .footer-link {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        .footer-link:hover {
+            color: var(--text-primary);
         }
         .pagination {
             display: flex;
@@ -227,31 +241,29 @@
 </head>
 <body>
     <div class="header">
-        <nav class="nav-links">
-            <a href="/" class="nav-link">/ cartero</a>
-            <a href="/feed.rss" class="nav-link">/ rss</a>
-            <a href="/feed.atom" class="nav-link">/ atom</a>
-            <a href="/feed.json" class="nav-link">/ json</a>
-        </nav>
-        <div class="date-filter">
-            <a href="/?date=today" class="filter-link{{if eq .DateRange "today"}} active{{end}}">today</a>
-            <span class="separator">/</span>
-            <a href="/?date=yesterday" class="filter-link{{if eq .DateRange "yesterday"}} active{{end}}">yesterday</a>
+        <a href="/" class="logo">cartero</a>
+        <div class="header-center">
+            <div class="date-filter">
+                <a href="/?date=today" class="filter-link{{if eq .DateRange "today"}} active{{end}}">today</a>
+                <a href="/?date=yesterday" class="filter-link{{if eq .DateRange "yesterday"}} active{{end}}">yesterday</a>
+            </div>
         </div>
-        <div class="social-links">
-            <a href="https://bsky.app/profile/news.karthihegde.dev" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="Follow us on Bluesky">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 1024 1024">
+        <div class="header-right">
+            <a href="https://bsky.app/profile/news.karthihegde.dev" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="Follow on Bluesky">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 1024 1024">
                     <path d="M351.121 315.106C416.241 363.994 486.281 463.123 512 516.315C537.719 463.123 607.759 363.994 672.879 315.106C719.866 279.83 796 252.536 796 339.388C796 356.734 786.055 485.101 780.222 505.943C759.947 578.396 686.067 596.876 620.347 585.691C735.222 605.242 764.444 670.002 701.333 734.762C581.473 857.754 529.061 703.903 515.631 664.481C513.169 657.254 512.017 653.873 512 656.748C511.983 653.873 510.831 657.254 508.369 664.481C494.939 703.903 442.527 857.754 322.667 734.762C259.556 670.002 288.778 605.242 403.653 585.691C337.933 596.876 264.053 578.396 243.778 505.943C237.945 485.101 228 356.734 228 339.388C228 252.536 304.134 279.83 351.121 315.106Z"></path>
                 </svg>
-                <span>Follow on Bluesky</span>
+                <span>bluesky</span>
             </a>
         </div>
     </div>
 
     <div class="content">
+        {{if .DateRange}}
         <div class="title">
-            <h1>Latest Stories{{if eq .DateRange "yesterday"}} - Yesterday{{end}}</h1>
+            {{if eq .DateRange "yesterday"}}Yesterday's Stories{{else}}Latest Stories{{end}}
         </div>
+        {{end}}
 
         {{if .Entries}}
             {{range .Entries}}
@@ -302,7 +314,12 @@
     </div>
 
     <div class="footer">
-        <p>last updated: {{.Now.Format "Jan 2, 2006 15:04:05 MST"}}</p>
+        <div class="footer-links">
+            <a href="/feed.rss" class="footer-link">rss</a>
+            <a href="/feed.atom" class="footer-link">atom</a>
+            <a href="/feed.json" class="footer-link">json</a>
+        </div>
+        <div>last updated: {{.Now.Format "Jan 2, 2006 15:04 MST"}}</div>
     </div>
 </body>
 </html>
