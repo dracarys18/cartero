@@ -45,7 +45,7 @@ func (s *feedStore) ListRecentEntries(ctx context.Context, limit int) ([]storage
 	if err != nil {
 		return nil, fmt.Errorf("failed to query entries: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	entries := make([]storage.FeedEntry, 0, limit)
 	for rows.Next() {
@@ -102,7 +102,7 @@ func (s *feedStore) ListEntriesPaginated(ctx context.Context, page, perPage int,
 	if err != nil {
 		return nil, fmt.Errorf("failed to query entries: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	entries, err := s.scanEntries(rows, perPage)
 	if err != nil {

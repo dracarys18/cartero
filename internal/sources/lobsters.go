@@ -149,7 +149,7 @@ func (l *LobstersSource) fetchPosts(ctx context.Context) ([]LobstersPost, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch posts: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -172,9 +172,10 @@ func (l *LobstersSource) buildFeedURL() string {
 	baseURL := "https://lobste.rs/"
 
 	sortPath := l.sortBy
-	if sortPath == "hot" {
+	switch sortPath {
+	case "hot":
 		sortPath = "hottest"
-	} else if sortPath == "new" {
+	case "new":
 		sortPath = "newest"
 	}
 

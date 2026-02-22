@@ -137,7 +137,7 @@ func (s *Server) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
 	entries, err := s.feedStore.ListRecentEntries(r.Context(), s.config.FeedSize)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Error: %v", err)
+		_, _ = fmt.Fprintf(w, "Error: %v", err)
 		return
 	}
 
@@ -151,14 +151,14 @@ func (s *Server) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/xml; charset=utf-8")
 	w.Header().Set("Content-Disposition", "inline")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
-	fmt.Fprint(w, rss)
+	_, _ = fmt.Fprint(w, rss)
 }
 
 func (s *Server) handleAtomFeed(w http.ResponseWriter, r *http.Request) {
 	entries, err := s.feedStore.ListRecentEntries(r.Context(), s.config.FeedSize)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Error: %v", err)
+		_, _ = fmt.Fprintf(w, "Error: %v", err)
 		return
 	}
 
@@ -172,14 +172,14 @@ func (s *Server) handleAtomFeed(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/xml; charset=utf-8")
 	w.Header().Set("Content-Disposition", "inline")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
-	fmt.Fprint(w, atom)
+	_, _ = fmt.Fprint(w, atom)
 }
 
 func (s *Server) handleJSONFeed(w http.ResponseWriter, r *http.Request) {
 	entries, err := s.feedStore.ListRecentEntries(r.Context(), s.config.FeedSize)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Error: %v", err)
+		_, _ = fmt.Fprintf(w, "Error: %v", err)
 		return
 	}
 
@@ -193,12 +193,12 @@ func (s *Server) handleJSONFeed(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("Content-Disposition", "inline")
 	w.Header().Set("Cache-Control", "public, max-age=3600")
-	fmt.Fprint(w, jsonStr)
+	_, _ = fmt.Fprint(w, jsonStr)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, `{"status":"ok","name":"%s","time":"%s"}`, s.name, time.Now().UTC().Format(time.RFC3339))
+	_, _ = fmt.Fprintf(w, `{"status":"ok","name":"%s","time":"%s"}`, s.name, time.Now().UTC().Format(time.RFC3339))
 }
 
 func (s *Server) buildFeed(entries []storage.FeedEntry) *feeds.Feed {
@@ -245,7 +245,7 @@ func (s *Server) handleHomepage(w http.ResponseWriter, r *http.Request) {
 	result, err := s.feedStore.ListEntriesPaginated(r.Context(), page, perPage, startDate, endDate)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Error: %v", err)
+		_, _ = fmt.Fprintf(w, "Error: %v", err)
 		return
 	}
 
@@ -275,7 +275,7 @@ func (s *Server) parsePageParam(r *http.Request) int {
 		return 1
 	}
 	page := 1
-	fmt.Sscanf(pageStr, "%d", &page)
+	_, _ = fmt.Sscanf(pageStr, "%d", &page)
 	if page < 1 {
 		page = 1
 	}

@@ -19,7 +19,6 @@ const (
 type Template struct {
 	textTmpl *texttemplate.Template
 	htmlTmpl *htmltemplate.Template
-	kind     TemplateType
 }
 
 func (t *Template) Load(path string, kind TemplateType, customFuncs any) error {
@@ -75,10 +74,6 @@ func (t *Template) TextTemplate() *texttemplate.Template {
 
 func (t *Template) HTMLTemplate() *htmltemplate.Template {
 	return t.htmlTmpl
-}
-
-func (t *Template) Kind() bool {
-	return t.Kind()
 }
 
 func toJSON(v any) string {

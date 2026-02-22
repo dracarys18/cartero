@@ -58,7 +58,7 @@ func (p *DiscordPlatform) Initialize(ctx context.Context) error {
 
 func (p *DiscordPlatform) Close(ctx context.Context) error {
 	if p.session != nil {
-		p.session.Close()
+		_ = p.session.Close()
 	}
 	return nil
 }

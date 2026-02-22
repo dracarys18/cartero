@@ -172,7 +172,7 @@ func UploadBlob(ctx context.Context, c *xrpc.Client, imageURL string) (*util.Lex
 	if reqErr != nil {
 		return nil, reqErr
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to fetch image: %s", resp.Status)

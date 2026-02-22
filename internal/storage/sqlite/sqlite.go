@@ -31,12 +31,12 @@ func New(dbPath string) (storage.StorageInterface, error) {
 	}
 
 	if err := conn.Ping(); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
 	if err := runMigrations(conn); err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, err
 	}
 

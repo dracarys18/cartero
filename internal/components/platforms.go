@@ -66,10 +66,10 @@ func (c *PlatformComponent) Initialize(ctx context.Context) error {
 
 func (c *PlatformComponent) Close(ctx context.Context) error {
 	if c.discordPlatform != nil {
-		c.discordPlatform.Close(ctx)
+		_ = c.discordPlatform.Close(ctx)
 	}
 	if c.blueskyPlatform != nil {
-		c.blueskyPlatform.Close(ctx)
+		_ = c.blueskyPlatform.Close(ctx)
 	}
 	return nil
 }

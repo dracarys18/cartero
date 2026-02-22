@@ -194,7 +194,7 @@ func (s *State) createSource(name string, cfg config.SourceConfig) types.Source 
 
 	switch cfg.Type {
 	case "hackernews":
-		storyType := cfg.Settings.HackerNewsSettings.StoryType
+		storyType := cfg.Settings.StoryType
 		if storyType == "" {
 			storyType = "topstories"
 		}

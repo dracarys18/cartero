@@ -139,7 +139,7 @@ func (h *HackerNewsSource) fetchStoryIDs(ctx context.Context) ([]int64, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch story IDs: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
@@ -170,7 +170,7 @@ func (h *HackerNewsSource) fetchStory(ctx context.Context, id int64) (*HNStory, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch story: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
