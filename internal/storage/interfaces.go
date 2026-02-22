@@ -42,8 +42,19 @@ type FeedEntry struct {
 	CreatedAt   time.Time
 }
 
+type PaginationResult struct {
+	Entries     []FeedEntry
+	Total       int
+	Page        int
+	PerPage     int
+	TotalPages  int
+	HasNext     bool
+	HasPrevious bool
+}
+
 type FeedStore interface {
 	InsertEntry(ctx context.Context, id, title, link, description, content, author, source, imageURL string, publishedAt time.Time) error
 	ListRecentEntries(ctx context.Context, limit int) ([]FeedEntry, error)
+	ListEntriesPaginated(ctx context.Context, page, perPage int, startDate, endDate time.Time) (*PaginationResult, error)
 	DeleteOlderThan(ctx context.Context, age time.Duration) error
 }

@@ -65,6 +65,12 @@ func New(name string, config Config, feedStore storage.FeedStore) *Server {
 				return fmt.Sprintf("%d days ago", days)
 			}
 		},
+		"add": func(a, b int) int {
+			return a + b
+		},
+		"sub": func(a, b int) int {
+			return a - b
+		},
 	}
 
 	tmpl := &template.Template{}
@@ -230,31 +236,82 @@ func (s *Server) buildFeed(entries []storage.FeedEntry) *feeds.Feed {
 }
 
 func (s *Server) handleHomepage(w http.ResponseWriter, r *http.Request) {
-	entries, err := s.feedStore.ListRecentEntries(r.Context(), s.config.FeedSize)
+	page := s.parsePageParam(r)
+	dateRange := s.parseDateParam(r)
+	perPage := 20
+
+	startDate, endDate := s.calculateDateRange(dateRange)
+
+	result, err := s.feedStore.ListEntriesPaginated(r.Context(), page, perPage, startDate, endDate)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Error: %v", err)
 		return
 	}
 
-	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].CreatedAt.After(entries[j].CreatedAt)
-	})
-
-	if len(entries) > s.config.MaxItems {
-		entries = entries[:s.config.MaxItems]
-	}
-
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=300")
 
 	data := map[string]interface{}{
-		"Title":   fmt.Sprintf("Cartero - %s", s.name),
-		"Entries": entries,
-		"Now":     time.Now(),
+		"Title":      fmt.Sprintf("Cartero - %s", s.name),
+		"Entries":    result.Entries,
+		"Now":        time.Now(),
+		"Page":       result.Page,
+		"TotalPages": result.TotalPages,
+		"HasNext":    result.HasNext,
+		"HasPrev":    result.HasPrevious,
+		"DateRange":  dateRange,
+		"Total":      result.Total,
 	}
 
 	if err := s.htmlTemplate.HTMLTemplate().Execute(w, data); err != nil {
 		fmt.Printf("Template error: %v\n", err)
 	}
+}
+
+func (s *Server) parsePageParam(r *http.Request) int {
+	pageStr := r.URL.Query().Get("page")
+	if pageStr == "" {
+		return 1
+	}
+	page := 1
+	fmt.Sscanf(pageStr, "%d", &page)
+	if page < 1 {
+		page = 1
+	}
+	return page
+}
+
+func (s *Server) parseDateParam(r *http.Request) string {
+	dateRange := r.URL.Query().Get("date")
+	if dateRange == "" {
+		return "today"
+	}
+	if dateRange != "today" && dateRange != "yesterday" {
+		return "today"
+	}
+	return dateRange
+}
+
+func (s *Server) calculateDateRange(dateRange string) (time.Time, time.Time) {
+	now := time.Now()
+
+	switch dateRange {
+	case "yesterday":
+		return s.yesterdayRange(now)
+	default:
+		return s.todayRange(now)
+	}
+}
+
+func (s *Server) todayRange(now time.Time) (time.Time, time.Time) {
+	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	endOfToday := startOfToday.Add(24 * time.Hour)
+	return startOfToday, endOfToday
+}
+
+func (s *Server) yesterdayRange(now time.Time) (time.Time, time.Time) {
+	startOfYesterday := time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, now.Location())
+	endOfYesterday := startOfYesterday.Add(24 * time.Hour)
+	return startOfYesterday, endOfYesterday
 }

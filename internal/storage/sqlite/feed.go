@@ -87,6 +87,103 @@ func (s *feedStore) ListRecentEntries(ctx context.Context, limit int) ([]storage
 	return entries, nil
 }
 
+func (s *feedStore) ListEntriesPaginated(ctx context.Context, page, perPage int, startDate, endDate time.Time) (*storage.PaginationResult, error) {
+	offset := (page - 1) * perPage
+
+	countQuery := s.buildCountQuery(startDate, endDate)
+	var total int
+	err := s.db.QueryRowContext(ctx, countQuery, startDate, endDate).Scan(&total)
+	if err != nil {
+		return nil, fmt.Errorf("failed to count entries: %w", err)
+	}
+
+	selectQuery := s.buildSelectQuery(startDate, endDate)
+	rows, err := s.db.QueryContext(ctx, selectQuery, startDate, endDate, perPage, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query entries: %w", err)
+	}
+	defer rows.Close()
+
+	entries, err := s.scanEntries(rows, perPage)
+	if err != nil {
+		return nil, err
+	}
+
+	totalPages := (total + perPage - 1) / perPage
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
+	return &storage.PaginationResult{
+		Entries:     entries,
+		Total:       total,
+		Page:        page,
+		PerPage:     perPage,
+		TotalPages:  totalPages,
+		HasNext:     page < totalPages,
+		HasPrevious: page > 1,
+	}, nil
+}
+
+func (s *feedStore) buildCountQuery(startDate, endDate time.Time) string {
+	return `
+		SELECT COUNT(*)
+		FROM feed_entries
+		WHERE created_at >= ? AND created_at < ?
+	`
+}
+
+func (s *feedStore) buildSelectQuery(startDate, endDate time.Time) string {
+	return `
+		SELECT id, title, link, description, content, author, source, image_url, published_at, created_at
+		FROM feed_entries
+		WHERE created_at >= ? AND created_at < ?
+		ORDER BY created_at DESC
+		LIMIT ? OFFSET ?
+	`
+}
+
+func (s *feedStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEntry, error) {
+	entries := make([]storage.FeedEntry, 0, capacity)
+	for rows.Next() {
+		var entry storage.FeedEntry
+		var publishedAt sql.NullTime
+		var imageURL sql.NullString
+
+		err := rows.Scan(
+			&entry.ID,
+			&entry.Title,
+			&entry.Link,
+			&entry.Description,
+			&entry.Content,
+			&entry.Author,
+			&entry.Source,
+			&imageURL,
+			&publishedAt,
+			&entry.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan entry: %w", err)
+		}
+
+		if publishedAt.Valid {
+			entry.PublishedAt = publishedAt.Time
+		}
+
+		if imageURL.Valid {
+			entry.ImageURL = imageURL.String
+		}
+
+		entries = append(entries, entry)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
+
+	return entries, nil
+}
+
 func (s *feedStore) DeleteOlderThan(ctx context.Context, age time.Duration) error {
 	cutoff := time.Now().Add(-age)
 	query := `DELETE FROM feed_entries WHERE created_at < ?`

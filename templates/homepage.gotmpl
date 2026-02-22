@@ -49,6 +49,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
             overflow: hidden;
         }
         .nav-links {
@@ -57,6 +59,26 @@
         }
         .nav-link {
             margin-left: 10px;
+        }
+        .date-filter {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .filter-link {
+            color: var(--text-secondary);
+            font-size: 14px;
+            padding: 4px 8px;
+        }
+        .filter-link.active {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+        .separator {
+            color: var(--text-secondary);
+        }
+        .social-links {
+            margin-left: auto;
         }
         .social-icon {
             margin-left: 15px;
@@ -173,6 +195,34 @@
             font-size: 14px;
             color: var(--text-secondary);
         }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin: 30px 0;
+            padding: 20px 0;
+            border-top: 1px dashed var(--border-light);
+        }
+        .pagination a {
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 2px;
+        }
+        .pagination a:hover {
+            background-color: var(--hover-bg);
+            text-decoration: none;
+        }
+        .pagination a.disabled {
+            color: var(--text-secondary);
+            pointer-events: none;
+            border-color: var(--border-light);
+        }
+        .pagination .page-info {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -183,6 +233,11 @@
             <a href="/feed.atom" class="nav-link">/ atom</a>
             <a href="/feed.json" class="nav-link">/ json</a>
         </nav>
+        <div class="date-filter">
+            <a href="/?date=today" class="filter-link{{if eq .DateRange "today"}} active{{end}}">today</a>
+            <span class="separator">/</span>
+            <a href="/?date=yesterday" class="filter-link{{if eq .DateRange "yesterday"}} active{{end}}">yesterday</a>
+        </div>
         <div class="social-links">
             <a href="https://bsky.app/profile/news.karthihegde.dev" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="Follow us on Bluesky">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 1024 1024">
@@ -195,7 +250,7 @@
 
     <div class="content">
         <div class="title">
-            <h1>Latest Stories</h1>
+            <h1>Latest Stories{{if eq .DateRange "yesterday"}} - Yesterday{{end}}</h1>
         </div>
 
         {{if .Entries}}
@@ -219,6 +274,24 @@
                     <div class="story-description">{{.Description}}</div>
                     {{end}}
                 </div>
+            </div>
+            {{end}}
+
+            {{if gt .TotalPages 1}}
+            <div class="pagination">
+                {{if .HasPrev}}
+                <a href="/?date={{.DateRange}}&page={{sub .Page 1}}">← Previous</a>
+                {{else}}
+                <a class="disabled">← Previous</a>
+                {{end}}
+                
+                <span class="page-info">Page {{.Page}} of {{.TotalPages}} ({{.Total}} stories)</span>
+                
+                {{if .HasNext}}
+                <a href="/?date={{.DateRange}}&page={{add .Page 1}}">Next →</a>
+                {{else}}
+                <a class="disabled">Next →</a>
+                {{end}}
             </div>
             {{end}}
         {{else}}
