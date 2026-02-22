@@ -1,4 +1,5 @@
 bin/
 output/
 *.db*
+cartero
 config.toml

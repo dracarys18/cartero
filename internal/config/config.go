@@ -77,7 +77,14 @@ type HackerNewsSettings struct {
 }
 
 type RSSSettings struct {
-	FeedURL string `toml:"feed_url"`
+	FeedURL string     `toml:"feed_url"`
+	From    FromSource `toml:"from"`
+}
+
+type FromSource struct {
+	Type  string `toml:"type"`
+	Kind  string `toml:"kind"`
+	Value string `toml:"value"`
 }
 
 type LobstersSettings struct {
@@ -100,6 +107,7 @@ type ProcessorSettings struct {
 	DedupeSettings
 	ScoreFilterSettings
 	KeywordFilterSettings
+	PublishedAtFilterSettings
 	RateLimitSettings
 	TokenBucketSettings
 	SummarySettings
@@ -121,6 +129,11 @@ type KeywordFilterSettings struct {
 	ExactKeyword     []string `toml:"exact_keywords"`
 	Mode             string   `toml:"mode"`
 	KeywordThreshold float64  `toml:"keyword_threshold"`
+}
+
+type PublishedAtFilterSettings struct {
+	After  string `toml:"after"`
+	Before string `toml:"before"`
 }
 
 type RateLimitSettings struct {

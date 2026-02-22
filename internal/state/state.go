@@ -209,10 +209,21 @@ func (s *State) createSource(name string, cfg config.SourceConfig) types.Source 
 
 	case "rss":
 		rssCfg := cfg.Settings.RSSSettings
-		if rssCfg.FeedURL == "" {
-			return nil
+
+		if rssCfg.From.Type != "" {
+			source, err := sources.NewRSSSourceFromConfig(name, rssCfg, maxItems)
+			if err != nil {
+				s.Logger.Error("Failed to create RSS source from config", "source", name, "error", err)
+				return nil
+			}
+			return source
 		}
-		return sources.NewRSSSource(name, rssCfg.FeedURL, maxItems)
+
+		if rssCfg.FeedURL != "" {
+			return sources.NewRSSSource(name, rssCfg.FeedURL, maxItems)
+		}
+
+		return nil
 
 	default:
 		return nil
@@ -240,6 +251,9 @@ func (s *State) createProcessor(name string, cfg config.ProcessorConfig) types.P
 
 	case "filter_keyword":
 		return processors.NewKeywordFilterProcessor(name)
+
+	case "filter_published":
+		return processors.NewPublishedAtFilterProcessor(name)
 
 	case "dedupe":
 		return processors.NewDedupeProcessor(name)

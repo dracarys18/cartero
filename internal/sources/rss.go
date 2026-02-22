@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"cartero/internal/config"
+	"cartero/internal/sources/rss"
 	"cartero/internal/types"
 
 	"github.com/microcosm-cc/bluemonday"
@@ -161,9 +163,17 @@ func (r *RSSSource) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// sanitizeID removes characters that might cause issues in item IDs
+func NewRSSSourceFromConfig(name string, cfg config.RSSSettings, maxItems int) (types.Source, error) {
+	sourceConfig := rss.SourceConfig{
+		Type:  cfg.From.Type,
+		Kind:  cfg.From.Kind,
+		Value: cfg.From.Value,
+	}
+
+	return rss.NewSource(name, sourceConfig, maxItems)
+}
+
 func sanitizeID(id string) string {
-	// Replace problematic characters
 	id = strings.ReplaceAll(id, "://", "_")
 	id = strings.ReplaceAll(id, "/", "_")
 	id = strings.ReplaceAll(id, "?", "_")
@@ -172,7 +182,6 @@ func sanitizeID(id string) string {
 	id = strings.ReplaceAll(id, "#", "_")
 	id = strings.ReplaceAll(id, " ", "_")
 
-	// Limit length
 	if len(id) > 200 {
 		id = id[:200]
 	}
@@ -182,18 +191,11 @@ func sanitizeID(id string) string {
 
 var htmlStripper = bluemonday.StrictPolicy()
 
-// stripHTML removes HTML tags and decodes entities from text
 func stripHTML(s string) string {
-	// Strip all HTML tags
 	s = htmlStripper.Sanitize(s)
-
-	// Decode HTML entities
 	s = html.UnescapeString(s)
-
-	// Trim whitespace
 	s = strings.TrimSpace(s)
 
-	// Limit length to avoid extremely long descriptions
 	if len(s) > 500 {
 		s = s[:497] + "..."
 	}
