@@ -90,7 +90,7 @@ func (s *ScraperSource) Initialize(ctx context.Context) error {
 
 	switch s.scraperType {
 	case "internal":
-		loader = lua.NewEmbeddedLoader(s.embeddedFS, "scripts/scrapers")
+		loader = lua.NewEmbeddedLoader(s.embeddedFS, "scrapers")
 	case "external":
 		loader = lua.NewFilesystemLoader(".")
 	default:
