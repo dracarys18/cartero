@@ -2,5 +2,5 @@ package cartero
 
 import "embed"
 
-//go:embed scripts/scrapers/*.lua
+//go:embed scrapers/*.lua
 var EmbeddedScripts embed.FS
