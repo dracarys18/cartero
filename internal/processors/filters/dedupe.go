@@ -73,8 +73,7 @@ func (d *DedupeProcessor) Process(ctx context.Context, st types.StateAccessor, i
 
 func (d *DedupeProcessor) hashItem(item *types.Item) string {
 	data, _ := json.Marshal(map[string]interface{}{
-		"id":      item.ID,
-		"source":  item.Source,
+		"title":   item.Metadata["title"],
 		"content": item.Content,
 	})
 	return hash.NewHash(data).ComputeHash()
