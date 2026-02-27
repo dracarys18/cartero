@@ -70,6 +70,7 @@ type SourceSettings struct {
 	RSSSettings
 	LobstersSettings
 	LessWrongSettings
+	ScraperSettings
 }
 
 type HackerNewsSettings struct {
@@ -94,6 +95,13 @@ type LobstersSettings struct {
 }
 
 type LessWrongSettings struct {
+}
+
+type ScraperSettings struct {
+	ScraperType string                 `toml:"scraper_type"`
+	ScraperName string                 `toml:"scraper_name"`
+	ScriptPath  string                 `toml:"script_path"`
+	Config      map[string]interface{} `toml:"config"`
 }
 
 type ProcessorConfig struct {

@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"cartero"
 	"cartero/internal/core"
 	"cartero/internal/state"
 )
@@ -43,7 +44,7 @@ func main() {
 func run(ctx context.Context) error {
 	fmt.Printf("Loading configuration from: %s\n", *configPath)
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	appState := state.New(logger)
+	appState := state.New(logger, cartero.EmbeddedScripts)
 	if err := appState.Initialize(ctx, *configPath); err != nil {
 		return fmt.Errorf("failed to initialize state: %w", err)
 	}

@@ -30,6 +30,7 @@ require (
 	github.com/blevesearch/segment v0.9.1 // indirect
 	github.com/blevesearch/snowballstem v0.9.0 // indirect
 	github.com/blevesearch/upsidedown_store_api v1.0.2 // indirect
+	github.com/cjoudrey/gluahttp v0.0.0-20201111170219-25003d9adfa9 // indirect
 	github.com/earthboundkid/versioninfo/v2 v2.24.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
@@ -73,6 +74,7 @@ require (
 	github.com/polydawn/refmt v0.89.1-0.20221221234430-40501e09de1f // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/whyrusleeping/cbor-gen v0.2.1-0.20241030202151-b7a6831be65e // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1 // indirect
 	go.opentelemetry.io/otel v1.21.0 // indirect
 	go.opentelemetry.io/otel/metric v1.21.0 // indirect
@@ -85,5 +87,6 @@ require (
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
+	layeh.com/gopher-json v0.0.0-20201124131017-552bb3c4c3bf // indirect
 	lukechampine.com/blake3 v1.2.1 // indirect
 )

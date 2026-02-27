@@ -77,9 +77,10 @@ func (pc *ProcessorChain) Execute(ctx context.Context, state types.StateAccessor
 	pc.mu.RLock()
 	order := pc.order
 
-	if order == nil {
+	if len(order) == 0 {
 		pc.mu.RUnlock()
-		panic("processor order not initialized")
+		logger.Debug("No processors configured, skipping processor chain")
+		return nil
 	}
 
 	orderCopy := make([]string, len(order))
