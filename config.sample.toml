@@ -54,6 +54,27 @@ targets = ["discord_lw"]
 [sources.lesswrong.settings]
 max_items = 20
 
+[sources.scraper_internal]
+type = "scraper"
+enabled = false
+targets = ["feed_target"]
+[sources.scraper_internal.settings]
+scraper_type = "internal"
+scraper_name = "techcrunch"
+max_items = 20
+[sources.scraper_internal.settings.config]
+
+[sources.scraper_external]
+type = "scraper"
+enabled = false
+targets = ["feed_target"]
+[sources.scraper_external.settings]
+scraper_type = "external"
+script_path = "./scripts/custom_scraper.lua"
+max_items = 20
+[sources.scraper_external.settings.config]
+custom_param = "value"
+
 [processors.dedupe]
 type = "dedupe"
 enabled = true

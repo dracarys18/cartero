@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"embed"
 	"fmt"
 
 	"cartero/internal/components"
@@ -18,17 +19,19 @@ import (
 )
 
 type State struct {
-	Config   *config.Config
-	Registry *components.Registry
-	Pipeline *core.Pipeline
-	Storage  storage.StorageInterface
-	Chain    types.ProcessorChain
-	Logger   *slog.Logger
+	Config          *config.Config
+	Registry        *components.Registry
+	Pipeline        *core.Pipeline
+	Storage         storage.StorageInterface
+	Chain           types.ProcessorChain
+	Logger          *slog.Logger
+	EmbeddedScripts embed.FS
 }
 
-func New(logger *slog.Logger) *State {
+func New(logger *slog.Logger, embeddedScripts embed.FS) *State {
 	return &State{
-		Logger: logger,
+		Logger:          logger,
+		EmbeddedScripts: embeddedScripts,
 	}
 }
 
@@ -86,6 +89,10 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 		return fmt.Errorf("failed to build pipeline: %w", err)
 	}
 	s.Pipeline = pipeline
+
+	if err := s.Pipeline.Initialize(ctx, s.Logger); err != nil {
+		return fmt.Errorf("failed to initialize pipeline: %w", err)
+	}
 
 	chain := s.buildProcessorChain(ctx)
 	s.Chain = chain
@@ -224,6 +231,14 @@ func (s *State) createSource(name string, cfg config.SourceConfig) types.Source 
 		}
 
 		return nil
+
+	case "scraper":
+		source, err := sources.NewScraperSource(name, cfg.Settings, s.EmbeddedScripts, s.Logger)
+		if err != nil {
+			s.Logger.Error("Failed to create scraper source", "source", name, "error", err)
+			return nil
+		}
+		return source
 
 	default:
 		return nil
