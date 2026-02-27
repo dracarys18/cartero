@@ -1,17 +1,23 @@
+local http = require("http")
+local html = require("html")
+local json = require("json")
+
 function scrape(config)
     local max_items = config.max_items or 10
     
+    log.info("Fetching TechCrunch homepage")
     local response, err = http.get("https://techcrunch.com")
     if err then
-        log.error("Failed to fetch TechCrunch: " .. err)
+        log.error("Failed to fetch TechCrunch: " .. tostring(err))
         return {}
     end
     
-    if response.status ~= 200 then
-        log.error("TechCrunch returned status: " .. response.status)
+    if response.status_code ~= 200 then
+        log.error("TechCrunch returned status: " .. tostring(response.status_code))
         return {}
     end
     
+    log.info("Parsing HTML")
     local doc, err = html.parse(response.body)
     if err then
         log.error("Failed to parse HTML: " .. err)

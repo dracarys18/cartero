@@ -24,30 +24,26 @@ func (h *HTMLModule) Name() string {
 }
 
 func (h *HTMLModule) Register(L *lua.LState) error {
-	h.registerDocumentType(L)
-	h.registerElementType(L)
-
-	htmlTable := L.NewTable()
-
-	L.SetField(htmlTable, "parse", L.NewFunction(h.htmlParse))
-	L.SetField(htmlTable, "select", L.NewFunction(h.htmlSelect))
-	L.SetField(htmlTable, "select_one", L.NewFunction(h.htmlSelectOne))
-	L.SetField(htmlTable, "text", L.NewFunction(h.htmlText))
-	L.SetField(htmlTable, "attr", L.NewFunction(h.htmlAttr))
-	L.SetField(htmlTable, "html", L.NewFunction(h.htmlHTML))
-
-	L.SetGlobal("html", htmlTable)
-	return nil
-}
-
-func (h *HTMLModule) registerDocumentType(L *lua.LState) {
 	mt := L.NewTypeMetatable(luaDocumentTypeName)
 	L.SetField(mt, "__index", L.SetFuncs(L.NewTable(), map[string]lua.LGFunction{}))
-}
 
-func (h *HTMLModule) registerElementType(L *lua.LState) {
-	mt := L.NewTypeMetatable(luaElementTypeName)
+	mt = L.NewTypeMetatable(luaElementTypeName)
 	L.SetField(mt, "__index", L.SetFuncs(L.NewTable(), map[string]lua.LGFunction{}))
+
+	L.PreloadModule("html", func(L *lua.LState) int {
+		mod := L.NewTable()
+		L.SetFuncs(mod, map[string]lua.LGFunction{
+			"parse":      h.htmlParse,
+			"select":     h.htmlSelect,
+			"select_one": h.htmlSelectOne,
+			"text":       h.htmlText,
+			"attr":       h.htmlAttr,
+			"html":       h.htmlHTML,
+		})
+		L.Push(mod)
+		return 1
+	})
+	return nil
 }
 
 func (h *HTMLModule) htmlParse(L *lua.LState) int {

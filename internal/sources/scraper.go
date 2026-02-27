@@ -8,7 +8,11 @@ import (
 	"embed"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"time"
+
+	"github.com/cjoudrey/gluahttp"
+	json "layeh.com/gopher-json"
 )
 
 type ScraperSource struct {
@@ -98,19 +102,20 @@ func (s *ScraperSource) Initialize(ctx context.Context) error {
 		lua.WithSecureMode(true),
 	)
 
-	if err := lua.RegisterModule(s.runtime.State(), lua.NewHTTPModule()); err != nil {
-		return fmt.Errorf("failed to register HTTP module: %w", err)
-	}
+	L := s.runtime.State()
 
-	if err := lua.RegisterModule(s.runtime.State(), lua.NewHTMLModule()); err != nil {
+	httpClient := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+	L.PreloadModule("http", gluahttp.NewHttpModule(httpClient).Loader)
+
+	json.Preload(L)
+
+	if err := lua.RegisterModule(L, lua.NewHTMLModule()); err != nil {
 		return fmt.Errorf("failed to register HTML module: %w", err)
 	}
 
-	if err := lua.RegisterModule(s.runtime.State(), lua.NewJSONModule()); err != nil {
-		return fmt.Errorf("failed to register JSON module: %w", err)
-	}
-
-	if err := lua.RegisterModule(s.runtime.State(), lua.NewLogModule(s.logger)); err != nil {
+	if err := lua.RegisterModule(L, lua.NewLogModule(s.logger)); err != nil {
 		return fmt.Errorf("failed to register Log module: %w", err)
 	}
 

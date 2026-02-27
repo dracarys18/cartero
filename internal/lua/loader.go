@@ -69,14 +69,25 @@ func (f *FilesystemLoader) Load(identifier string) (string, error) {
 }
 
 func SetupRequire(L *lua.LState, loader Loader) {
-	L.PreloadModule("require", func(L *lua.LState) int {
-		return 0
-	})
-
 	originalRequire := L.GetGlobal("require")
 
 	customRequire := L.NewFunction(func(L *lua.LState) int {
 		module := L.CheckString(1)
+
+		pkg := L.GetField(L.Get(lua.EnvironIndex), "package")
+		preload := L.GetField(pkg, "preload")
+
+		if tbl, ok := preload.(*lua.LTable); ok {
+			preloadFn := L.GetField(tbl, module)
+			if preloadFn != lua.LNil {
+				if fn, ok := originalRequire.(*lua.LFunction); ok {
+					L.Push(fn)
+					L.Push(lua.LString(module))
+					L.Call(1, 1)
+					return 1
+				}
+			}
+		}
 
 		scriptContent, err := loader.Load(module)
 		if err != nil {
