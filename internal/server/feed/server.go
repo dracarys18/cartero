@@ -13,6 +13,8 @@ import (
 	"cartero/internal/template"
 
 	"github.com/gorilla/feeds"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type Config struct {
@@ -79,12 +81,13 @@ func New(name string, config Config, feedStore storage.FeedStore) *Server {
 			return strings.Split(s, sep)
 		},
 		"formatSource": func(source string) string {
+			caser := cases.Title(language.English)
 			words := strings.FieldsFunc(source, func(r rune) bool {
 				return r == '_' || r == '-'
 			})
 			result := make([]string, len(words))
 			for i, word := range words {
-				result[i] = strings.Title(strings.ToLower(word))
+				result[i] = caser.String(strings.ToLower(word))
 			}
 			return strings.Join(result, " ")
 		},
