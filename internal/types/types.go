@@ -11,13 +11,15 @@ import (
 )
 
 type Item struct {
-	ID          string
-	Content     interface{}
-	Metadata    map[string]interface{}
-	Source      string
-	TextContent *Article
-	Timestamp   time.Time
-	mu          sync.RWMutex
+	ID              string
+	Title           string
+	Content         interface{}
+	Metadata        map[string]interface{}
+	Source          string
+	TextContent     *Article
+	MatchedKeywords string
+	Timestamp       time.Time
+	mu              sync.RWMutex
 }
 
 type Article struct {
@@ -73,12 +75,11 @@ func (i *Item) GetThumbnail() string {
 	return ""
 }
 
-func (i *Item) ModifyContent(fn func() interface{}) error {
+func (i *Item) ModifyContent(content any) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
-	i.Content = fn()
-	return nil
+	i.Content = content
 }
 
 func (i *Item) GetMetadata(key string) (interface{}, bool) {
@@ -91,21 +92,45 @@ func (i *Item) GetMetadata(key string) (interface{}, bool) {
 	return val, ok
 }
 
-func (i *Item) AddMetadata(key string, value any) error {
+func (i *Item) AddMetadata(key string, value any) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if i.Metadata == nil {
 		i.Metadata = make(map[string]interface{})
 	}
 	i.Metadata[key] = value
-	return nil
 }
 
-func (i *Item) SetArticle(article *Article) error {
+func (i *Item) SetArticle(article *Article) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	i.TextContent = article
-	return nil
+}
+
+func (i *Item) GetTitle() string {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	return i.Title
+}
+
+func (i *Item) SetTitle(title string) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.Title = title
+}
+
+func (i *Item) GetMatchedKeywords() string {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	return i.MatchedKeywords
+}
+
+func (i *Item) SetMatchedKeywords(keywords string) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.MatchedKeywords = keywords
 }
 
 type PublishResult struct {

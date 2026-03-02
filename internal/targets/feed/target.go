@@ -31,14 +31,12 @@ func (t *Target) Initialize(ctx context.Context) error {
 }
 
 func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishResult, error) {
-	// From[*types.Item] - Convert Item to FeedItem
 	var feedItem FeedItem
 	feedItem.From(item)
 
-	// Create FeedEntry with metadata
 	entry := NewFeedEntry(item.ID, feedItem, item.Source, item.Timestamp)
+	entry.MatchedKeywords = item.GetMatchedKeywords()
 
-	// Insert into storage
 	err := InsertIntoStore(ctx, t.feedStore, entry)
 	if err != nil {
 		return nil, err

@@ -70,9 +70,7 @@ func (d *SummaryProcessor) Process(ctx context.Context, st types.StateAccessor, 
 		return nil
 	}
 
-	if err := item.AddMetadata("summary", summary); err != nil {
-		return err
-	}
+	item.AddMetadata("summary", summary)
 	logger.Debug("Generated summary for item", "processor", d.name, "item_id", item.ID, "summary", summary)
 
 	return nil

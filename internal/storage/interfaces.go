@@ -30,16 +30,17 @@ type ItemStore interface {
 }
 
 type FeedEntry struct {
-	ID          string
-	Title       string
-	Link        string
-	Description string
-	Content     string
-	Author      string
-	Source      string
-	ImageURL    string
-	PublishedAt time.Time
-	CreatedAt   time.Time
+	ID              string
+	Title           string
+	Link            string
+	Description     string
+	Content         string
+	Author          string
+	Source          string
+	ImageURL        string
+	MatchedKeywords string
+	PublishedAt     time.Time
+	CreatedAt       time.Time
 }
 
 type PaginationResult struct {
@@ -53,7 +54,7 @@ type PaginationResult struct {
 }
 
 type FeedStore interface {
-	InsertEntry(ctx context.Context, id, title, link, description, content, author, source, imageURL string, publishedAt time.Time) error
+	InsertEntry(ctx context.Context, id, title, link, description, content, author, source, imageURL, matchedKeywords string, publishedAt time.Time) error
 	ListRecentEntries(ctx context.Context, limit int) ([]FeedEntry, error)
 	ListEntriesPaginated(ctx context.Context, page, perPage int, startDate, endDate time.Time) (*PaginationResult, error)
 	DeleteOlderThan(ctx context.Context, age time.Duration) error

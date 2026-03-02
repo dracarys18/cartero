@@ -137,6 +137,7 @@ type KeywordFilterSettings struct {
 	ExactKeyword     []string `toml:"exact_keywords"`
 	Mode             string   `toml:"mode"`
 	KeywordThreshold float64  `toml:"keyword_threshold"`
+	TitleBypass      bool     `toml:"title_bypass"`
 }
 
 type PublishedAtFilterSettings struct {

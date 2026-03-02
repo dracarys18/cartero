@@ -172,6 +172,7 @@ func (m *MultiRSSSource) convertToItem(feedItem *gofeed.Item, feedName string) *
 
 	return &types.Item{
 		ID:        fmt.Sprintf("rss_%s", sanitizeID(itemID)),
+		Title:     feedItem.Title,
 		Content:   feedItem,
 		Source:    sourceName,
 		Timestamp: timestamp,

@@ -96,6 +96,7 @@ func (h *HackerNewsSource) Fetch(ctx context.Context, state types.StateAccessor)
 
 				item := &types.Item{
 					ID:        fmt.Sprintf("hn_%d", story.ID),
+					Title:     story.Title,
 					Source:    h.name,
 					Timestamp: time.Unix(story.Time, 0),
 					Content:   story,

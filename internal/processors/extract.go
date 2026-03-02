@@ -62,9 +62,7 @@ func (e *ExtractText) Process(ctx context.Context, st types.StateAccessor, item 
 		return nil
 	}
 
-	if err := item.SetArticle(article); err != nil {
-		return err
-	}
+	item.SetArticle(article)
 
 	return nil
 }

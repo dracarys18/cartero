@@ -86,12 +86,13 @@ func (d *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 }
 
 func (d *Target) createForumThread(item *types.Item) (string, error) {
-	title := "Untitled"
-	if t, ok := item.Metadata["title"].(string); ok {
-		title = t
-		if len(title) > 100 {
-			title = title[:97] + "..."
-		}
+	title := item.GetTitle()
+	if title == "" {
+		title = "Untitled"
+	}
+
+	if len(title) > 100 {
+		title = title[:97] + "..."
 	}
 
 	embed, err := d.buildEmbed(item)

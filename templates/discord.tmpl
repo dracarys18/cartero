@@ -1,5 +1,5 @@
 {
-  "title": {{ index .Metadata "title" | json }},
+  "title": {{ .Title | json }},
   "url": {{ index .Metadata "url" | json }},
   "color": 3447003,
   "thumbnail_url": {{ if .TextContent }}{{ .TextContent.Image | json }}{{ else }}""{{ end }},

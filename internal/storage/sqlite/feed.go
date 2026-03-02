@@ -16,16 +16,16 @@ func newFeedStore(db *sql.DB) storage.FeedStore {
 	return &feedStore{db: db}
 }
 
-func (s *feedStore) InsertEntry(ctx context.Context, id, title, link, description, content, author, source, imageURL string, publishedAt time.Time) error {
+func (s *feedStore) InsertEntry(ctx context.Context, id, title, link, description, content, author, source, imageURL, matchedKeywords string, publishedAt time.Time) error {
 	query := `
-		INSERT INTO feed_entries (id, title, link, description, content, author, source, image_url, published_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO feed_entries (id, title, link, description, content, author, source, image_url, matched_keywords, published_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO NOTHING
 	`
 
 	publishedAtNull := sql.NullTime{Valid: !publishedAt.IsZero(), Time: publishedAt}
 
-	_, err := s.db.ExecContext(ctx, query, id, title, link, description, content, author, source, imageURL, publishedAtNull)
+	_, err := s.db.ExecContext(ctx, query, id, title, link, description, content, author, source, imageURL, matchedKeywords, publishedAtNull)
 	if err != nil {
 		return fmt.Errorf("failed to insert feed entry: %w", err)
 	}
@@ -35,7 +35,7 @@ func (s *feedStore) InsertEntry(ctx context.Context, id, title, link, descriptio
 
 func (s *feedStore) ListRecentEntries(ctx context.Context, limit int) ([]storage.FeedEntry, error) {
 	query := `
-		SELECT id, title, link, description, content, author, source, image_url, published_at, created_at
+		SELECT id, title, link, description, content, author, source, image_url, matched_keywords, published_at, created_at
 		FROM feed_entries
 		ORDER BY created_at DESC
 		LIMIT ?
@@ -52,6 +52,7 @@ func (s *feedStore) ListRecentEntries(ctx context.Context, limit int) ([]storage
 		var entry storage.FeedEntry
 		var publishedAt sql.NullTime
 		var imageURL sql.NullString
+		var matchedKeywords sql.NullString
 
 		err := rows.Scan(
 			&entry.ID,
@@ -62,6 +63,7 @@ func (s *feedStore) ListRecentEntries(ctx context.Context, limit int) ([]storage
 			&entry.Author,
 			&entry.Source,
 			&imageURL,
+			&matchedKeywords,
 			&publishedAt,
 			&entry.CreatedAt,
 		)
@@ -75,6 +77,10 @@ func (s *feedStore) ListRecentEntries(ctx context.Context, limit int) ([]storage
 
 		if imageURL.Valid {
 			entry.ImageURL = imageURL.String
+		}
+
+		if matchedKeywords.Valid {
+			entry.MatchedKeywords = matchedKeywords.String
 		}
 
 		entries = append(entries, entry)
@@ -135,7 +141,7 @@ func (s *feedStore) buildCountQuery(startDate, endDate time.Time) string {
 
 func (s *feedStore) buildSelectQuery(startDate, endDate time.Time) string {
 	return `
-		SELECT id, title, link, description, content, author, source, image_url, published_at, created_at
+		SELECT id, title, link, description, content, author, source, image_url, matched_keywords, published_at, created_at
 		FROM feed_entries
 		WHERE created_at >= ? AND created_at < ?
 		ORDER BY created_at DESC
@@ -149,6 +155,7 @@ func (s *feedStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEnt
 		var entry storage.FeedEntry
 		var publishedAt sql.NullTime
 		var imageURL sql.NullString
+		var matchedKeywords sql.NullString
 
 		err := rows.Scan(
 			&entry.ID,
@@ -159,6 +166,7 @@ func (s *feedStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEnt
 			&entry.Author,
 			&entry.Source,
 			&imageURL,
+			&matchedKeywords,
 			&publishedAt,
 			&entry.CreatedAt,
 		)
@@ -172,6 +180,10 @@ func (s *feedStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEnt
 
 		if imageURL.Valid {
 			entry.ImageURL = imageURL.String
+		}
+
+		if matchedKeywords.Valid {
+			entry.MatchedKeywords = matchedKeywords.String
 		}
 
 		entries = append(entries, entry)

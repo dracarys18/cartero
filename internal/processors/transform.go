@@ -41,15 +41,9 @@ func (t *TransformProcessor) Process(ctx context.Context, st types.StateAccessor
 			logger.Info("TransformProcessor rejected item", "processor", t.name, "item_id", item.ID, "reason", "transform failed", "error", err)
 			return fmt.Errorf("transform failed: %w", err)
 		}
-		if err := item.ModifyContent(func() interface{} { return transformed }); err != nil {
-			return err
-		}
-		if err := item.AddMetadata("transformed", true); err != nil {
-			return err
-		}
-		if err := item.AddMetadata("transformer", t.name); err != nil {
-			return err
-		}
+		item.ModifyContent(transformed)
+		item.AddMetadata("transformed", true)
+		item.AddMetadata("transformer", t.name)
 	}
 
 	return nil
@@ -169,11 +163,10 @@ func (c *ChainTransformProcessor) Process(ctx context.Context, st types.StateAcc
 		currentData = tempItem.GetContent()
 
 		for k, v := range tempItem.Metadata {
-			if err := item.AddMetadata(k, v); err != nil {
-				return err
-			}
+			item.AddMetadata(k, v)
 		}
 	}
 
-	return item.ModifyContent(func() any { return currentData })
+	item.ModifyContent(currentData)
+	return nil
 }

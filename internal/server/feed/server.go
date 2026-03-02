@@ -6,6 +6,7 @@ import (
 	htmltemplate "html/template"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"cartero/internal/storage"
@@ -70,6 +71,22 @@ func New(name string, config Config, feedStore storage.FeedStore) *Server {
 		},
 		"sub": func(a, b int) int {
 			return a - b
+		},
+		"split": func(s, sep string) []string {
+			if s == "" {
+				return []string{}
+			}
+			return strings.Split(s, sep)
+		},
+		"formatSource": func(source string) string {
+			words := strings.FieldsFunc(source, func(r rune) bool {
+				return r == '_' || r == '-'
+			})
+			result := make([]string, len(words))
+			for i, word := range words {
+				result[i] = strings.Title(strings.ToLower(word))
+			}
+			return strings.Join(result, " ")
 		},
 	}
 

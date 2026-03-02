@@ -20,10 +20,11 @@ type FeedItem struct {
 }
 
 type FeedEntry struct {
-	ID          string
-	Item        FeedItem
-	Source      string
-	PublishedAt time.Time
+	ID              string
+	Item            FeedItem
+	Source          string
+	MatchedKeywords string
+	PublishedAt     time.Time
 }
 
 func (f *FeedItem) TryFrom(templateOutput []byte) error {
@@ -34,7 +35,9 @@ func (f *FeedItem) TryFrom(templateOutput []byte) error {
 }
 
 func (f *FeedItem) From(item *types.Item) {
-	if title, ok := item.Metadata["title"].(string); ok {
+	title := item.GetTitle()
+
+	if title != "" {
 		f.Title = title
 	} else {
 		f.Title = "Untitled"
@@ -69,16 +72,17 @@ func (e *FeedEntry) Into() storage.FeedEntry {
 	publishedAt, _ := time.Parse(time.RFC3339, e.Item.Published)
 
 	return storage.FeedEntry{
-		ID:          e.ID,
-		Title:       e.Item.Title,
-		Link:        e.Item.Link,
-		Description: e.Item.Description,
-		Content:     e.Item.Content,
-		Author:      e.Item.Author,
-		Source:      e.Source,
-		ImageURL:    e.Item.ImageURL,
-		PublishedAt: publishedAt,
-		CreatedAt:   time.Now(),
+		ID:              e.ID,
+		Title:           e.Item.Title,
+		Link:            e.Item.Link,
+		Description:     e.Item.Description,
+		Content:         e.Item.Content,
+		Author:          e.Item.Author,
+		Source:          e.Source,
+		ImageURL:        e.Item.ImageURL,
+		MatchedKeywords: e.MatchedKeywords,
+		PublishedAt:     publishedAt,
+		CreatedAt:       time.Now(),
 	}
 }
 
@@ -115,6 +119,7 @@ func InsertIntoStore(ctx context.Context, store storage.FeedStore, entry FeedEnt
 		entry.Item.Author,
 		entry.Source,
 		entry.Item.ImageURL,
+		entry.MatchedKeywords,
 		publishedAt,
 	)
 }

@@ -50,11 +50,13 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, st types.StateAcce
 	cfg := stateConfig.Processors[k.name].Settings.KeywordFilterSettings
 	logger := st.GetLogger()
 
-	stemmedKeywords := make(map[string]bool, len(cfg.Keywords))
+	stemmedKeywords := make(map[string]string, len(cfg.Keywords))
+
 	for _, kw := range cfg.Keywords {
-		tokens := analyzeText(strings.ToLower(kw))
+		kwLower := strings.ToLower(kw)
+		tokens := analyzeText(kwLower)
 		for token := range maps.Keys(tokens) {
-			stemmedKeywords[token] = true
+			stemmedKeywords[token] = kw
 		}
 	}
 
@@ -63,70 +65,54 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, st types.StateAcce
 		exactKeywords[i] = strings.ToLower(kw)
 	}
 
-	totalInterestCount := len(stemmedKeywords)
-	if totalInterestCount == 0 {
+	if len(stemmedKeywords) == 0 && len(exactKeywords) == 0 {
 		return nil
 	}
 
-	title, ok := item.Metadata["title"].(string)
-	if !ok {
-		title = ""
-	}
+	title := item.GetTitle()
 
-	title = strings.ToLower(title)
 	var content string
 	if article := item.GetArticle(); article != nil {
-		content = strings.ToLower(article.Text)
+		content = article.Text
 	}
 
+	titleLower := strings.ToLower(title)
+	contentLower := strings.ToLower(content)
+
 	for exactKeyword := range slices.Values(exactKeywords) {
-		if strings.Contains(title, exactKeyword) || strings.Contains(content, exactKeyword) {
-			logger.Debug("KeywordFilterProcessor item matched with the exact keyword", "processor", k.name, "item_id", item.ID, "keyword", exactKeyword)
+		if strings.Contains(titleLower, exactKeyword) || strings.Contains(contentLower, exactKeyword) {
+			logger.Debug("KeywordFilterProcessor matched exact keyword", "processor", k.name, "item_id", item.ID, "keyword", exactKeyword)
+			item.SetMatchedKeywords(exactKeyword)
 			return nil
 		}
 	}
 
-	stemmedTitle := analyzeText(title)
-	stemmedContent := analyzeText(content)
-
-	contentMatches := make(map[string]bool)
-	totalTitleMatches := 0
-
-	for token := range maps.Keys(stemmedKeywords) {
-		if _, exists := stemmedTitle[token]; exists {
-			totalTitleMatches++
-		}
-
-		if _, exists := stemmedContent[token]; exists {
-			contentMatches[token] = true
+	if cfg.TitleBypass {
+		stemmedTitle := analyzeText(titleLower)
+		for stemmed, original := range stemmedKeywords {
+			if _, exists := stemmedTitle[stemmed]; exists {
+				logger.Info("KeywordFilterProcessor matched via title bypass", "processor", k.name, "item_id", item.ID, "keyword", original)
+				item.SetMatchedKeywords(original)
+				return nil
+			}
 		}
 	}
 
-	contentScore := float64(len(contentMatches)) / float64(totalInterestCount)
-	matches := contentScore >= cfg.KeywordThreshold
-	if totalTitleMatches >= 1 {
-		matches = true
-		logger.Info("KeywordFilterProcessor item matched due to title keyword presence", "processor", k.name, "item_id", item.ID, "title_matches", totalTitleMatches)
+	fullText := titleLower + " " + contentLower
+	density, matchedKeywords := calculateKeywordDensity(fullText, stemmedKeywords)
+
+	logger.Debug("KeywordFilterProcessor density calculated", "processor", k.name, "item_id", item.ID, "density", density*100, "keywords", matchedKeywords, "threshold", cfg.KeywordThreshold*100)
+
+	if density >= cfg.KeywordThreshold {
+		logger.Info("KeywordFilterProcessor matched via density", "processor", k.name, "item_id", item.ID, "density", density*100, "keywords", matchedKeywords)
+		item.SetMatchedKeywords(matchedKeywords)
+		return nil
 	}
 
-	switch cfg.Mode {
-	case "include":
-		if !matches {
-			logger.Info("KeywordFilterProcessor rejected item", "processor", k.name, "item_id", item.ID, "coverage", contentScore*100, "threshold", cfg.KeywordThreshold*100)
-			return types.NewFilteredError(k.name, item.ID, "keyword coverage below threshold").
-				WithDetail("coverage_percentage", contentScore*100).
-				WithDetail("threshold_percentage", cfg.KeywordThreshold*100)
-		}
-	case "exclude":
-		if matches {
-			logger.Info("KeywordFilterProcessor rejected item", "processor", k.name, "item_id", item.ID, "coverage", contentScore*100)
-			return types.NewFilteredError(k.name, item.ID, "keyword coverage exceeds exclusion threshold").
-				WithDetail("coverage_percentage", contentScore*100)
-		}
-	}
-
-	logger.Debug("KeywordFilterProcessor item coverage", "processor", k.name, "item_id", item.ID, "coverage", contentScore*100)
-	return nil
+	logger.Info("KeywordFilterProcessor rejected item", "processor", k.name, "item_id", item.ID, "density", density*100, "threshold", cfg.KeywordThreshold*100)
+	return types.NewFilteredError(k.name, item.ID, "keyword density below threshold").
+		WithDetail("density_percentage", density*100).
+		WithDetail("threshold_percentage", cfg.KeywordThreshold*100)
 }
 
 func analyzeText(text string) map[string]bool {
@@ -142,4 +128,49 @@ func analyzeText(text string) map[string]bool {
 	}
 
 	return tokens
+}
+
+func calculateKeywordDensity(text string, stemmedKeywords map[string]string) (float64, string) {
+	if text == "" {
+		return 0, ""
+	}
+
+	tokenStream := analyzer.Analyze([]byte(text))
+	if len(tokenStream) == 0 {
+		return 0, ""
+	}
+
+	keywordCounts := countKeywordOccurrences(tokenStream, stemmedKeywords)
+	if len(keywordCounts) == 0 {
+		return 0, ""
+	}
+
+	topKeyword := findTopKeyword(keywordCounts)
+	density := float64(keywordCounts[topKeyword]) / float64(len(tokenStream))
+
+	return density, topKeyword
+}
+
+func countKeywordOccurrences(tokenStream analysis.TokenStream, stemmedKeywords map[string]string) map[string]int {
+	counts := make(map[string]int)
+	for _, token := range tokenStream {
+		if keyword, exists := stemmedKeywords[string(token.Term)]; exists {
+			counts[keyword]++
+		}
+	}
+	return counts
+}
+
+func findTopKeyword(keywordCounts map[string]int) string {
+	var topKeyword string
+	maxCount := 0
+
+	for keyword, count := range keywordCounts {
+		if count > maxCount {
+			maxCount = count
+			topKeyword = keyword
+		}
+	}
+
+	return topKeyword
 }

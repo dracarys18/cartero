@@ -52,7 +52,9 @@ func (p *Post) TryFrom(templateOutput []byte) error {
 }
 
 func (p *Post) From(item *types.Item) {
-	if title, ok := item.Metadata["title"].(string); ok && title != "" {
+	title := item.GetTitle()
+
+	if title != "" {
 		p.Segments = append(p.Segments, Segment{Text: title})
 		p.Segments = append(p.Segments, Segment{Text: "\n"})
 	}
@@ -71,7 +73,6 @@ func (p *Post) From(item *types.Item) {
 			URI:  url,
 		})
 
-		title, _ := item.Metadata["title"].(string)
 		p.Embed = &EmbedData{
 			URI:   url,
 			Title: title,
