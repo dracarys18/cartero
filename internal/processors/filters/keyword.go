@@ -93,6 +93,10 @@ func extractWords(text string) []string {
 	return wordRegex.FindAllString(text, -1)
 }
 
+func isAcronym(keyword string) bool {
+	return keyword == strings.ToUpper(keyword)
+}
+
 func matchKeywordExact(keyword, word string) bool {
 	return strings.EqualFold(keyword, word)
 }
@@ -103,6 +107,10 @@ func matchKeywordFuzzy(keyword, word string) bool {
 
 	if kw == w {
 		return true
+	}
+
+	if isAcronym(keyword) {
+		return false
 	}
 
 	minLen := float64(min(len(kw), len(w)))
