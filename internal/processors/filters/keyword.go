@@ -8,8 +8,6 @@ import (
 
 	"cartero/internal/processors/names"
 	"cartero/internal/types"
-
-	"github.com/lithammer/fuzzysearch/fuzzy"
 )
 
 var wordRegex = regexp.MustCompile(`\b[a-zA-Z0-9]+\b`)
@@ -93,54 +91,12 @@ func extractWords(text string) []string {
 	return wordRegex.FindAllString(text, -1)
 }
 
-func isAcronym(keyword string) bool {
-	return keyword == strings.ToUpper(keyword)
-}
-
 func matchKeywordExact(keyword, word string) bool {
 	return strings.EqualFold(keyword, word)
 }
 
 func matchKeywordFuzzy(keyword, word string) bool {
-	kw := strings.ToLower(keyword)
-	w := strings.ToLower(word)
-
-	if kw == w {
-		return true
-	}
-
-	if isAcronym(keyword) {
-		return false
-	}
-
-	minLen := float64(min(len(kw), len(w)))
-	maxLen := float64(max(len(kw), len(w)))
-
-	if minLen == 0 || maxLen == 0 {
-		return false
-	}
-
-	lengthRatio := minLen / maxLen
-	isPrefix := strings.HasPrefix(w, kw) || strings.HasPrefix(kw, w)
-
-	if isPrefix {
-		if lengthRatio < 0.65 {
-			return false
-		}
-	} else {
-		if lengthRatio < 0.90 {
-			return false
-		}
-	}
-
-	distance := fuzzy.LevenshteinDistance(kw, w)
-
-	maxDistance := 1
-	if len(kw) > 5 {
-		maxDistance = 2
-	}
-
-	return distance <= maxDistance
+	return strings.EqualFold(keyword, word)
 }
 
 func countKeywordOccurrencesExact(words []string, keywords []string) map[string]int {

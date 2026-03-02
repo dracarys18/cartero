@@ -15,7 +15,6 @@ require (
 	github.com/bwmarrin/discordgo v0.29.0
 	github.com/cjoudrey/gluahttp v0.0.0-20201111170219-25003d9adfa9
 	github.com/gorilla/feeds v1.1.2
-	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/mmcdole/gofeed v1.3.0
 	github.com/ollama/ollama v0.13.5
