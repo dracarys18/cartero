@@ -164,7 +164,8 @@ type ExtractFieldsSettings struct {
 }
 
 type ExtractTextSettings struct {
-	Limit int `toml:"limit"`
+	Limit            int `toml:"limit"`
+	MinContentLength int `toml:"min_content_length"`
 }
 
 type TemplateSettings struct {

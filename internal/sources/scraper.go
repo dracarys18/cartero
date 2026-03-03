@@ -4,11 +4,11 @@ import (
 	"cartero/internal/config"
 	"cartero/internal/lua"
 	"cartero/internal/types"
+	"cartero/internal/utils"
 	"context"
 	"embed"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"time"
 
 	"github.com/cjoudrey/gluahttp"
@@ -104,9 +104,7 @@ func (s *ScraperSource) Initialize(ctx context.Context) error {
 
 	L := s.runtime.State()
 
-	httpClient := &http.Client{
-		Timeout: 30 * time.Second,
-	}
+	httpClient := utils.NewHTTPClient(30 * time.Second)
 	L.PreloadModule("http", gluahttp.NewHttpModule(httpClient).Loader)
 
 	json.Preload(L)
