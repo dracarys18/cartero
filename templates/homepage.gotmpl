@@ -138,15 +138,6 @@
             object-fit: cover;
             display: block;
         }
-        .story-image-placeholder {
-            width: 100%;
-            height: 100%;
-            background: #f0f0f0;
-            background-image: url('/assets/default-thumbnail.png');
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: 60%;
-        }
         .story-content {
             padding: 20px;
             flex: 1;
@@ -411,11 +402,7 @@
             {{range .Entries}}
             <div class="story">
                 <div class="story-image-container">
-                    {{if .ImageURL}}
-                    <img src="{{.ImageURL}}" alt="{{.Title}}" class="story-image" loading="lazy" onerror="this.src='/assets/default-thumbnail.png'">
-                    {{else}}
-                    <div class="story-image-placeholder"></div>
-                    {{end}}
+                    <img src="{{.ImageURL}}" alt="{{.Title}}" class="story-image" loading="lazy" onerror="this.classList.add('broken');">
                 </div>
                 <div class="story-content">
                     <div class="story-title">
