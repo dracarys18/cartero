@@ -11,11 +11,9 @@ import (
 
 	"cartero/internal/storage"
 	"cartero/internal/template"
-	"cartero/internal/utils"
+	utils "cartero/internal/utils/string"
 
 	"github.com/gorilla/feeds"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 type Config struct {
