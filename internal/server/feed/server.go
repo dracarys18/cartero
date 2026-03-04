@@ -11,6 +11,7 @@ import (
 
 	"cartero/internal/storage"
 	"cartero/internal/template"
+	"cartero/internal/utils"
 
 	"github.com/gorilla/feeds"
 	"golang.org/x/text/cases"
@@ -80,17 +81,7 @@ func New(name string, config Config, feedStore storage.FeedStore) *Server {
 			}
 			return strings.Split(s, sep)
 		},
-		"formatSource": func(source string) string {
-			caser := cases.Title(language.English)
-			words := strings.FieldsFunc(source, func(r rune) bool {
-				return r == '_' || r == '-'
-			})
-			result := make([]string, len(words))
-			for i, word := range words {
-				result[i] = caser.String(strings.ToLower(word))
-			}
-			return strings.Join(result, " ")
-		},
+		"formatSource": utils.Readable,
 	}
 
 	tmpl := &template.Template{}

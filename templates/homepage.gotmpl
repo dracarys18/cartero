@@ -401,9 +401,11 @@
         {{if .Entries}}
             {{range .Entries}}
             <div class="story">
+                {{if .ImageURL}}
                 <div class="story-image-container">
                     <img src="{{.ImageURL}}" alt="{{.Title}}" class="story-image" loading="lazy" onerror="this.classList.add('broken');">
                 </div>
+                {{end}}
                 <div class="story-content">
                     <div class="story-title">
                         <a href="{{.Link}}" target="_blank" rel="noopener">{{.Title}}</a>
