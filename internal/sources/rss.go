@@ -131,7 +131,6 @@ func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *types.Item {
 	metadata := map[string]interface{}{
 		"title":       feedItem.Title,
 		"link":        feedItem.Link,
-		"url":         feedItem.Link,
 		"description": stripHTML(description),
 		"author":      author,
 		"published":   feedItem.Published,
@@ -153,6 +152,7 @@ func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *types.Item {
 	return &types.Item{
 		ID:        fmt.Sprintf("rss_%s", sanitizeID(itemID)),
 		Title:     feedItem.Title,
+		URL:       feedItem.Link,
 		Content:   feedItem,
 		Source:    r.name,
 		Timestamp: timestamp,

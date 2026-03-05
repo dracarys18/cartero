@@ -245,7 +245,7 @@ func (s *ScraperSource) convertMapToItem(itemMap map[string]interface{}) *types.
 		item.SetTitle(title)
 	}
 	if url != "" {
-		item.Metadata["url"] = url
+		item.SetURL(url)
 	}
 
 	if author, ok := itemMap["author"].(string); ok && author != "" {

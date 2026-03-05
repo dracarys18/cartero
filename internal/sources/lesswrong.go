@@ -101,6 +101,7 @@ func (l *LessWrongSource) Fetch(ctx context.Context, state types.StateAccessor) 
 				item := &types.Item{
 					ID:        fmt.Sprintf("lw_%s", post.ID),
 					Title:     post.Title,
+					URL:       postURL,
 					Source:    l.name,
 					Timestamp: post.PostedAt,
 					Content:   post,
@@ -111,7 +112,6 @@ func (l *LessWrongSource) Fetch(ctx context.Context, state types.StateAccessor) 
 						"vote_count":    post.VoteCount,
 						"lw_id":         post.ID,
 						"title":         post.Title,
-						"url":           postURL,
 					},
 				}
 

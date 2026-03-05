@@ -13,6 +13,7 @@ import (
 type Item struct {
 	ID              string
 	Title           string
+	URL             string
 	Content         interface{}
 	Metadata        map[string]interface{}
 	Source          string
@@ -118,6 +119,19 @@ func (i *Item) SetTitle(title string) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	i.Title = title
+}
+
+func (i *Item) GetURL() string {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	return i.URL
+}
+
+func (i *Item) SetURL(url string) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.URL = url
 }
 
 func (i *Item) GetMatchedKeywords() string {

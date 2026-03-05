@@ -67,7 +67,7 @@ func (p *Post) From(item *types.Item) {
 		p.Segments = append(p.Segments, Segment{Text: " · "})
 	}
 
-	if url, ok := item.Metadata["url"].(string); ok && url != "" {
+	if url := item.URL; url != "" {
 		p.Segments = append(p.Segments, Segment{
 			Text: "Read More",
 			URI:  url,

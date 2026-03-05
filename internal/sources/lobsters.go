@@ -103,12 +103,12 @@ func (l *LobstersSource) Fetch(ctx context.Context, state types.StateAccessor) (
 				item := &types.Item{
 					ID:        fmt.Sprintf("lobsters_%s", post.ShortID),
 					Title:     post.Title,
+					URL:       post.URL,
 					Content:   post,
 					Source:    l.name,
 					Timestamp: createdAt,
 					Metadata: map[string]interface{}{
 						"title":         post.Title,
-						"url":           post.URL,
 						"link":          post.URL,
 						"score":         post.Score,
 						"author":        post.Submitter,

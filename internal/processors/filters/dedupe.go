@@ -2,31 +2,17 @@ package filters
 
 import (
 	"context"
-	"encoding/json"
-	"sync"
-	"time"
 
 	"cartero/internal/types"
 	"cartero/internal/utils/hash"
 )
 
 type DedupeProcessor struct {
-	name      string
-	seen      map[string]time.Time
-	mu        sync.RWMutex
-	cleanupCh chan struct{}
+	name string
 }
 
 func NewDedupeProcessor(name string) *DedupeProcessor {
-	d := &DedupeProcessor{
-		name:      name,
-		seen:      make(map[string]time.Time),
-		cleanupCh: make(chan struct{}),
-	}
-
-	go d.cleanup()
-
-	return d
+	return &DedupeProcessor{name: name}
 }
 
 func (d *DedupeProcessor) Name() string {
@@ -38,68 +24,20 @@ func (d *DedupeProcessor) DependsOn() []string {
 }
 
 func (d *DedupeProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
-	hash := d.hashItem(item)
+	h := hash.HashURL(item.GetURL())
 	store := st.GetStorage().Items()
 	logger := st.GetLogger()
 
-	d.mu.RLock()
-	firstSeen, inSession := d.seen[hash]
-	d.mu.RUnlock()
-
-	if inSession {
-		logger.Info("DedupeProcessor rejected item", "processor", d.name, "item_id", item.ID, "reason", "seen in current session", "first_seen", firstSeen)
-		return types.NewFilteredError(d.name, item.ID, "duplicate in session").
-			WithDetail("first_seen", firstSeen)
-	}
-
-	exists, err := store.Exists(ctx, item.ID)
+	exists, err := store.ExistsByHash(ctx, h)
 	if err != nil {
 		return err
 	}
 
 	if exists {
-		logger.Info("DedupeProcessor rejected item", "processor", d.name, "item_id", item.ID, "reason", "exists in storage")
-		return types.NewFilteredError(d.name, item.ID, "duplicate item").
-			WithDetail("location", "storage").
-			WithDetail("hash", hash)
+		logger.Info("DedupeProcessor rejected item", "processor", d.name, "item_id", item.ID, "reason", "duplicate url")
+		return types.NewFilteredError(d.name, item.ID, "duplicate url").
+			WithDetail("hash", h)
 	}
-
-	d.mu.Lock()
-	d.seen[hash] = time.Now()
-	d.mu.Unlock()
 
 	return nil
-}
-
-func (d *DedupeProcessor) hashItem(item *types.Item) string {
-	data, _ := json.Marshal(map[string]interface{}{
-		"title":   item.GetTitle(),
-		"content": item.Content,
-	})
-	return hash.NewHash(data).ComputeHash()
-}
-
-func (d *DedupeProcessor) cleanup() {
-	ticker := time.NewTicker(1 * time.Hour)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			d.mu.Lock()
-			now := time.Now()
-			for hash, timestamp := range d.seen {
-				if now.Sub(timestamp) > 24*time.Hour {
-					delete(d.seen, hash)
-				}
-			}
-			d.mu.Unlock()
-		case <-d.cleanupCh:
-			return
-		}
-	}
-}
-
-func (d *DedupeProcessor) Stop() {
-	close(d.cleanupCh)
 }

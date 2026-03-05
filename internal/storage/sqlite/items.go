@@ -5,7 +5,6 @@ import (
 	"cartero/internal/utils/hash"
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -19,14 +18,7 @@ func newItemStore(db *sql.DB) storage.ItemStore {
 }
 
 func (s *itemStore) Store(ctx context.Context, item storage.Item) error {
-	data := map[string]interface{}{
-		"id":      item.GetID(),
-		"source":  item.GetSource(),
-		"content": item.GetContent(),
-	}
-
-	jsonData, _ := json.Marshal(data)
-	hash := hash.NewHash(jsonData).ComputeHash()
+	h := hash.HashURL(item.GetURL())
 
 	query := `
 		INSERT INTO items (id, hash, source, timestamp)
@@ -34,7 +26,7 @@ func (s *itemStore) Store(ctx context.Context, item storage.Item) error {
 		ON CONFLICT(id) DO NOTHING
 	`
 
-	_, err := s.db.ExecContext(ctx, query, item.GetID(), hash, item.GetSource(), item.GetTimestamp())
+	_, err := s.db.ExecContext(ctx, query, item.GetID(), h, item.GetSource(), item.GetTimestamp())
 	if err != nil {
 		return fmt.Errorf("failed to store item: %w", err)
 	}
@@ -43,21 +35,21 @@ func (s *itemStore) Store(ctx context.Context, item storage.Item) error {
 }
 
 func (s *itemStore) Exists(ctx context.Context, id string) (bool, error) {
-	var count int
-	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM items WHERE id = ?`, id).Scan(&count)
+	var exists bool
+	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM items WHERE id = ?)`, id).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("failed to check existence: %w", err)
 	}
-	return count > 0, nil
+	return exists, nil
 }
 
 func (s *itemStore) ExistsByHash(ctx context.Context, hash string) (bool, error) {
-	var count int
-	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM items WHERE hash = ?`, hash).Scan(&count)
+	var exists bool
+	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM items WHERE hash = ?)`, hash).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("failed to check hash existence: %w", err)
 	}
-	return count > 0, nil
+	return exists, nil
 }
 
 func (s *itemStore) MarkPublished(ctx context.Context, itemID, target string) error {
@@ -76,12 +68,12 @@ func (s *itemStore) MarkPublished(ctx context.Context, itemID, target string) er
 }
 
 func (s *itemStore) IsPublished(ctx context.Context, itemID, target string) (bool, error) {
-	var count int
-	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM published WHERE item_id = ? AND target = ?`, itemID, target).Scan(&count)
+	var exists bool
+	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM published WHERE item_id = ? AND target = ?)`, itemID, target).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("failed to check published status: %w", err)
 	}
-	return count > 0, nil
+	return exists, nil
 }
 
 func (s *itemStore) DeleteOlderThan(ctx context.Context, age time.Duration) error {

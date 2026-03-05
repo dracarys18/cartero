@@ -2,6 +2,7 @@ package hash
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 )
 
@@ -16,4 +17,11 @@ func NewHash(data []byte) Hash {
 func (h Hash) ComputeHash() string {
 	hash := sha256.Sum256(h.data)
 	return fmt.Sprintf("%x", hash)
+}
+
+func HashURL(url string) string {
+	data, _ := json.Marshal(map[string]interface{}{
+		"link": url,
+	})
+	return NewHash(data).ComputeHash()
 }

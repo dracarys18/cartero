@@ -149,7 +149,6 @@ func (m *MultiRSSSource) convertToItem(feedItem *gofeed.Item, feedName string) *
 	metadata := map[string]interface{}{
 		"title":       feedItem.Title,
 		"link":        feedItem.Link,
-		"url":         feedItem.Link,
 		"description": stripHTML(description),
 		"author":      author,
 		"published":   feedItem.Published,
@@ -173,6 +172,7 @@ func (m *MultiRSSSource) convertToItem(feedItem *gofeed.Item, feedName string) *
 	return &types.Item{
 		ID:        fmt.Sprintf("rss_%s", sanitizeID(itemID)),
 		Title:     feedItem.Title,
+		URL:       feedItem.Link,
 		Content:   feedItem,
 		Source:    sourceName,
 		Timestamp: timestamp,

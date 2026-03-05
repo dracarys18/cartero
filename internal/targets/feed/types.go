@@ -43,8 +43,8 @@ func (f *FeedItem) From(item *types.Item) {
 		f.Title = "Untitled"
 	}
 
-	if link, ok := item.Metadata["url"].(string); ok {
-		f.Link = link
+	if item.URL != "" {
+		f.Link = item.URL
 	} else if link, ok := item.Metadata["link"].(string); ok {
 		f.Link = link
 	}
