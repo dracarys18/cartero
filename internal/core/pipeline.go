@@ -13,6 +13,7 @@ import (
 
 type Pipeline struct {
 	routes             []SourceRoute
+	routeIndex         map[string]int
 	processors         []types.Processor
 	processorConfigs   map[string]types.ProcessorConfig
 	initializedTargets map[string]bool
@@ -29,6 +30,7 @@ func (p *Pipeline) GetRoutes() []SourceRoute {
 func NewPipeline() *Pipeline {
 	return &Pipeline{
 		routes:             make([]SourceRoute, 0),
+		routeIndex:         make(map[string]int),
 		processors:         make([]types.Processor, 0),
 		processorConfigs:   make(map[string]types.ProcessorConfig),
 		initializedTargets: make(map[string]bool),
@@ -40,6 +42,7 @@ func (p *Pipeline) AddRoute(route SourceRoute) *Pipeline {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.routes = append(p.routes, route)
+	p.routeIndex[route.Source.Name()] = len(p.routes) - 1
 	return p
 }
 
@@ -189,12 +192,11 @@ func (p *Pipeline) runDeliveryConsumer(ctx context.Context, state types.StateAcc
 func (p *Pipeline) routeForItem(item *types.Item) *SourceRoute {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	for i := range p.routes {
-		if p.routes[i].Source.Name() == item.Source {
-			return &p.routes[i]
-		}
+	idx, ok := p.routeIndex[item.Source]
+	if !ok {
+		return nil
 	}
-	return nil
+	return &p.routes[idx]
 }
 
 func (p *Pipeline) Run(ctx context.Context, state types.StateAccessor) error {
