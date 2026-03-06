@@ -62,7 +62,7 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 	richText := post.Into()
 
 	var embedExternal *bsky.EmbedExternal_External
-	if post.Embed != nil {
+	if post.Embed != nil && post.Embed.URI != "" {
 		var err error
 		embedExternal, err = post.Embed.TryInto()
 		if err != nil {
@@ -74,9 +74,8 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 
 	var resp *atproto.RepoCreateRecord_Output
 	err := t.platform.Do(ctx, func(c *xrpc.Client) error {
-		imgURL := post.Embed.ThumbnailURL
-		if imgURL != "" {
-			blob, blobErr := UploadBlob(ctx, c, imgURL)
+		if post.Embed != nil && post.Embed.ThumbnailURL != "" {
+			blob, blobErr := UploadBlob(ctx, c, post.Embed.ThumbnailURL)
 			if blobErr == nil {
 				AttachThumbnail(bskyPost, blob)
 			}
