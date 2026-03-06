@@ -4,6 +4,7 @@ import (
 	"cartero/internal/types"
 	"cartero/internal/utils"
 	"context"
+	"slices"
 )
 
 type SourceRoute struct {
@@ -69,16 +70,7 @@ func (sr *SourceRoute) processItem(ctx context.Context, state types.StateAccesso
 }
 
 func (sr *SourceRoute) resolveTargets(names []string) Targets {
-	nameSet := make(map[string]struct{}, len(names))
-	for _, n := range names {
-		nameSet[n] = struct{}{}
-	}
-
-	var result Targets
-	for _, t := range sr.Targets {
-		if _, ok := nameSet[t.Name()]; ok {
-			result = append(result, t)
-		}
-	}
-	return result
+	return Targets(utils.FilterArray([]types.Target(sr.Targets), func(t types.Target) bool {
+		return slices.Contains(names, t.Name())
+	}))
 }
