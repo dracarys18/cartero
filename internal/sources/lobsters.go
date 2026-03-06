@@ -60,79 +60,68 @@ func (l *LobstersSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (l *LobstersSource) Fetch(ctx context.Context, state types.StateAccessor) (<-chan *types.Item, <-chan error) {
-	itemChan := make(chan *types.Item)
-	errChan := make(chan error, 1)
+func (l *LobstersSource) Publish(ctx context.Context, state types.StateAccessor) error {
+	logger := state.GetLogger()
+	q := state.GetQueue()
+	stream := q.SourceStream()
 
-	go func() {
-		defer close(itemChan)
-		defer close(errChan)
+	posts, err := l.fetchPosts(ctx)
+	if err != nil {
+		logger.Error("Lobsters source error fetching posts", "source", l.name, "error", err)
+		return err
+	}
 
-		logger := state.GetLogger()
+	logger.Debug("Lobsters source retrieved posts", "source", l.name, "count", len(posts))
 
-		posts, err := l.fetchPosts(ctx)
-		if err != nil {
-			logger.Error("Lobsters source error fetching posts", "source", l.name, "error", err)
-			errChan <- err
-			return
+	limit := l.maxItems
+	if limit > len(posts) {
+		limit = len(posts)
+	}
+
+	logger.Debug("Lobsters source processing posts", "source", l.name, "limit", limit)
+
+	for i := 0; i < limit; i++ {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
 		}
 
-		logger.Debug("Lobsters source retrieved posts", "source", l.name, "count", len(posts))
+		post := posts[i]
 
-		limit := l.maxItems
-		if limit > len(posts) {
-			limit = len(posts)
+		if !l.shouldIncludePost(post) {
+			continue
 		}
 
-		logger.Debug("Lobsters source processing posts", "source", l.name, "limit", limit)
+		createdAt, _ := time.Parse(time.RFC3339, post.CreatedAt)
 
-		for i := 0; i < limit; i++ {
-			select {
-			case <-ctx.Done():
-				errChan <- ctx.Err()
-				return
-			default:
-				post := posts[i]
-
-				if !l.shouldIncludePost(post) {
-					continue
-				}
-
-				createdAt, _ := time.Parse(time.RFC3339, post.CreatedAt)
-
-				item := &types.Item{
-					ID:        fmt.Sprintf("lobsters_%s", post.ShortID),
-					Title:     post.Title,
-					URL:       post.URL,
-					Content:   post,
-					Source:    l.name,
-					Timestamp: createdAt,
-					Metadata: map[string]interface{}{
-						"title":         post.Title,
-						"link":          post.URL,
-						"score":         post.Score,
-						"author":        post.Submitter,
-						"comments":      post.CommentsURL,
-						"comment_count": post.CommentCount,
-						"tags":          post.Tags,
-						"category":      strings.Join(post.Tags, ","),
-					},
-				}
-
-				select {
-				case itemChan <- item:
-					logger.Debug("Lobsters source sent item", "source", l.name, "index", i+1, "limit", limit, "post_id", post.ShortID, "score", post.Score)
-				case <-ctx.Done():
-					errChan <- ctx.Err()
-					return
-				}
-			}
+		item := &types.Item{
+			ID:        fmt.Sprintf("lobsters_%s", post.ShortID),
+			Title:     post.Title,
+			URL:       post.URL,
+			Content:   post,
+			Source:    l.name,
+			Timestamp: createdAt,
+			Metadata: map[string]interface{}{
+				"title":         post.Title,
+				"link":          post.URL,
+				"score":         post.Score,
+				"author":        post.Submitter,
+				"comments":      post.CommentsURL,
+				"comment_count": post.CommentCount,
+				"tags":          post.Tags,
+				"category":      strings.Join(post.Tags, ","),
+			},
 		}
 
-		logger.Debug("Lobsters source finished processing all items", "source", l.name)
-	}()
+		if err := q.Publish(ctx, stream, item, nil); err != nil {
+			return err
+		}
+		logger.Debug("Lobsters source published item", "source", l.name, "index", i+1, "limit", limit, "post_id", post.ShortID, "score", post.Score)
+	}
 
-	return itemChan, errChan
+	logger.Debug("Lobsters source finished processing all items", "source", l.name)
+	return nil
 }
 
 func (l *LobstersSource) fetchPosts(ctx context.Context) ([]LobstersPost, error) {

@@ -149,49 +149,45 @@ func (s *ScraperSource) loadScript(loader lua.Loader) (string, error) {
 	return scriptContent, nil
 }
 
-func (s *ScraperSource) Fetch(ctx context.Context, state types.StateAccessor) (<-chan *types.Item, <-chan error) {
-	itemChan := make(chan *types.Item)
-	errChan := make(chan error, 1)
+func (s *ScraperSource) Publish(ctx context.Context, state types.StateAccessor) error {
+	q := state.GetQueue()
+	stream := q.SourceStream()
 
-	go func() {
-		defer close(itemChan)
-		defer close(errChan)
+	results, err := s.runtime.Execute("scrape", s.config)
+	if err != nil {
+		s.logger.Error("Scraper execution error", "source", s.name, "error", err)
+		return err
+	}
 
-		results, err := s.runtime.Execute("scrape", s.config)
-		if err != nil {
-			s.logger.Error("Scraper execution error", "source", s.name, "error", err)
-			errChan <- err
-			return
+	if len(results) == 0 {
+		s.logger.Warn("Scraper returned no results", "source", s.name)
+		return nil
+	}
+
+	s.logger.Debug("Scraper returned results", "source", s.name, "count", len(results), "type", fmt.Sprintf("%T", results[0]))
+
+	items, err := s.convertResultsToItems(results[0])
+	if err != nil {
+		s.logger.Error("Failed to convert scraper results", "source", s.name, "error", err)
+		return err
+	}
+
+	s.logger.Debug("Scraper fetched items", "source", s.name, "count", len(items))
+
+	for _, item := range items {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
 		}
 
-		if len(results) == 0 {
-			s.logger.Warn("Scraper returned no results", "source", s.name)
-			return
+		if err := q.Publish(ctx, stream, item, nil); err != nil {
+			return err
 		}
+		s.logger.Debug("Scraper published item", "source", s.name, "id", item.ID)
+	}
 
-		s.logger.Debug("Scraper returned results", "source", s.name, "count", len(results), "type", fmt.Sprintf("%T", results[0]))
-
-		items, err := s.convertResultsToItems(results[0])
-		if err != nil {
-			s.logger.Error("Failed to convert scraper results", "source", s.name, "error", err)
-			errChan <- err
-			return
-		}
-
-		s.logger.Debug("Scraper fetched items", "source", s.name, "count", len(items))
-
-		for _, item := range items {
-			select {
-			case itemChan <- item:
-				s.logger.Debug("Scraper sent item", "source", s.name, "id", item.ID)
-			case <-ctx.Done():
-				errChan <- ctx.Err()
-				return
-			}
-		}
-	}()
-
-	return itemChan, errChan
+	return nil
 }
 
 func (s *ScraperSource) convertResultsToItems(result interface{}) ([]*types.Item, error) {

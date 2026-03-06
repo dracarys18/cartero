@@ -4,12 +4,15 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"os"
+	"strconv"
 
 	"cartero/internal/components"
 	"cartero/internal/config"
 	"cartero/internal/core"
 	"cartero/internal/middleware"
 	"cartero/internal/processors"
+	"cartero/internal/queue"
 	"cartero/internal/sources"
 	"cartero/internal/storage"
 	_ "cartero/internal/storage/sqlite"
@@ -24,6 +27,7 @@ type State struct {
 	Pipeline        *core.Pipeline
 	Storage         storage.StorageInterface
 	Chain           types.ProcessorChain
+	Queue           *queue.Queue
 	Logger          *slog.Logger
 	EmbeddedScripts embed.FS
 }
@@ -47,6 +51,12 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 		return fmt.Errorf("failed to initialize storage: %w", err)
 	}
 	s.Storage = st
+
+	conn, err := queue.NewRedisConnection(s.Config.Redis.Addr, s.Config.Redis.Password, s.Config.Redis.DB)
+	if err != nil {
+		return fmt.Errorf("failed to connect to redis: %w", err)
+	}
+	s.Queue = queue.New(conn, s.Config.Redis.StreamMaxLen, consumerName())
 
 	s.Registry = components.NewRegistry()
 
@@ -94,6 +104,10 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 		return fmt.Errorf("failed to initialize pipeline: %w", err)
 	}
 
+	if err := s.Pipeline.InitializeQueues(ctx, s.Queue); err != nil {
+		return fmt.Errorf("failed to initialize pipeline queues: %w", err)
+	}
+
 	chain := s.buildProcessorChain(ctx)
 	s.Chain = chain
 
@@ -122,6 +136,10 @@ func (s *State) GetChain() types.ProcessorChain {
 
 func (s *State) GetLogger() *slog.Logger {
 	return s.Logger
+}
+
+func (s *State) GetQueue() types.Queue {
+	return s.Queue
 }
 
 func (s *State) buildPlatformComponent() *components.PlatformComponent {
@@ -313,4 +331,10 @@ func (s *State) createTarget(name string, cfg config.TargetConfig) types.Target 
 	default:
 		return nil
 	}
+}
+
+func consumerName() string {
+	hostname, _ := os.Hostname()
+	pid := strconv.Itoa(os.Getpid())
+	return "worker-" + hostname + "-" + pid
 }

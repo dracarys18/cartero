@@ -85,6 +85,16 @@ func (p *Pipeline) Initialize(ctx context.Context, logger *slog.Logger) error {
 	return nil
 }
 
+func (p *Pipeline) InitializeQueues(ctx context.Context, q types.Queue) error {
+	if err := q.CreateGroup(ctx, q.SourceStream()); err != nil {
+		return fmt.Errorf("failed to create source stream group: %w", err)
+	}
+	if err := q.CreateGroup(ctx, q.ProcessedStream()); err != nil {
+		return fmt.Errorf("failed to create processed stream group: %w", err)
+	}
+	return nil
+}
+
 func (p *Pipeline) Run(ctx context.Context, state types.StateAccessor) error {
 	logger := state.GetLogger()
 	p.mu.Lock()

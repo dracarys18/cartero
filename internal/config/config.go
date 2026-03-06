@@ -12,10 +12,18 @@ import (
 type Config struct {
 	Bot        BotConfig                  `toml:"bot"`
 	Storage    StorageConfig              `toml:"storage"`
+	Redis      RedisConfig                `toml:"redis"`
 	Platforms  map[string]PlatformConfig  `toml:"platforms"`
 	Sources    map[string]SourceConfig    `toml:"sources"`
 	Processors map[string]ProcessorConfig `toml:"processors"`
 	Targets    map[string]TargetConfig    `toml:"targets"`
+}
+
+type RedisConfig struct {
+	Addr         string `toml:"addr"`
+	Password     string `toml:"password"`
+	DB           int    `toml:"db"`
+	StreamMaxLen int64  `toml:"stream_max_len"`
 }
 
 type BotConfig struct {
@@ -279,6 +287,14 @@ func validateConfig(config *Config) error {
 
 	if config.Storage.Path == "" {
 		config.Storage.Path = "./cartero.db"
+	}
+
+	if config.Redis.Addr == "" {
+		config.Redis.Addr = "localhost:6379"
+	}
+
+	if config.Redis.StreamMaxLen == 0 {
+		config.Redis.StreamMaxLen = 1000
 	}
 
 	return nil

@@ -36,49 +36,38 @@ func (m *MultiRSSSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (m *MultiRSSSource) Fetch(ctx context.Context, state types.StateAccessor) (<-chan *types.Item, <-chan error) {
-	itemChan := make(chan *types.Item, 100)
-	errChan := make(chan error, 1)
+func (m *MultiRSSSource) Publish(ctx context.Context, state types.StateAccessor) error {
+	logger := state.GetLogger()
+	q := state.GetQueue()
+	stream := q.SourceStream()
 
-	go func() {
-		defer close(itemChan)
-		defer close(errChan)
+	logger.Info("MultiRSS source fetching feeds", "source", m.name, "count", len(m.feeds))
 
-		logger := state.GetLogger()
-		logger.Info("MultiRSS source fetching feeds", "source", m.name, "count", len(m.feeds))
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(m.feeds))
 
-		var wg sync.WaitGroup
-		feedItemChan := make(chan *types.Item, 100)
+	for _, feed := range m.feeds {
+		wg.Add(1)
+		go func(f Feed) {
+			defer wg.Done()
+			m.fetchFeed(ctx, f, stream, q, state)
+		}(feed)
+	}
 
-		for _, feed := range m.feeds {
-			wg.Add(1)
-			go func(f Feed) {
-				defer wg.Done()
-				m.fetchFeed(ctx, f, feedItemChan, state)
-			}(feed)
+	wg.Wait()
+	close(errChan)
+
+	for err := range errChan {
+		if err != nil {
+			return err
 		}
+	}
 
-		go func() {
-			wg.Wait()
-			close(feedItemChan)
-		}()
-
-		for item := range feedItemChan {
-			select {
-			case itemChan <- item:
-			case <-ctx.Done():
-				errChan <- ctx.Err()
-				return
-			}
-		}
-
-		logger.Info("MultiRSS source finished", "source", m.name)
-	}()
-
-	return itemChan, errChan
+	logger.Info("MultiRSS source finished", "source", m.name)
+	return nil
 }
 
-func (m *MultiRSSSource) fetchFeed(ctx context.Context, feed Feed, itemChan chan<- *types.Item, state types.StateAccessor) {
+func (m *MultiRSSSource) fetchFeed(ctx context.Context, feed Feed, stream string, q types.Queue, state types.StateAccessor) {
 	logger := state.GetLogger()
 
 	parsedFeed, err := m.parser.ParseURLWithContext(feed.URL, ctx)
@@ -99,16 +88,14 @@ func (m *MultiRSSSource) fetchFeed(ctx context.Context, feed Feed, itemChan chan
 		case <-ctx.Done():
 			return
 		default:
-			feedItem := parsedFeed.Items[i]
-			item := m.convertToItem(feedItem, feed.Name)
-
-			select {
-			case itemChan <- item:
-				logger.Debug("MultiRSS item sent", "source", m.name, "feed", feed.Name, "item", i+1)
-			case <-ctx.Done():
-				return
-			}
 		}
+
+		item := m.convertToItem(parsedFeed.Items[i], feed.Name)
+		if err := q.Publish(ctx, stream, item, nil); err != nil {
+			logger.Error("MultiRSS failed to publish item", "source", m.name, "feed", feed.Name, "error", err)
+			return
+		}
+		logger.Debug("MultiRSS item published", "source", m.name, "feed", feed.Name, "item", i+1)
 	}
 }
 

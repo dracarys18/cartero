@@ -159,7 +159,7 @@ type PublishResult struct {
 type Source interface {
 	Name() string
 	Initialize(ctx context.Context) error
-	Fetch(ctx context.Context, state StateAccessor) (<-chan *Item, <-chan error)
+	Publish(ctx context.Context, state StateAccessor) error
 	Shutdown(ctx context.Context) error
 }
 
@@ -192,6 +192,20 @@ type Storage interface {
 	Close() error
 }
 
+type Envelope struct {
+	Item    *Item    `json:"item"`
+	Targets []string `json:"targets"`
+}
+
+type Queue interface {
+	SourceStream() string
+	ProcessedStream() string
+	CreateGroup(ctx context.Context, stream string) error
+	Publish(ctx context.Context, stream string, item *Item, targets []string) error
+	Consume(ctx context.Context, stream string) ([]Envelope, []string, error)
+	Ack(ctx context.Context, stream string, ids ...string) error
+}
+
 type StateAccessor interface {
 	GetConfig() *config.Config
 	GetStorage() storage.StorageInterface
@@ -199,6 +213,7 @@ type StateAccessor interface {
 	GetLogger() *slog.Logger
 	GetPipeline() interface{}
 	GetChain() ProcessorChain
+	GetQueue() Queue
 }
 
 type ProcessorChain interface {

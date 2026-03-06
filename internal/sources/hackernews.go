@@ -56,76 +56,66 @@ func (h *HackerNewsSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (h *HackerNewsSource) Fetch(ctx context.Context, state types.StateAccessor) (<-chan *types.Item, <-chan error) {
-	itemChan := make(chan *types.Item)
-	errChan := make(chan error, 1)
+func (h *HackerNewsSource) Publish(ctx context.Context, state types.StateAccessor) error {
+	logger := state.GetLogger()
+	q := state.GetQueue()
+	stream := q.SourceStream()
 
-	go func() {
-		defer close(itemChan)
-		defer close(errChan)
+	storyIDs, err := h.fetchStoryIDs(ctx)
+	if err != nil {
+		logger.Error("HackerNews source error fetching story IDs", "source", h.name, "error", err)
+		return err
+	}
 
-		logger := state.GetLogger()
+	logger.Debug("HackerNews source retrieved story IDs", "source", h.name, "count", len(storyIDs))
 
-		storyIDs, err := h.fetchStoryIDs(ctx)
+	limit := h.maxItems
+	if limit > len(storyIDs) {
+		limit = len(storyIDs)
+	}
+
+	logger.Debug("HackerNews source fetching stories", "source", h.name, "limit", limit)
+
+	for i := 0; i < limit; i++ {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		story, err := h.fetchStory(ctx, storyIDs[i])
 		if err != nil {
-			logger.Error("HackerNews source error fetching story IDs", "source", h.name, "error", err)
-			errChan <- err
-			return
+			logger.Warn("HackerNews source error fetching story", "source", h.name, "story_id", storyIDs[i], "error", err)
+			continue
 		}
 
-		logger.Debug("HackerNews source retrieved story IDs", "source", h.name, "count", len(storyIDs))
-
-		limit := h.maxItems
-		if limit > len(storyIDs) {
-			limit = len(storyIDs)
+		item := &types.Item{
+			ID:        fmt.Sprintf("hn_%d", story.ID),
+			Title:     story.Title,
+			URL:       story.URL,
+			Source:    h.name,
+			Timestamp: time.Unix(story.Time, 0),
+			Content:   story,
+			Metadata: map[string]interface{}{
+				"score":         story.Score,
+				"author":        story.By,
+				"comments":      fmt.Sprintf("https://news.ycombinator.com/item?id=%d", story.ID),
+				"comment_count": story.Descendants,
+				"story_type":    h.storyType,
+				"hn_id":         story.ID,
+				"title":         story.Title,
+			},
 		}
 
-		logger.Debug("HackerNews source fetching stories", "source", h.name, "limit", limit)
-
-		for i := 0; i < limit; i++ {
-			select {
-			case <-ctx.Done():
-				errChan <- ctx.Err()
-				return
-			default:
-				story, err := h.fetchStory(ctx, storyIDs[i])
-				if err != nil {
-					logger.Warn("HackerNews source error fetching story", "source", h.name, "story_id", storyIDs[i], "error", err)
-					continue
-				}
-
-				item := &types.Item{
-					ID:        fmt.Sprintf("hn_%d", story.ID),
-					Title:     story.Title,
-					URL:       story.URL,
-					Source:    h.name,
-					Timestamp: time.Unix(story.Time, 0),
-					Content:   story,
-					Metadata: map[string]interface{}{
-						"score":         story.Score,
-						"author":        story.By,
-						"comments":      fmt.Sprintf("https://news.ycombinator.com/item?id=%d", story.ID),
-						"comment_count": story.Descendants,
-						"story_type":    h.storyType,
-						"hn_id":         story.ID,
-						"title":         story.Title,
-					},
-				}
-
-				select {
-				case itemChan <- item:
-					logger.Debug("HackerNews source sent item", "source", h.name, "index", i+1, "limit", limit, "story_id", story.ID, "score", story.Score)
-				case <-ctx.Done():
-					errChan <- ctx.Err()
-					return
-				}
-			}
+		if err := q.Publish(ctx, stream, item, nil); err != nil {
+			return err
 		}
 
-		logger.Debug("HackerNews source finished fetching all items", "source", h.name)
-	}()
+		logger.Debug("HackerNews source published item", "source", h.name, "index", i+1, "limit", limit, "story_id", story.ID, "score", story.Score)
+	}
 
-	return itemChan, errChan
+	logger.Debug("HackerNews source finished fetching all items", "source", h.name)
+	return nil
 }
 
 func (h *HackerNewsSource) fetchStoryIDs(ctx context.Context) ([]int64, error) {
