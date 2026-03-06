@@ -5,6 +5,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./config.toml:/app/config.toml:ro
+      - ./keywords.txt:/app/keywords.txt:ro
       - cartero-data:/app/data
     environment:
       - TZ=UTC
