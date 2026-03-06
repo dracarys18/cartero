@@ -5,7 +5,10 @@ import (
 	"cartero/internal/config"
 	"cartero/internal/storage"
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 )
@@ -196,6 +199,31 @@ type Storage interface {
 type Envelope struct {
 	Item    *Item    `json:"item"`
 	Targets []string `json:"targets"`
+}
+
+func (e *Envelope) TryFrom(fields map[string]any) error {
+	itemStr, ok := fields["item"].(string)
+	if !ok {
+		return fmt.Errorf("missing or invalid item field")
+	}
+	if err := json.Unmarshal([]byte(itemStr), &e.Item); err != nil {
+		return fmt.Errorf("failed to unmarshal item: %w", err)
+	}
+	if t, ok := fields["targets"].(string); ok && t != "" {
+		e.Targets = strings.Split(t, ",")
+	}
+	return nil
+}
+
+func (e Envelope) TryInto() (map[string]any, error) {
+	item, err := json.Marshal(e.Item)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal item: %w", err)
+	}
+	return map[string]any{
+		"item":    string(item),
+		"targets": strings.Join(e.Targets, ","),
+	}, nil
 }
 
 type Queue interface {

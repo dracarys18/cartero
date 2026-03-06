@@ -50,7 +50,7 @@ func (q *Queue) CreateGroup(ctx context.Context, stream string) error {
 }
 
 func (q *Queue) Publish(ctx context.Context, stream string, env types.Envelope) error {
-	fields, err := marshalEnvelope(env)
+	fields, err := env.TryInto()
 	if err != nil {
 		return err
 	}
@@ -68,8 +68,8 @@ func (q *Queue) Consume(ctx context.Context, stream string) ([]types.Envelope, [
 	ids := make([]string, 0, len(messages))
 
 	for _, msg := range messages {
-		env, err := unmarshalEnvelope(msg.Data)
-		if err != nil {
+		var env types.Envelope
+		if err := env.TryFrom(msg.Data); err != nil {
 			return nil, nil, fmt.Errorf("message %s: %w", msg.ID, err)
 		}
 		envelopes = append(envelopes, env)
