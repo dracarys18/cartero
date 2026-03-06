@@ -4,8 +4,6 @@ services:
     container_name: cartero-redis
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
-    ports:
-      - "6379:6379"
     volumes:
       - redis-data:/data
     networks:
