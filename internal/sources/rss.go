@@ -43,55 +43,42 @@ func (r *RSSSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (r *RSSSource) Fetch(ctx context.Context, state types.StateAccessor) (<-chan *types.Item, <-chan error) {
-	itemChan := make(chan *types.Item)
-	errChan := make(chan error, 1)
+func (r *RSSSource) Publish(ctx context.Context, state types.StateAccessor) error {
+	logger := state.GetLogger()
+	q := state.GetQueue()
+	stream := q.SourceStream()
 
-	go func() {
-		defer close(itemChan)
-		defer close(errChan)
+	feed, err := r.parser.ParseURLWithContext(r.feedURL, ctx)
+	if err != nil {
+		logger.Error("RSS source error fetching feed", "source", r.name, "error", err)
+		return fmt.Errorf("failed to parse feed: %w", err)
+	}
 
-		logger := state.GetLogger()
+	logger.Debug("RSS source retrieved items", "source", r.name, "count", len(feed.Items))
 
-		feed, err := r.parser.ParseURLWithContext(r.feedURL, ctx)
-		if err != nil {
-			logger.Error("RSS source error fetching feed", "source", r.name, "error", err)
-			errChan <- fmt.Errorf("failed to parse feed: %w", err)
-			return
+	limit := r.maxItems
+	if limit > len(feed.Items) {
+		limit = len(feed.Items)
+	}
+
+	logger.Debug("RSS source processing items", "source", r.name, "limit", limit)
+
+	for i := 0; i < limit; i++ {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
 		}
 
-		logger.Debug("RSS source retrieved items", "source", r.name, "count", len(feed.Items))
-
-		limit := r.maxItems
-		if limit > len(feed.Items) {
-			limit = len(feed.Items)
+		item := r.convertToItem(feed.Items[i])
+		if err := q.Publish(ctx, stream, types.Envelope{Item: item}); err != nil {
+			return err
 		}
+		logger.Debug("RSS source published item", "source", r.name, "index", i+1, "limit", limit, "item_id", item.ID)
+	}
 
-		logger.Debug("RSS source processing items", "source", r.name, "limit", limit)
-
-		for i := 0; i < limit; i++ {
-			select {
-			case <-ctx.Done():
-				errChan <- ctx.Err()
-				return
-			default:
-				feedItem := feed.Items[i]
-				item := r.convertToItem(feedItem)
-
-				select {
-				case itemChan <- item:
-					logger.Debug("RSS source sent item", "source", r.name, "index", i+1, "limit", limit, "item_id", item.ID)
-				case <-ctx.Done():
-					errChan <- ctx.Err()
-					return
-				}
-			}
-		}
-
-		logger.Debug("RSS source finished processing all items", "source", r.name)
-	}()
-
-	return itemChan, errChan
+	logger.Debug("RSS source finished processing all items", "source", r.name)
+	return nil
 }
 
 func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *types.Item {
@@ -155,6 +142,7 @@ func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *types.Item {
 		URL:       feedItem.Link,
 		Content:   feedItem,
 		Source:    r.name,
+		Route:     r.name,
 		Timestamp: timestamp,
 		Metadata:  metadata,
 	}

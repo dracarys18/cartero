@@ -58,6 +58,8 @@ func (b *Bot) Start(ctx context.Context) error {
 	b.running = true
 	b.mu.Unlock()
 
+	b.pipeline.StartConsumers(ctx, b.state)
+
 	if b.runOnce {
 		return b.runOnceMode(ctx)
 	}

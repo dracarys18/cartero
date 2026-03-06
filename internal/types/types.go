@@ -5,7 +5,10 @@ import (
 	"cartero/internal/config"
 	"cartero/internal/storage"
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 )
@@ -17,6 +20,7 @@ type Item struct {
 	Content         interface{}
 	Metadata        map[string]interface{}
 	Source          string
+	Route           string
 	TextContent     *Article
 	MatchedKeywords string
 	Timestamp       time.Time
@@ -159,7 +163,7 @@ type PublishResult struct {
 type Source interface {
 	Name() string
 	Initialize(ctx context.Context) error
-	Fetch(ctx context.Context, state StateAccessor) (<-chan *Item, <-chan error)
+	Publish(ctx context.Context, state StateAccessor) error
 	Shutdown(ctx context.Context) error
 }
 
@@ -192,6 +196,45 @@ type Storage interface {
 	Close() error
 }
 
+type Envelope struct {
+	Item    *Item    `json:"item"`
+	Targets []string `json:"targets"`
+}
+
+func (e *Envelope) TryFrom(fields map[string]any) error {
+	itemStr, ok := fields["item"].(string)
+	if !ok {
+		return fmt.Errorf("missing or invalid item field")
+	}
+	if err := json.Unmarshal([]byte(itemStr), &e.Item); err != nil {
+		return fmt.Errorf("failed to unmarshal item: %w", err)
+	}
+	if t, ok := fields["targets"].(string); ok && t != "" {
+		e.Targets = strings.Split(t, ",")
+	}
+	return nil
+}
+
+func (e Envelope) TryInto() (map[string]any, error) {
+	item, err := json.Marshal(e.Item)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal item: %w", err)
+	}
+	return map[string]any{
+		"item":    string(item),
+		"targets": strings.Join(e.Targets, ","),
+	}, nil
+}
+
+type Queue interface {
+	SourceStream() string
+	ProcessedStream() string
+	CreateGroup(ctx context.Context, stream string) error
+	Publish(ctx context.Context, stream string, env Envelope) error
+	Consume(ctx context.Context, stream string) ([]Envelope, []string, error)
+	Ack(ctx context.Context, stream string, ids ...string) error
+}
+
 type StateAccessor interface {
 	GetConfig() *config.Config
 	GetStorage() storage.StorageInterface
@@ -199,6 +242,7 @@ type StateAccessor interface {
 	GetLogger() *slog.Logger
 	GetPipeline() interface{}
 	GetChain() ProcessorChain
+	GetQueue() Queue
 }
 
 type ProcessorChain interface {

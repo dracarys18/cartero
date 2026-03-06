@@ -1,8 +1,20 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: cartero-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    networks:
+      - cartero-network
+
   cartero:
     image: ghcr.io/dracarys18/cartero:latest
     container_name: cartero
     restart: unless-stopped
+    depends_on:
+      - redis
     volumes:
       - ./config.toml:/app/config.toml:ro
       - ./keywords.txt:/app/keywords.txt:ro
@@ -10,6 +22,7 @@ services:
     environment:
       - TZ=UTC
       - OLLAMA_HOST=http://host.docker.internal:11434
+      - CARTERO_QUEUE_PREFIX=cartero
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -60,4 +73,6 @@ volumes:
   cartero-data:
     driver: local
   diun-data:
+    driver: local
+  redis-data:
     driver: local

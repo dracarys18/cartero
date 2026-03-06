@@ -67,68 +67,57 @@ func (l *LessWrongSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (l *LessWrongSource) Fetch(ctx context.Context, state types.StateAccessor) (<-chan *types.Item, <-chan error) {
-	itemChan := make(chan *types.Item)
-	errChan := make(chan error, 1)
+func (l *LessWrongSource) Publish(ctx context.Context, state types.StateAccessor) error {
+	logger := state.GetLogger()
+	q := state.GetQueue()
+	stream := q.SourceStream()
 
-	go func() {
-		defer close(itemChan)
-		defer close(errChan)
+	posts, err := l.fetchPosts(ctx)
+	if err != nil {
+		logger.Error("LessWrong source error fetching posts", "source", l.name, "error", err)
+		return err
+	}
 
-		logger := state.GetLogger()
+	logger.Debug("LessWrong source retrieved posts", "source", l.name, "count", len(posts))
 
-		posts, err := l.fetchPosts(ctx)
-		if err != nil {
-			logger.Error("LessWrong source error fetching posts", "source", l.name, "error", err)
-			errChan <- err
-			return
+	for i, post := range posts {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
 		}
 
-		logger.Debug("LessWrong source retrieved posts", "source", l.name, "count", len(posts))
-
-		for i, post := range posts {
-			select {
-			case <-ctx.Done():
-				errChan <- ctx.Err()
-				return
-			default:
-				// Build full URL if not present
-				postURL := post.URL
-				if postURL == "" {
-					postURL = fmt.Sprintf("https://www.lesswrong.com/posts/%s/%s", post.ID, post.Slug)
-				}
-
-				item := &types.Item{
-					ID:        fmt.Sprintf("lw_%s", post.ID),
-					Title:     post.Title,
-					URL:       postURL,
-					Source:    l.name,
-					Timestamp: post.PostedAt,
-					Content:   post,
-					Metadata: map[string]interface{}{
-						"score":         post.BaseScore,
-						"comments":      postURL,
-						"comment_count": post.CommentCount,
-						"vote_count":    post.VoteCount,
-						"lw_id":         post.ID,
-						"title":         post.Title,
-					},
-				}
-
-				select {
-				case itemChan <- item:
-					logger.Debug("LessWrong source sent item", "source", l.name, "index", i+1, "total", len(posts), "post_id", post.ID, "score", post.BaseScore)
-				case <-ctx.Done():
-					errChan <- ctx.Err()
-					return
-				}
-			}
+		postURL := post.URL
+		if postURL == "" {
+			postURL = fmt.Sprintf("https://www.lesswrong.com/posts/%s/%s", post.ID, post.Slug)
 		}
 
-		logger.Debug("LessWrong source finished fetching all items", "source", l.name)
-	}()
+		item := &types.Item{
+			ID:        fmt.Sprintf("lw_%s", post.ID),
+			Title:     post.Title,
+			URL:       postURL,
+			Source:    l.name,
+			Route:     l.name,
+			Timestamp: post.PostedAt,
+			Content:   post,
+			Metadata: map[string]interface{}{
+				"score":         post.BaseScore,
+				"comments":      postURL,
+				"comment_count": post.CommentCount,
+				"vote_count":    post.VoteCount,
+				"lw_id":         post.ID,
+				"title":         post.Title,
+			},
+		}
 
-	return itemChan, errChan
+		if err := q.Publish(ctx, stream, types.Envelope{Item: item}); err != nil {
+			return err
+		}
+		logger.Debug("LessWrong source published item", "source", l.name, "index", i+1, "total", len(posts), "post_id", post.ID, "score", post.BaseScore)
+	}
+
+	logger.Debug("LessWrong source finished fetching all items", "source", l.name)
+	return nil
 }
 
 func (l *LessWrongSource) fetchPosts(ctx context.Context) ([]LWPost, error) {
