@@ -33,15 +33,9 @@ func (e *ExtractText) Process(ctx context.Context, st types.StateAccessor, item 
 	minContentLength := cfg.MinContentLength
 	logger := st.GetLogger()
 
-	url, exists := item.GetMetadata("url")
-	if !exists {
+	urlStr := item.GetURL()
+	if urlStr == "" {
 		return nil
-	}
-
-	urlStr, ok := url.(string)
-	if !ok {
-		logger.Info("ExtractText processor rejected item", "processor", e.name, "item_id", item.ID, "reason", "url metadata is not a string")
-		return types.NewFilteredError(e.name, item.ID, "url metadata is not a string")
 	}
 
 	httpMod := utils.BrowserHeadersModifier()
