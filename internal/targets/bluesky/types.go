@@ -156,6 +156,8 @@ func BuildPost(richText RichText, embedExternal *bsky.EmbedExternal_External, la
 	return post
 }
 
+const maxBlobSize = 976 * 1024
+
 func UploadBlob(ctx context.Context, c *xrpc.Client, imageURL string) (*util.LexBlob, error) {
 	if imageURL == "" {
 		return nil, nil
@@ -182,6 +184,10 @@ func UploadBlob(ctx context.Context, c *xrpc.Client, imageURL string) (*util.Lex
 	data, readErr := io.ReadAll(resp.Body)
 	if readErr != nil {
 		return nil, readErr
+	}
+
+	if len(data) > maxBlobSize {
+		return nil, nil
 	}
 
 	blobResp, blobErr := atproto.RepoUploadBlob(ctx, c, bytes.NewReader(data))
