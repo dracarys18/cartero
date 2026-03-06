@@ -1482,6 +1482,271 @@ Sony
 SoftBank
 MediaTek
 
+# === DATA FORMATS & SERIALIZATION ===
+JSON
+XML
+YAML
+TOML
+CSV
+TSV
+Parquet
+Avro
+Protobuf
+MessagePack
+CBOR
+FlatBuffers
+Cap'n Proto
+Thrift
+BSON
+Feather
+HDF5
+NetCDF
+JSON Lines
+NDJSON
+JSON Schema
+XML Schema
+XSD
+XSLT
+XPath
+XQuery
+DTD
+
+# === QUERY & TRANSFORMATION TOOLS ===
+jq
+yq
+xq
+jqplay
+gron
+fq
+dasel
+Miller
+csvkit
+xsv
+q
+SQLite CLI
+DuckDB CLI
+Polars
+pandas
+dbt
+dbt Core
+dbt Cloud
+Airbyte
+Fivetran
+Meltano
+Singer
+Great Expectations
+data contracts
+
+# === SHELL & CLI TOOLS ===
+Bash
+Zsh
+Fish
+PowerShell
+Nushell
+xonsh
+Oil Shell
+Elvish
+tmux
+screen
+fzf
+ripgrep
+fd
+bat
+eza
+lsd
+delta
+difftastic
+zoxide
+atuin
+mcfly
+Starship
+direnv
+asdf
+mise
+nvm
+pyenv
+rbenv
+gvm
+volta
+fnm
+pnpm
+Bun
+Yarn
+npm
+Homebrew
+Scoop
+Chocolatey
+WinGet
+Nix
+Flox
+Devbox
+devenv
+pkgx
+
+# === BUILD SYSTEMS & TASK RUNNERS ===
+Make
+Makefile
+CMake
+Bazel
+Buck2
+Pants
+Nx
+Turborepo
+Gradle
+Maven
+sbt
+Mill
+Leiningen
+Mix
+Rebar3
+Cargo
+Meson
+Ninja
+SCons
+Tup
+just
+Task
+xc
+Earthly
+
+# === OBSERVABILITY & MONITORING ===
+OpenTelemetry
+OTel
+Jaeger
+Zipkin
+Tempo
+Grafana
+Grafana Loki
+Prometheus
+Alertmanager
+Thanos
+Cortex
+DataDog
+New Relic
+Dynatrace
+Elastic APM
+Honeycomb
+Lightstep
+Sentry
+Rollbar
+Bugsnag
+PagerDuty
+Opsgenie
+Signoz
+Pixie
+Parca
+Pyroscope
+Continuous Profiling
+Distributed Tracing
+Log Aggregation
+Metrics Pipeline
+OTEL Collector
+Span
+Trace
+Baggage
+Exemplar
+
+# === NETWORKING & PROTOCOLS ===
+TCP
+UDP
+ICMP
+TLS
+DTLS
+HTTP
+HTTPS
+HTTP2
+HTTP3
+QUIC
+DNS
+DoH
+DoT
+DNSSEC
+BGP
+OSPF
+MPLS
+VPN
+IPSec
+WireGuard
+OpenVPN
+SSH
+SFTP
+FTP
+SMTP
+IMAP
+POP3
+XMPP
+Matrix
+ActivityPub
+Fediverse
+Tor
+I2P
+IPFS
+libp2p
+Noise Protocol
+
+# === VERSION CONTROL & COLLABORATION ===
+Git
+GitHub
+GitLab
+Bitbucket
+Forgejo
+Gitea
+Sourcehut
+Fossil
+Mercurial
+Perforce
+SVN
+Subversion
+Pijul
+jujutsu
+git-worktree
+git-bisect
+git-rebase
+git-stash
+Conventional Commits
+Semantic Release
+Changesets
+Release Please
+
+# === PACKAGE REGISTRIES & ARTIFACT MANAGEMENT ===
+npm Registry
+PyPI
+crates.io
+pkg.go.dev
+Maven Central
+Hex
+RubyGems
+NuGet Gallery
+Docker Hub
+GitHub Container Registry
+GHCR
+JFrog Artifactory
+Sonatype Nexus
+Harbor
+Quay
+OCI
+OCI Artifacts
+ORAS
+
+# === DOCUMENTATION & KNOWLEDGE ===
+Markdown
+AsciiDoc
+reStructuredText
+Sphinx
+MkDocs
+Docusaurus
+Mintlify
+GitBook
+Notion
+Confluence
+Backstage TechDocs
+Architecture Decision Records
+ADR
+RFC
+runbook
+postmortem
+incident report
+
 # === MISC ===
 GrapheneOS
 AOSP
@@ -1514,3 +1779,649 @@ DevEx
 Developer Experience
 platform team
 golden path
+
+# === PROGRAMMING CONCEPTS & PARADIGMS ===
+object-oriented programming
+OOP
+functional programming
+procedural programming
+declarative programming
+reactive programming
+metaprogramming
+reflection
+generics
+polymorphism
+inheritance
+composition
+dependency injection
+inversion of control
+IoC
+type inference
+type system
+static typing
+dynamic typing
+duck typing
+structural typing
+nominal typing
+algebraic data types
+pattern matching
+destructuring
+currying
+partial application
+higher-order functions
+closures
+memoization
+lazy evaluation
+eager evaluation
+tail call optimization
+coroutine
+fiber
+green thread
+actor model
+communicating sequential processes
+dataflow
+stream processing
+event loop
+concurrency
+parallelism
+immutability
+pure function
+side effects
+referential transparency
+monad
+functor
+applicative
+recursion
+dynamic programming
+backtracking
+
+# === DATA STRUCTURES & ALGORITHMS ===
+linked list
+doubly linked list
+dynamic array
+priority queue
+binary heap
+Fibonacci heap
+hash table
+hash map
+hash set
+open addressing
+cuckoo hashing
+binary search tree
+BST
+AVL tree
+red-black tree
+splay tree
+trie
+radix tree
+skip list
+segment tree
+Fenwick tree
+KD-tree
+quad tree
+octree
+union find
+disjoint set
+topological sort
+breadth-first search
+depth-first search
+Dijkstra
+Bellman-Ford
+Floyd-Warshall
+merge sort
+quicksort
+heapsort
+timsort
+radix sort
+counting sort
+binary search
+two pointers
+sliding window
+prefix sum
+monotonic stack
+sparse table
+lowest common ancestor
+strongly connected components
+maximum flow
+min cut
+bipartite matching
+stable matching
+convex hull
+line sweep
+interval tree
+amortized analysis
+Big O notation
+time complexity
+space complexity
+NP-hard
+NP-complete
+approximation algorithm
+
+# === COMPUTER SCIENCE FUNDAMENTALS ===
+automata theory
+finite state machine
+pushdown automaton
+Turing machine
+halting problem
+computability
+complexity theory
+information theory
+Shannon entropy
+Kolmogorov complexity
+formal languages
+regular expression
+context-free grammar
+recursive descent parser
+Earley parser
+PEG parser
+packrat parsing
+semantic analysis
+type checking
+unification
+lambda calculus
+pi calculus
+category theory
+dependent types
+linear types
+effect system
+session types
+memory model
+memory ordering
+cache coherence
+MESI protocol
+memory barrier
+lock-free
+wait-free
+compare-and-swap
+atomic operations
+ABA problem
+hazard pointers
+epoch-based reclamation
+read-copy-update
+
+# === NETWORKING INTERNALS ===
+socket programming
+epoll
+kqueue
+non-blocking I/O
+async I/O
+multiplexing
+connection pooling
+keepalive
+nagle algorithm
+TCP handshake
+TLS handshake
+certificate pinning
+SNI
+ALPN
+HTTP pipelining
+head-of-line blocking
+flow control
+congestion control
+slow start
+CUBIC
+BBR
+NAT traversal
+STUN
+TURN
+ICE
+SRTP
+anycast
+unicast
+multicast
+subnet
+CIDR
+VLAN
+SDN
+NFV
+network namespace
+TAP device
+TUN device
+link aggregation
+
+# === STORAGE & FILE SYSTEMS ===
+ext4
+XFS
+APFS
+NTFS
+FAT32
+exFAT
+tmpfs
+overlayfs
+fuse
+POSIX
+inode
+page cache
+dirty page
+writeback
+fsync
+fdatasync
+copy-on-write
+snapshot
+deduplication
+erasure coding
+object storage
+block storage
+file storage
+NFS
+SMB
+iSCSI
+NVMe-oF
+Ceph
+GlusterFS
+MinIO
+Longhorn
+Rook
+
+# === CRYPTOGRAPHY ===
+AES-GCM
+ChaCha20
+Poly1305
+ECDSA
+EdDSA
+Ed25519
+X25519
+Diffie-Hellman
+ECDH
+SHA-256
+SHA-3
+BLAKE3
+HMAC
+digital signature
+PKI
+certificate authority
+x509
+hardware security module
+key derivation function
+PBKDF2
+scrypt
+Argon2
+bcrypt
+nonce
+initialization vector
+padding oracle
+timing attack
+side-channel attack
+constant-time comparison
+CSPRNG
+TLS 1.3
+cipher suite
+perfect forward secrecy
+key rotation
+key wrapping
+envelope encryption
+Shamir Secret Sharing
+threshold cryptography
+
+# === WEB STANDARDS & BROWSER APIS ===
+Virtual DOM
+Custom Elements
+HTML5
+CSS Grid
+CSS Flexbox
+CSS Variables
+CSS Animations
+Web Workers
+Service Worker
+Workbox
+IndexedDB
+Web Storage
+localStorage
+sessionStorage
+Cache API
+Fetch API
+XMLHttpRequest
+WebGL
+WebGPU
+Canvas API
+Web Audio API
+Web Bluetooth
+Web USB
+Web Serial
+Intersection Observer
+Mutation Observer
+Resize Observer
+Performance API
+File System Access API
+Clipboard API
+Notifications API
+Push API
+Background Sync
+Web Share
+Credential Management
+Payment Request API
+Accessibility Tree
+ARIA
+WCAG
+a11y
+i18n
+l10n
+Content Security Policy
+CORS
+SameSite
+Subresource Integrity
+
+# === FRONTEND TOOLING & DX ===
+ESLint
+Prettier
+Biome
+oxlint
+Stylelint
+Husky
+lint-staged
+commitlint
+Chromatic
+Ladle
+happy-dom
+jsdom
+Faker.js
+date-fns
+Luxon
+Zod
+Yup
+Valibot
+Immer
+XState
+Zustand
+Jotai
+Recoil
+MobX
+Redux Toolkit
+RTK Query
+TanStack Query
+TanStack Router
+React Router
+SWR
+Apollo Client
+urql
+Axios
+Lodash
+Ramda
+fp-ts
+neverthrow
+
+# === DEVOPS PRACTICES ===
+Infrastructure as Code
+DevSecOps
+SecOps
+MLOps
+AIOps
+DataOps
+NoOps
+shift left
+policy as code
+compliance as code
+immutable infrastructure
+ephemeral environments
+preview environments
+environment parity
+twelve-factor app
+container image scanning
+supply chain security
+SLSA
+DORA metrics
+deployment frequency
+lead time for changes
+change failure rate
+mean time to restore
+error budget
+service level objective
+service level indicator
+on-call
+runbook automation
+ChatOps
+progressive delivery
+feature toggles
+experiment platform
+strangler fig
+lift and shift
+
+# === MACHINE LEARNING ENGINEERING ===
+feature store
+model registry
+model serving
+model monitoring
+data drift
+concept drift
+feature drift
+training pipeline
+inference pipeline
+batch inference
+online inference
+shadow deployment
+champion-challenger
+model versioning
+experiment tracking
+hyperparameter tuning
+AutoML
+neural architecture search
+knowledge distillation
+pruning
+model compression
+edge inference
+TensorFlow Lite
+Core ML
+ONNX
+TorchScript
+TensorRT
+OpenVINO
+GGML
+ExLlamaV2
+AWQ
+GPTQ
+speculative decoding
+continuous batching
+paged attention
+prefix caching
+tensor parallelism
+pipeline parallelism
+data parallelism
+FSDP
+DeepSpeed
+Megatron
+Triton Inference Server
+BentoML
+Seldon
+KServe
+Ray Serve
+MLflow
+Weights and Biases
+WandB
+Comet ML
+ZenML
+Metaflow
+Kubeflow
+Vertex AI
+SageMaker
+
+# === LANGUAGE TOOLING & ANALYSIS ===
+Language Server Protocol
+Debug Adapter Protocol
+semantic highlighting
+code lens
+inlay hints
+go to definition
+find references
+rename symbol
+code actions
+dead code elimination
+static analysis
+dataflow analysis
+taint analysis
+symbolic execution
+model checking
+property-based testing
+mutation testing
+branch coverage
+line coverage
+mutation score
+AddressSanitizer
+ThreadSanitizer
+MemorySanitizer
+UBSan
+heaptrack
+cachegrind
+callgrind
+perf record
+perf stat
+hotspot
+profiler
+
+# === PLATFORM ENGINEERING ===
+golden path template
+scaffolding
+service catalog
+software catalog
+dependency graph
+tech radar
+build pipeline
+deploy pipeline
+environment provisioning
+self-service
+API catalog
+schema registry
+event catalog
+cost attribution
+chargeback
+showback
+shift-right testing
+production testing
+chaos mesh
+Litmus
+Gremlin
+Toxiproxy
+fault injection
+load testing
+stress testing
+soak testing
+spike testing
+volume testing
+
+# === EMBEDDED & REAL-TIME SYSTEMS ===
+embedded systems
+RTOS
+FreeRTOS
+Zephyr RTOS
+ThreadX
+VxWorks
+QNX
+bare metal
+firmware
+bootloader
+U-Boot
+UEFI
+device driver
+kernel module
+interrupt handler
+interrupt service routine
+DMA
+direct memory access
+memory-mapped IO
+SPI
+I2C
+UART
+CAN bus
+LIN bus
+Modbus
+PWM
+ADC
+DAC
+hardware description language
+Verilog
+VHDL
+SystemVerilog
+UVM
+cocotb
+verilator
+OpenOCD
+JTAG
+SWD
+logic analyzer
+oscilloscope
+signal integrity
+
+# === GAME DEVELOPMENT ===
+game loop
+entity component system
+scene graph
+physics engine
+collision detection
+rigid body
+ray casting
+frustum culling
+occlusion culling
+level of detail
+texture atlas
+sprite sheet
+vertex shader
+fragment shader
+geometry shader
+compute shader
+deferred rendering
+forward rendering
+physically based rendering
+global illumination
+ambient occlusion
+shadow mapping
+anti-aliasing
+procedural generation
+Perlin noise
+simplex noise
+pathfinding
+behavior tree
+navmesh
+steering behavior
+inverse kinematics
+skeletal animation
+blend tree
+animation graph
+particle system
+visual scripting
+GDScript
+Lua scripting
+modding API
+netcode
+rollback netcode
+GGPO
+lag compensation
+client-side prediction
+
+# === LOW-LEVEL & PERFORMANCE ENGINEERING ===
+SIMD intrinsics
+AVX2
+SSE4
+NEON
+SVE
+vectorization
+auto-vectorization
+instruction pipelining
+out-of-order execution
+branch prediction
+speculative execution
+Spectre
+Meltdown
+CPU prefetching
+cache miss
+cache line
+false sharing
+NUMA locality
+memory bandwidth
+memory latency
+transparent huge pages
+arena allocator
+slab allocator
+bump allocator
+pool allocator
+jemalloc
+mimalloc
+tcmalloc
+snmalloc
+lock-free queue
+disruptor pattern
+mechanical sympathy
+data-oriented design
+struct of arrays
+array of structs
+cache-oblivious algorithm
+write combining
+reorder buffer
