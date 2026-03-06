@@ -4,9 +4,6 @@ import (
 	"cartero/internal/types"
 	"cartero/internal/utils"
 	"context"
-	"errors"
-
-	"github.com/redis/go-redis/v9"
 )
 
 type SourceRoute struct {
@@ -27,53 +24,7 @@ func (sr *SourceRoute) filterTargets(ctx context.Context, state types.StateAcces
 }
 
 func (sr *SourceRoute) Process(ctx context.Context, state types.StateAccessor) error {
-	if err := sr.runSourceConsumer(ctx, state); err != nil {
-		return err
-	}
-	return sr.runDeliveryConsumer(ctx, state)
-}
-
-func (sr *SourceRoute) runSourceConsumer(ctx context.Context, state types.StateAccessor) error {
-	logger := state.GetLogger()
-	q := state.GetQueue()
-	stream := q.SourceStream()
-
-	if err := sr.Source.Publish(ctx, state); err != nil {
-		return err
-	}
-
-	itemCount := 0
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		envelopes, ids, err := q.Consume(ctx, stream)
-		if err != nil {
-			if errors.Is(err, redis.Nil) {
-				logger.Info("Source finished processing items", "source", sr.Source.Name(), "count", itemCount)
-				return nil
-			}
-			return err
-		}
-
-		if len(envelopes) == 0 {
-			logger.Info("Source finished processing items", "source", sr.Source.Name(), "count", itemCount)
-			return nil
-		}
-
-		for i, env := range envelopes {
-			itemCount++
-			if err := sr.processItem(ctx, state, env.Item); err != nil {
-				return err
-			}
-			if err := q.Ack(ctx, stream, ids[i]); err != nil {
-				logger.Error("Failed to ack source message", "source", sr.Source.Name(), "id", ids[i], "error", err)
-			}
-		}
-	}
+	return sr.Source.Publish(ctx, state)
 }
 
 func (sr *SourceRoute) processItem(ctx context.Context, state types.StateAccessor, item *types.Item) error {
@@ -115,43 +66,6 @@ func (sr *SourceRoute) processItem(ctx context.Context, state types.StateAccesso
 	}
 
 	return nil
-}
-
-func (sr *SourceRoute) runDeliveryConsumer(ctx context.Context, state types.StateAccessor) error {
-	logger := state.GetLogger()
-	q := state.GetQueue()
-	stream := q.ProcessedStream()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		envelopes, ids, err := q.Consume(ctx, stream)
-		if err != nil {
-			if errors.Is(err, redis.Nil) {
-				return nil
-			}
-			return err
-		}
-
-		if len(envelopes) == 0 {
-			return nil
-		}
-
-		for i, env := range envelopes {
-			targets := sr.resolveTargets(env.Targets)
-			if err := targets.Process(ctx, state, env.Item, logger); err != nil {
-				logger.Error("Failed to deliver item to targets", "item_id", env.Item.ID, "error", err)
-				return err
-			}
-			if err := q.Ack(ctx, stream, ids[i]); err != nil {
-				logger.Error("Failed to ack processed message", "item_id", env.Item.ID, "id", ids[i], "error", err)
-			}
-		}
-	}
 }
 
 func (sr *SourceRoute) resolveTargets(names []string) Targets {
