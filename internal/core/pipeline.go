@@ -192,7 +192,7 @@ func (p *Pipeline) runDeliveryConsumer(ctx context.Context, state types.StateAcc
 func (p *Pipeline) routeForItem(item *types.Item) *SourceRoute {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	idx, ok := p.routeIndex[item.Source]
+	idx, ok := p.routeIndex[item.Route]
 	if !ok {
 		return nil
 	}

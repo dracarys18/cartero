@@ -17,6 +17,7 @@ type Item struct {
 	Content         interface{}
 	Metadata        map[string]interface{}
 	Source          string
+	Route           string
 	TextContent     *Article
 	MatchedKeywords string
 	Timestamp       time.Time

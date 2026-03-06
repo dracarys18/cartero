@@ -101,6 +101,7 @@ func (l *LobstersSource) Publish(ctx context.Context, state types.StateAccessor)
 			URL:       post.URL,
 			Content:   post,
 			Source:    l.name,
+			Route:     l.name,
 			Timestamp: createdAt,
 			Metadata: map[string]interface{}{
 				"title":         post.Title,

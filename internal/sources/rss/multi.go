@@ -162,6 +162,7 @@ func (m *MultiRSSSource) convertToItem(feedItem *gofeed.Item, feedName string) *
 		URL:       feedItem.Link,
 		Content:   feedItem,
 		Source:    sourceName,
+		Route:     m.name,
 		Timestamp: timestamp,
 		Metadata:  metadata,
 	}

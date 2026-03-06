@@ -142,6 +142,7 @@ func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *types.Item {
 		URL:       feedItem.Link,
 		Content:   feedItem,
 		Source:    r.name,
+		Route:     r.name,
 		Timestamp: timestamp,
 		Metadata:  metadata,
 	}

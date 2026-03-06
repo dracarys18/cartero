@@ -97,6 +97,7 @@ func (l *LessWrongSource) Publish(ctx context.Context, state types.StateAccessor
 			Title:     post.Title,
 			URL:       postURL,
 			Source:    l.name,
+			Route:     l.name,
 			Timestamp: post.PostedAt,
 			Content:   post,
 			Metadata: map[string]interface{}{

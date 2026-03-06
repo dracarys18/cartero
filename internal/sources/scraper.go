@@ -232,6 +232,7 @@ func (s *ScraperSource) convertMapToItem(itemMap map[string]interface{}) *types.
 	item := &types.Item{
 		ID:        id,
 		Source:    s.name,
+		Route:     s.name,
 		Timestamp: time.Now(),
 		Content:   itemMap,
 		Metadata:  make(map[string]interface{}),

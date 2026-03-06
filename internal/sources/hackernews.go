@@ -94,6 +94,7 @@ func (h *HackerNewsSource) Publish(ctx context.Context, state types.StateAccesso
 			Title:     story.Title,
 			URL:       story.URL,
 			Source:    h.name,
+			Route:     h.name,
 			Timestamp: time.Unix(story.Time, 0),
 			Content:   story,
 			Metadata: map[string]interface{}{
