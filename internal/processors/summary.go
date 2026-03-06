@@ -29,6 +29,10 @@ func (d *SummaryProcessor) Name() string {
 	return d.name
 }
 
+func (d *SummaryProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
+	return nil
+}
+
 func (d *SummaryProcessor) DependsOn() []string {
 	return []string{procnames.ScoreFilter, procnames.KeywordFilter, procnames.ExtractText}
 }

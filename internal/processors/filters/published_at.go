@@ -45,6 +45,10 @@ func (p *PublishedAtFilterProcessor) Name() string {
 	return p.name
 }
 
+func (p *PublishedAtFilterProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
+	return nil
+}
+
 func (p *PublishedAtFilterProcessor) DependsOn() []string {
 	return []string{
 		names.Dedupe,

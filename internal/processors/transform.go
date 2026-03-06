@@ -27,6 +27,10 @@ func (t *TransformProcessor) Name() string {
 	return t.name
 }
 
+func (t *TransformProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
+	return nil
+}
+
 func (t *TransformProcessor) DependsOn() []string {
 	return []string{
 		names.KeywordFilter,
@@ -138,6 +142,10 @@ func NewChainTransformProcessor(name string, transformers ...*TransformProcessor
 
 func (c *ChainTransformProcessor) Name() string {
 	return c.name
+}
+
+func (c *ChainTransformProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
+	return nil
 }
 
 func (c *ChainTransformProcessor) DependsOn() []string {

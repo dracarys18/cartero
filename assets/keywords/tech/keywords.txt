@@ -1,0 +1,1516 @@
+# === AI-NATIVE DEVELOPMENT ===
+Cursor
+Windsurf
+Cascade
+GitHub Copilot
+Copilot Extensions
+Claude Code
+Replit
+Replit Agent
+Supermaven
+Codeium
+Tabnine
+Anysphere
+Dify
+Agentic IDE
+AI Code Editor
+Autonomous Coding
+Aide
+Ghostwriter
+Devin
+SWE-agent
+OpenHands
+Plandex
+Aider
+Continue
+Cline
+Roo Code
+v0
+Bolt
+Lovable
+
+# === CORE EDITORS & IDEs ===
+VSCode
+Visual Studio Code
+IntelliJ IDEA
+WebStorm
+PyCharm
+Zed
+Neovim
+NVChad
+LunarVim
+AstroNvim
+Emacs
+Doom Emacs
+Sublime Text
+JetBrains Gateway
+Remote Development
+Vim
+Helix
+Kakoune
+Nova
+Xcode
+Android Studio
+CLion
+RustRover
+Rider
+GoLand
+DataGrip
+
+# === FRONTEND & DESIGN ENGINEERING ===
+React 19
+Next.js 15
+Next.js 16
+Server Components
+RSC
+Partial Hydration
+Vue 3
+Nuxt 3
+Svelte 6
+SvelteKit
+Angular 19
+Angular 20
+SolidJS
+Qwik
+Astro
+HTMX
+Alpine.js
+HMPL
+Web Components
+Shadow DOM
+Tailwind CSS v4
+Panda CSS
+StyleX
+DaisyUI
+Radix UI
+Shadcn UI
+Vite 6
+Vite 7
+Turbopack
+Rspack
+Bun Shell
+Figma
+Penpot
+
+# === BACKEND FRAMEWORKS & RUNTIMES ===
+Node.js 24
+Deno 2
+Bun 1.5
+Bun 2.0
+Hono
+Elysia
+FastAPI
+NestJS
+Express.js
+Koa
+Go Fiber
+Gin
+Axum
+Actix Web
+Spring Boot 3
+Laravel 11
+Ruby on Rails 8
+Phoenix
+Elixir
+Django
+Flask
+Motia
+Temporal 2.0
+Durable Execution
+Orchestration
+
+# === DEVOPS & INFRASTRUCTURE ===
+Terraform
+OpenTofu
+Pulumi
+Pulumi Cloud
+Spacelift
+Crossplane
+AWS CDK
+AWS CloudFormation
+Azure Bicep
+Pkl
+Jsonnet
+CUE
+Ansible
+Chef
+Puppet
+Packer
+Vagrant
+Nomad
+Spinnaker
+ArgoCD
+FluxCD
+GitOps
+Platform Engineering
+Internal Developer Portal
+IDP
+Backstage
+Port
+Humanitec
+Cortex
+
+# === CONTAINERS & ORCHESTRATION ===
+Docker
+Docker Desktop
+OrbStack
+Colima
+Podman
+Podman Desktop
+Kubernetes
+K8s
+K3s
+K3d
+Kind
+Minikube
+Talos Linux
+OpenShift
+Rancher
+Lens
+K9s
+Helm
+Kustomize
+Skaffold
+Tilt
+DevSpace
+Okteto
+
+# === API TOOLS & CONNECTIVITY ===
+Postman
+Insomnia
+Hoppscotch
+Bruno
+Firecamp
+GraphQL
+Apollo
+Relay
+tRPC
+gRPC
+Connect RPC
+WebRTC
+WebSocket
+SSE
+Message Queue
+Kafka
+Redpanda
+RabbitMQ
+Pulsar
+NATS
+
+# === TESTING & QUALITY ASSURANCE ===
+Playwright
+Cypress
+Selenium
+Jest
+Vitest
+Pytest
+Testing Library
+Storybook
+Mock Service Worker
+MSW
+Testcontainers
+Selenium Grid
+Appium
+K6
+Locust
+JMeter
+Fuzzing
+OSS-Fuzz
+
+# === SECURITY ===
+Snyk
+Checkmarx
+Veracode
+Semgrep
+SonarQube
+SonarCloud
+Wiz
+Prisma Cloud
+Aqua Security
+Trivy
+Gitleaks
+TruffleHog
+Burp Suite
+OWASP ZAP
+Socket.dev
+Sigstore
+Cosign
+SBOM
+CycloneDX
+SPDX
+
+# === CI/CD PLATFORMS ===
+GitHub Actions
+GitLab CI
+CircleCI
+Jenkins
+Tekton
+Dagger
+Buildkite
+Travis CI
+AppVeyor
+Codefresh
+Harness
+Bitbucket Pipelines
+
+# === PRODUCTIVITY & TEAM OPS ===
+Linear
+Jira
+Trello
+Asana
+Shortcut
+Confluence
+Notion
+Obsidian
+Logseq
+Raycast
+Alfred
+Tmux
+Zsh
+Fish Shell
+Oh My Zsh
+Starship
+Homebrew
+Nix
+Devbox
+Flox
+
+# === JAVASCRIPT / TYPESCRIPT ECOSYSTEM ===
+JavaScript
+TypeScript
+Node.js
+Deno
+Bun
+V8
+JSR
+React
+Next.js
+Remix
+Vue
+Nuxt
+Svelte
+SvelteKit
+Angular
+SolidJS
+Qwik
+Astro
+HTMX
+Alpine.js
+Vite
+Turbopack
+Webpack
+Rollup
+esbuild
+SWC
+Rspack
+Express
+NestJS
+Fastify
+Hono
+Elysia
+TRPC
+
+# === PYTHON ECOSYSTEM ===
+Python
+PyScript
+Django
+Flask
+FastAPI
+Pyramid
+Litestar
+SQLAlchemy
+Pydantic
+Pandas
+NumPy
+Scipy
+Conda
+Pipenv
+Poetry
+Pytest
+Tox
+Ruff
+
+# === RUST & SYSTEMS PROGRAMMING ===
+Rust
+Cargo
+CrabLang
+Actix
+Axum
+Rocket
+Tokio
+Serde
+async-std
+rayon
+crossbeam
+anyhow
+thiserror
+tracing
+criterion
+proptest
+Zig
+Mojo
+Carbon
+Clang
+LLVM
+GCC
+CMake
+Meson
+Assembly
+WASM
+WebAssembly
+WASI
+C++
+C
+unsafe
+borrow checker
+ownership
+lifetimes
+zero-cost abstractions
+
+# === GO ECOSYSTEM ===
+Go
+Golang
+Gin
+Echo
+Fiber
+Buffalo
+Gorm
+Go-kit
+Templ
+air
+golangci-lint
+gopls
+fx
+wire
+ent
+sqlc
+pgx
+chi
+gorilla
+cobra
+viper
+zerolog
+zap
+testify
+gomock
+fuzz testing
+
+# === JAVA & JVM ECOSYSTEM ===
+Java
+Kotlin
+JVM
+GraalVM
+Spring Boot
+Jakarta EE
+Quarkus
+Micronaut
+Hibernate
+Maven
+Gradle
+Scala
+Clojure
+Groovy
+
+# === .NET & MICROSOFT STACK ===
+C#
+F#
+.NET
+ASP.NET
+Blazor
+Entity Framework
+NuGet
+Xamarin
+MAUI
+Windows Forms
+WPF
+
+# === MOBILE & CROSS-PLATFORM ===
+Swift
+SwiftUI
+Objective-C
+Flutter
+Dart
+React Native
+Ionic
+Capacitor
+NativeScript
+Kotlin Multiplatform
+KMP
+
+# === FUNCTIONAL & NICHE LANGUAGES ===
+Elixir
+Phoenix
+Erlang
+OTP
+Gleam
+Haskell
+OCaml
+Lisp
+Scheme
+Racket
+Julia
+R Language
+Nim
+Crystal
+D Language
+
+# === RUBY & PHP ===
+Ruby
+Rails
+Ruby on Rails
+Sinatra
+Sidekiq
+RSpec
+PHP
+Laravel
+Symfony
+CodeIgniter
+Composer
+Swoole
+
+# === MODERN STYLING & CSS ===
+Tailwind CSS
+PostCSS
+Sass
+Less
+Stylus
+Panda CSS
+StyleX
+DaisyUI
+Shadcn
+Radix UI
+Chakra UI
+Headless UI
+
+# === AI & AGENTIC FRAMEWORKS ===
+LangChain
+LangGraph
+LlamaIndex
+DSPy
+CrewAI
+Semantic Kernel
+Model Context Protocol
+MCP
+AutoGPT
+
+# === PROTOCOLS ===
+REST
+RESTful
+OpenAPI
+Swagger
+GraphQL
+Apollo Federation
+GraphOS
+gRPC
+Protobuf
+Protocol Buffers
+gRPC-Web
+Connect RPC
+tRPC
+WebSocket
+WebTransport
+QUIC
+HTTP/3
+SSE
+Server-Sent Events
+AsyncAPI
+CloudEvents
+Webhooks
+JSON Schema
+HATEOAS
+
+# === API DESIGN & GOVERNANCE ===
+API-First
+API-Native
+Contract-First
+Consumer-Driven Contracts
+Pact
+API Design
+API Spec
+Spec Drift
+Breaking Changes
+SemVer
+API Monetization
+API Product
+Zombie API
+Shadow API
+API Sprawl
+API Gateway
+Reverse Proxy
+Edge Gateway
+Protocol Mediation
+
+# === ARCHITECTURAL STYLES ===
+Microservices
+Distributed Systems
+Modular Monolith
+Modulith
+Cell-based Architecture
+Cellular Architecture
+Sovereign Cells
+Serverless
+FaaS
+Cold Start
+Hexagonal Architecture
+Ports and Adapters
+Onion Architecture
+Clean Architecture
+Event-Driven Architecture
+EDA
+Event Sourcing
+CQRS
+Saga Pattern
+Domain-Driven Design
+DDD
+Bounded Context
+Ubiquitous Language
+
+# === RELIABILITY & RESILIENCE ===
+Circuit Breaker
+Bulkhead Pattern
+Retry Policy
+Exponential Backoff
+Jitter
+Load Shedding
+Backpressure
+Rate Limiting
+Throttling
+Idempotency
+Distributed Locking
+Redlock
+Service Discovery
+Load Balancing
+
+# === AGENTIC WORKFLOWS ===
+MCP Server
+Agentic API
+Function Calling
+Tool Calling
+Prompt Proxy
+AI Gateway
+Semantic Caching
+Temporal
+Durable Workflows
+Orchestration Engine
+Stateful Serverless
+Atomic Workflows
+Idempotency Keys
+LLM Orchestration
+
+# === SERVICE MESH & NETWORKING ===
+Service Mesh
+Istio
+Linkerd
+Cilium
+Hubble
+Tetragon
+Sidecar Pattern
+Sidecarless Mesh
+Ambient Mesh
+Data Plane
+Control Plane
+mTLS
+Mutual TLS
+Ingress Controller
+Egress Gateway
+eBPF
+XDP
+Kernel Bypass
+Envoy Proxy
+HAProxy
+Nginx
+Zero Trust
+ZTNA
+Identity-Aware Proxy
+IAP
+Machine Identity
+Workload Identity
+SPIFFE
+SPIRE
+OAuth 2.1
+OIDC
+JWT
+WebAuthn
+Passkeys
+RBAC
+ABAC
+ReBAC
+Relationship-Based Access Control
+Zanzibar
+Fine-grained Authorization
+FGA
+Policy-as-Code
+OPA
+Cedar
+AuthN
+AuthZ
+
+# === COMPILERS, RUNTIMES & PL THEORY ===
+Compiler
+Interpreter
+Transpiler
+JIT
+AOT
+LLVM
+GCC
+Clang
+MLIR
+Intermediate Representation
+IR
+Bitcode
+Cranelift
+Tree-sitter
+Parser
+Lexer
+AST
+Abstract Syntax Tree
+SSA Form
+Static Single Assignment
+Control Flow Graph
+CFG
+Basic Block
+Register Allocation
+Instruction Selection
+Garbage Collection
+Reference Counting
+ARC
+Borrow Checker
+Monomorphization
+Type Erasure
+Reification
+Inlining
+Loop Unrolling
+DCE
+LTO
+Link-Time Optimization
+PGO
+Profile-Guided Optimization
+WASM
+WASI
+Component Model
+
+# === DATABASE STORAGE ENGINES ===
+Storage Engine
+B-Tree
+B+ Tree
+LSM-Tree
+Log-Structured Merge-Tree
+SSTable
+Memtable
+Write-Ahead Log
+WAL
+Bloom Filter
+Buffer Pool
+Write Amplification
+Read Amplification
+Space Amplification
+Compaction Strategy
+Leveled Compaction
+Size-Tiered Compaction
+Vectorized Execution
+Query Pipeline
+Volcano Iterator Model
+
+# === CONCURRENCY CONTROL & TRANSACTIONS ===
+ACID
+Isolation Levels
+Serializable
+Snapshot Isolation
+Read Committed
+Repeatable Read
+MVCC
+Multi-Version Concurrency Control
+Optimistic Concurrency Control
+OCC
+Two-Phase Locking
+2PL
+Deadlock Detection
+Write Skew
+Transaction Manager
+Lock Manager
+
+# === DISTRIBUTED DATA SYSTEMS ===
+CAP Theorem
+PACELC
+Distributed Database
+Linearizability
+Sequential Consistency
+Eventual Consistency
+Causal Consistency
+Vector Clocks
+Lamport Timestamps
+Raft Consensus
+Paxos
+Multi-Paxos
+Zab Protocol
+Gossip Protocol
+Quorum
+Split Brain
+Byzantine Fault Tolerance
+BFT
+Two-Phase Commit
+2PC
+Three-Phase Commit
+Distributed Transaction
+Replication Lag
+Sync Replication
+Async Replication
+Conflict-Free Replicated Data Types
+CRDT
+Anti-entropy
+Read Repair
+
+# === SCALING & PARTITIONING ===
+Sharding
+Horizontal Scaling
+Vertical Scaling
+Consistent Hashing
+Range Partitioning
+Hash Partitioning
+Re-sharding
+Geo-replication
+Active-Active Configuration
+Active-Passive
+Failover
+High Availability
+
+# === ANALYTICAL & SPECIALIZED DATA MODELS ===
+OLTP
+OLAP
+HTAP
+Column-Oriented
+Row-Oriented
+NewSQL
+Distributed SQL
+Graph Database
+Vector Database
+Time-Series Database
+TSDB
+Spatial Database
+Document Store
+Key-Value Store
+In-memory Database
+
+# === QUERY OPTIMIZATION ===
+Query Optimizer
+Cost-Based Optimizer
+CBO
+Execution Plan
+Explain Plan
+Predicate Pushdown
+Projection Pushdown
+Join Order Optimization
+Nested Loop Join
+Hash Join
+Sort-Merge Join
+Materialized View
+Parallel Query Execution
+
+# === EMERGING DATA FORMATS ===
+Vector Embeddings
+Semantic Search
+HNSW Index
+IVF Index
+Apache Parquet
+Apache Arrow
+Apache Avro
+FlatBuffers
+Object Storage
+S3-compatible
+Data Lakehouse
+Data Mesh
+Data Fabric
+CDC
+Change Data Capture
+Debezium
+
+# === RELATIONAL & DISTRIBUTED SQL ===
+PostgreSQL
+Postgres
+MySQL
+MariaDB
+SQLite
+libSQL
+Microsoft SQL Server
+MSSQL
+Oracle Database
+IBM Db2
+SAP HANA
+SingleStore
+CockroachDB
+TiDB
+YugabyteDB
+Spanner
+Google Cloud Spanner
+AlloyDB
+Amazon Aurora
+Azure SQL
+
+# === NOSQL ===
+MongoDB
+Couchbase
+RavenDB
+DocumentDB
+Redis
+Valkey
+DragonflyDB
+KeyDB
+Amazon DynamoDB
+Cassandra
+Apache Cassandra
+ScyllaDB
+HBase
+Riak
+Aerospike
+FoundationDB
+Memcached
+
+# === ANALYTICS & DATA WAREHOUSE ===
+Snowflake
+BigQuery
+Google BigQuery
+ClickHouse
+DuckDB
+MotherDuck
+Databricks
+Apache Doris
+StarRocks
+Teradata
+Amazon Redshift
+Vertica
+Apache Druid
+Apache Pinot
+Trino
+Presto
+Apache Spark
+Apache Hive
+
+# === VECTOR DATABASES ===
+Pinecone
+Milvus
+Zilliz
+Weaviate
+Qdrant
+ChromaDB
+Chroma
+Marqo
+LanceDB
+Vespa
+Turbopuffer
+Faiss
+pgvector
+
+# === TIME-SERIES & REAL-TIME ===
+InfluxDB
+TimescaleDB
+Timescale
+QuestDB
+VictoriaMetrics
+Prometheus
+Grafana Mimir
+GreptimeDB
+TDengine
+CrateDB
+
+# === GRAPH DATABASES ===
+Neo4j
+Amazon Neptune
+TigerGraph
+ArangoDB
+Dgraph
+Memgraph
+FalkorDB
+JanusGraph
+
+# === SEARCH ENGINES ===
+Elasticsearch
+OpenSearch
+Solr
+Apache Solr
+Meilisearch
+Typesense
+Algolia
+Quickwit
+Manticore Search
+
+# === EMBEDDED & EDGE DATABASES ===
+RocksDB
+LevelDB
+LMDB
+Berkeley DB
+ObjectBox
+LiteDB
+
+# === EMERGING DATABASES ===
+SurrealDB
+EdgeDB
+Gel
+Neon
+Supabase
+PlanetScale
+Xata
+Turso
+Convex
+Fauna
+Dolt
+BangDB
+
+# === AI MODELS & LABS ===
+OpenAI
+Anthropic
+Mistral AI
+Cohere
+Groq
+Perplexity
+Scale AI
+Lambda Labs
+DeepL
+Character.ai
+Midjourney
+DeepSeek
+xAI
+Stability AI
+Runway
+ElevenLabs
+GPT
+Claude
+Gemini
+Llama
+Mistral
+Grok
+Qwen
+Phi
+Gemma
+Command R
+Sonar
+Nova
+LLM
+Large Language Model
+Foundation Model
+Frontier Model
+AI
+Artificial Intelligence
+Machine Learning
+Deep Learning
+Neural Network
+Transformer
+Attention Mechanism
+Fine-tuning
+RLHF
+RLAIF
+Reinforcement Learning from Human Feedback
+RAG
+GraphRAG
+Retrieval-Augmented Generation
+Vector Search
+Hybrid Search
+Chain-of-Thought
+CoT
+Tree-of-Thoughts
+Prompt Engineering
+Prompt Caching
+Context Window
+Quantization
+GGUF
+NF4
+LoRA
+QLoRA
+Flash Attention
+KV Cache
+Mixture of Experts
+MoE
+Hugging Face
+Ollama
+vLLM
+llama.cpp
+LM Studio
+Jan
+GPT4All
+Agentic AI
+AI Agents
+AI SDK
+ChatGPT
+Copilot
+Sora
+DALL-E
+Stable Diffusion
+Flux
+Imagen
+Whisper
+text-to-speech
+text-to-image
+multimodal
+vision model
+reasoning model
+inference
+training
+pretraining
+post-training
+alignment
+safety
+hallucination
+grounding
+embeddings
+tokenizer
+context length
+
+# === SECURITY & PRIVACY ===
+Zero Trust
+ZTNA
+IAM
+RBAC
+ABAC
+OAuth2
+OIDC
+SAML
+JWT
+WebAuthn
+Passkeys
+mTLS
+Secrets Management
+Vault
+Post-Quantum Cryptography
+PQC
+Kyber
+Dilithium
+Lattice-based
+Zero-Knowledge Proofs
+ZKP
+zk-SNARKs
+FHE
+Homomorphic Encryption
+Differential Privacy
+TEE
+Trusted Execution Environment
+Enclave
+SBOM
+CVE
+
+# === KERNEL, OS & PERFORMANCE ===
+Linux
+Unix
+macOS
+Windows
+WSL
+NixOS
+FreeBSD
+OpenBSD
+NetBSD
+Haiku
+seL4
+Redox
+Android
+ChromeOS
+Ubuntu
+Debian
+Fedora
+Arch Linux
+Alpine Linux
+Gentoo
+eBPF
+XDP
+io_uring
+Zero-Copy
+Kernel Bypass
+DPDK
+SPDK
+System Calls
+Context Switch
+Virtual Memory
+Hugepages
+CPU Cache
+NUMA
+SIMD
+AVX-512
+Formal Verification
+TLA+
+perf
+flamegraph
+strace
+dtrace
+valgrind
+sanitizer
+
+# === CPU, GPU & HARDWARE ===
+CPU
+Processor
+Ryzen
+Intel Core
+ARM
+RISC-V
+GPU
+Graphics Card
+RTX
+Radeon
+GeForce
+H100
+H200
+B200
+B100
+A100
+GB200
+GH200
+Blackwell
+Hopper
+Ada Lovelace
+TPU
+NPU
+Neural Processing Unit
+AI Accelerator
+Inferentia
+Trainium
+Gaudi
+RAM
+Memory
+DDR5
+DDR4
+HBM3
+HBM2e
+LPDDR5
+NVMe
+SSD
+PCIe
+CUDA
+ROCm
+Metal
+oneAPI
+ASIC
+FPGA
+System76
+Framework Laptop
+Purism
+Pine64
+MNT Reform
+NUC
+Mini PC
+TinyMiniMicro
+OptiPlex
+ThinkPad
+Mac Mini
+Mac Pro
+Mac Studio
+Apple Silicon
+M1
+M2
+M3
+M4
+Apple M
+Snapdragon
+Dimensity
+Exynos
+
+# === HOMELAB & SELF-HOSTING ===
+Homelab
+Self-Hosting
+Proxmox
+TrueNAS
+Unraid
+ZFS
+Btrfs
+Tailscale
+WireGuard
+Headscale
+Netbird
+ZeroTier
+Nextcloud
+Immich
+Jellyfin
+Plex
+Emby
+Home Assistant
+Pi-hole
+AdGuard Home
+Raspberry Pi
+SBC
+Orange Pi
+Banana Pi
+Rock Pi
+Odroid
+Khadas
+BeagleBone
+Arduino
+ESP32
+Tasmota
+ESPHome
+Zigbee
+Z-Wave
+Matter
+Thread
+pfSense
+OPNsense
+OpenWrt
+Portainer
+Coolify
+Yunohost
+Umbrel
+
+# === BIG TECH & SEMICONDUCTORS ===
+NVIDIA
+Alphabet
+Google
+Microsoft
+Apple
+Amazon
+AWS
+Meta
+Tesla
+SpaceX
+TSMC
+ASML
+Samsung
+Broadcom
+Intel
+AMD
+Qualcomm
+Micron
+Arm Holdings
+GlobalFoundries
+Texas Instruments
+ASML
+Infineon
+STMicroelectronics
+NXP
+Renesas
+Marvell
+Cadence
+Synopsys
+Ansys
+
+# === ENTERPRISE SOFTWARE ===
+Oracle
+SAP
+Salesforce
+ServiceNow
+Adobe
+IBM
+Workday
+VMware
+Red Hat
+Databricks
+Palantir
+Atlassian
+Autodesk
+
+# === CLOUD PROVIDERS ===
+Amazon Web Services
+Microsoft Azure
+Google Cloud
+Oracle Cloud
+IBM Cloud
+Alibaba Cloud
+Huawei Cloud
+Cloudflare
+Hetzner
+Vultr
+DigitalOcean
+Fly.io
+Vercel
+Netlify
+Fastly
+Akamai
+Linode
+OVHcloud
+Scaleway
+Exoscale
+Render
+Railway
+Koyeb
+Deno Deploy
+
+# === NEOCLOUDS & AI INFRA ===
+CoreWeave
+Lambda Labs
+Crusoe
+Nebius
+Together AI
+DeepInfra
+GroqCloud
+Anyscale
+RunPod
+GPU Cloud
+Inference Economy
+
+# === FINOPS & CLOUD OPS ===
+FinOps
+Cloud Cost Management
+Multi-Cloud
+Hybrid Cloud
+Vendor Lock-in
+Spot Instances
+Reserved Instances
+Auto-scaling
+Elasticity
+
+# === DIGITAL PROVENANCE & TRUST ===
+Digital Provenance
+Content Authenticity
+C2PA
+Watermarking
+Deepfake Defense
+Media Provenance
+Digital Signature
+AI Labeling
+
+# === PHYSICAL AI & ROBOTICS ===
+Physical AI
+Humanoid Robot
+Industrial Automation
+Cobot
+Robot Operating System
+ROS
+ROS2
+Computer Vision
+LiDAR
+SLAM
+NVIDIA Isaac
+Tesla Optimus
+Figure AI
+Boston Dynamics
+Unitree
+End-to-end Learning
+Reinforcement Learning
+
+# === CYBER RESILIENCE ===
+Cyber Resilience
+Threat Hunting
+Attack Surface Management
+ASM
+DDoS Mitigation
+Bot Mitigation
+Incident Response
+Digital Forensics
+SOC
+Security Operations
+Red Teaming
+Penetration Testing
+Pentest
+CrowdStrike
+Palo Alto Networks
+Fortinet
+Zscaler
+SentinelOne
+
+# === FINTECH & PAYMENTS ===
+High-Frequency Trading
+HFT
+Quantitative Trading
+Order Book
+Matching Engine
+Low-Latency Trading
+FIX Protocol
+Payment Gateway
+ISO 20022
+Real-time Payments
+FedNow
+Open Banking
+Core Banking
+Fraud Detection
+Stripe
+Adyen
+PayPal
+Visa
+Mastercard
+Plaid
+Revolut
+Klarna
+
+# === BIOTECH & HEALTH-TECH ===
+Bioinformatics
+Digital Health
+HL7
+FHIR
+Electronic Health Records
+Genomics
+Drug Discovery
+AlphaFold
+Telemedicine
+Computational Biology
+
+# === CLIMATE-TECH & SUSTAINABILITY ===
+Climate-Tech
+Green Computing
+Sustainable IT
+Carbon Accounting
+Smart Grid
+Energy Storage
+Battery Tech
+EV Infrastructure
+Renewable Energy
+Hydrogen Economy
+Fusion Power
+Carbon Capture
+
+# === SPACE-TECH & CONNECTIVITY ===
+Space-Tech
+LEO Satellite
+Starlink
+Project Kuiper
+Satellite Internet
+6G
+5G-Advanced
+Massive MIMO
+Software-Defined Radio
+
+# === GAMING & IMMERSIVE TECH ===
+Spatial Computing
+Augmented Reality
+AR
+Virtual Reality
+VR
+Mixed Reality
+Unreal Engine 5
+UE5
+Unity
+Godot
+Ray Tracing
+DLSS
+FSR
+Game Engine
+Digital Twin
+Omniverse
+OpenUSD
+
+# === ASIAN TECH ===
+Tencent
+Alibaba
+ByteDance
+TikTok
+Baidu
+Xiaomi
+Huawei
+Sony
+SoftBank
+MediaTek
+
+# === MISC ===
+GrapheneOS
+AOSP
+Commodore
+open source
+open-source
+OSS
+free software
+GPL
+MIT License
+Apache License
+copyleft
+fork
+pull request
+code review
+technical debt
+refactoring
+design pattern
+monorepo
+polyrepo
+trunk-based development
+feature flags
+dark launch
+canary deployment
+blue-green deployment
+chaos engineering
+SRE
+Site Reliability Engineering
+DevEx
+Developer Experience
+platform team
+golden path

@@ -21,6 +21,10 @@ func (e *ExtractText) Name() string {
 	return e.name
 }
 
+func (e *ExtractText) Initialize(_ context.Context, _ types.StateAccessor) error {
+	return nil
+}
+
 func (e *ExtractText) DependsOn() []string {
 	return []string{
 		names.ScoreFilter,

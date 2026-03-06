@@ -186,9 +186,16 @@ func (s *State) buildProcessorChain(ctx context.Context) types.ProcessorChain {
 		}
 
 		processor := s.createProcessor(name, procCfg)
-		if processor != nil {
-			chain = chain.With(procCfg.Type, processor)
+		if processor == nil {
+			continue
 		}
+
+		if err := processor.Initialize(ctx, s); err != nil {
+			s.Logger.Error("Failed to initialize processor", "processor", name, "error", err)
+			continue
+		}
+
+		chain = chain.With(procCfg.Type, processor)
 	}
 
 	chain.Build()

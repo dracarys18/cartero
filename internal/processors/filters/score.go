@@ -21,6 +21,10 @@ func (s *ScoreFilterProcessor) Name() string {
 	return s.name
 }
 
+func (s *ScoreFilterProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
+	return nil
+}
+
 func (s *ScoreFilterProcessor) DependsOn() []string {
 	return []string{
 		names.Dedupe,

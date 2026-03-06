@@ -19,6 +19,10 @@ func (d *DedupeProcessor) Name() string {
 	return d.name
 }
 
+func (d *DedupeProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
+	return nil
+}
+
 func (d *DedupeProcessor) DependsOn() []string {
 	return []string{}
 }

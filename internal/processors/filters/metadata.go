@@ -20,6 +20,10 @@ func (m *MetadataFilterProcessor) Name() string {
 	return m.name
 }
 
+func (m *MetadataFilterProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
+	return nil
+}
+
 func (m *MetadataFilterProcessor) DependsOn() []string {
 	return []string{}
 }

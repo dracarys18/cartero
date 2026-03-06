@@ -28,6 +28,10 @@ func (r *RateLimitProcessor) Name() string {
 	return r.name
 }
 
+func (r *RateLimitProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
+	return nil
+}
+
 func (r *RateLimitProcessor) DependsOn() []string {
 	return []string{}
 }
@@ -78,6 +82,10 @@ func NewTokenBucketProcessor(name string) *TokenBucketProcessor {
 
 func (t *TokenBucketProcessor) Name() string {
 	return t.name
+}
+
+func (t *TokenBucketProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
+	return nil
 }
 
 func (t *TokenBucketProcessor) DependsOn() []string {

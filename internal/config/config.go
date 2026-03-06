@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -135,6 +136,7 @@ type ScoreFilterSettings struct {
 type KeywordFilterSettings struct {
 	Keywords         []string `toml:"keywords"`
 	ExactKeyword     []string `toml:"exact_keywords"`
+	KeywordsFile     string   `toml:"keywords_file"`
 	Mode             string   `toml:"mode"`
 	KeywordThreshold float64  `toml:"keyword_threshold"`
 	TitleBypass      bool     `toml:"title_bypass"`
@@ -211,11 +213,43 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("failed to parse config: %w", err)
 	}
 
+	if err := loadKeywordFiles(&config); err != nil {
+		return nil, fmt.Errorf("failed to load keywords file: %w", err)
+	}
+
 	if err := validateConfig(&config); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 
 	return &config, nil
+}
+
+func loadKeywordFiles(config *Config) error {
+	for name, proc := range config.Processors {
+		if proc.Settings.KeywordsFile == "" {
+			continue
+		}
+
+		data, err := os.ReadFile(proc.Settings.KeywordsFile)
+		if err != nil {
+			return fmt.Errorf("processor %q: %w", name, err)
+		}
+
+		var keywords []string
+		for _, line := range strings.Split(string(data), "\n") {
+			line = strings.TrimSpace(line)
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			keywords = append(keywords, line)
+		}
+
+		settings := proc.Settings
+		settings.Keywords = append(settings.Keywords, keywords...)
+		proc.Settings = settings
+		config.Processors[name] = proc
+	}
+	return nil
 }
 
 func validateConfig(config *Config) error {

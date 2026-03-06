@@ -165,6 +165,7 @@ type Source interface {
 
 type Processor interface {
 	Name() string
+	Initialize(ctx context.Context, st StateAccessor) error
 	Process(ctx context.Context, s StateAccessor, item *Item) error
 	DependsOn() []string
 }
