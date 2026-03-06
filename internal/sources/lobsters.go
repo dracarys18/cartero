@@ -114,7 +114,7 @@ func (l *LobstersSource) Publish(ctx context.Context, state types.StateAccessor)
 			},
 		}
 
-		if err := q.Publish(ctx, stream, item, nil); err != nil {
+		if err := q.Publish(ctx, stream, types.Envelope{Item: item}); err != nil {
 			return err
 		}
 		logger.Debug("Lobsters source published item", "source", l.name, "index", i+1, "limit", limit, "post_id", post.ShortID, "score", post.Score)

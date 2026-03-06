@@ -49,8 +49,8 @@ func (q *Queue) CreateGroup(ctx context.Context, stream string) error {
 	return q.conn.CreateGroup(ctx, stream, groupName)
 }
 
-func (q *Queue) Publish(ctx context.Context, stream string, item *types.Item, targets []string) error {
-	fields, err := marshalEnvelope(types.Envelope{Item: item, Targets: targets})
+func (q *Queue) Publish(ctx context.Context, stream string, env types.Envelope) error {
+	fields, err := marshalEnvelope(env)
 	if err != nil {
 		return err
 	}

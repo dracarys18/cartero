@@ -201,7 +201,7 @@ type Queue interface {
 	SourceStream() string
 	ProcessedStream() string
 	CreateGroup(ctx context.Context, stream string) error
-	Publish(ctx context.Context, stream string, item *Item, targets []string) error
+	Publish(ctx context.Context, stream string, env Envelope) error
 	Consume(ctx context.Context, stream string) ([]Envelope, []string, error)
 	Ack(ctx context.Context, stream string, ids ...string) error
 }

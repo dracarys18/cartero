@@ -27,9 +27,16 @@ func (sr *SourceRoute) filterTargets(ctx context.Context, state types.StateAcces
 }
 
 func (sr *SourceRoute) Process(ctx context.Context, state types.StateAccessor) error {
+	if err := sr.runSourceConsumer(ctx, state); err != nil {
+		return err
+	}
+	return sr.runDeliveryConsumer(ctx, state)
+}
+
+func (sr *SourceRoute) runSourceConsumer(ctx context.Context, state types.StateAccessor) error {
 	logger := state.GetLogger()
 	q := state.GetQueue()
-	sourceStream := q.SourceStream()
+	stream := q.SourceStream()
 
 	if err := sr.Source.Publish(ctx, state); err != nil {
 		return err
@@ -43,7 +50,7 @@ func (sr *SourceRoute) Process(ctx context.Context, state types.StateAccessor) e
 		default:
 		}
 
-		envelopes, ids, err := q.Consume(ctx, sourceStream)
+		envelopes, ids, err := q.Consume(ctx, stream)
 		if err != nil {
 			if errors.Is(err, redis.Nil) {
 				logger.Info("Source finished processing items", "source", sr.Source.Name(), "count", itemCount)
@@ -62,7 +69,7 @@ func (sr *SourceRoute) Process(ctx context.Context, state types.StateAccessor) e
 			if err := sr.processItem(ctx, state, env.Item); err != nil {
 				return err
 			}
-			if err := q.Ack(ctx, sourceStream, ids[i]); err != nil {
+			if err := q.Ack(ctx, stream, ids[i]); err != nil {
 				logger.Error("Failed to ack source message", "source", sr.Source.Name(), "id", ids[i], "error", err)
 			}
 		}
@@ -77,7 +84,6 @@ func (sr *SourceRoute) processItem(ctx context.Context, state types.StateAccesso
 
 	filteredTargets := sr.filterTargets(ctx, state, item)
 	if len(filteredTargets) == 0 {
-		logger.Debug("No targets to publish to after filtering published targets", "item_id", item.ID)
 		return nil
 	}
 
@@ -102,41 +108,61 @@ func (sr *SourceRoute) processItem(ctx context.Context, state types.StateAccesso
 		targetNames[i] = t.Name()
 	}
 
-	processedStream := q.ProcessedStream()
-	if err := q.Publish(ctx, processedStream, item, targetNames); err != nil {
+	env := types.Envelope{Item: item, Targets: targetNames}
+	if err := q.Publish(ctx, q.ProcessedStream(), env); err != nil {
 		logger.Error("Failed to publish to processed stream", "item_id", item.ID, "error", err)
 		return err
-	}
-
-	envelopes, ids, err := q.Consume(ctx, processedStream)
-	if err != nil {
-		logger.Error("Failed to consume from processed stream", "item_id", item.ID, "error", err)
-		return err
-	}
-
-	for i, env := range envelopes {
-		deliveryTargets := sr.resolveTargets(env.Targets)
-		if err := deliveryTargets.Process(ctx, state, env.Item, logger); err != nil {
-			logger.Error("Failed to deliver item to targets", "item_id", env.Item.ID, "error", err)
-			return err
-		}
-		if err := q.Ack(ctx, processedStream, ids[i]); err != nil {
-			logger.Error("Failed to ack processed message", "item_id", env.Item.ID, "id", ids[i], "error", err)
-		}
 	}
 
 	return nil
 }
 
+func (sr *SourceRoute) runDeliveryConsumer(ctx context.Context, state types.StateAccessor) error {
+	logger := state.GetLogger()
+	q := state.GetQueue()
+	stream := q.ProcessedStream()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		envelopes, ids, err := q.Consume(ctx, stream)
+		if err != nil {
+			if errors.Is(err, redis.Nil) {
+				return nil
+			}
+			return err
+		}
+
+		if len(envelopes) == 0 {
+			return nil
+		}
+
+		for i, env := range envelopes {
+			targets := sr.resolveTargets(env.Targets)
+			if err := targets.Process(ctx, state, env.Item, logger); err != nil {
+				logger.Error("Failed to deliver item to targets", "item_id", env.Item.ID, "error", err)
+				return err
+			}
+			if err := q.Ack(ctx, stream, ids[i]); err != nil {
+				logger.Error("Failed to ack processed message", "item_id", env.Item.ID, "id", ids[i], "error", err)
+			}
+		}
+	}
+}
+
 func (sr *SourceRoute) resolveTargets(names []string) Targets {
-	nameSet := make(map[string]bool, len(names))
+	nameSet := make(map[string]struct{}, len(names))
 	for _, n := range names {
-		nameSet[n] = true
+		nameSet[n] = struct{}{}
 	}
 
 	var result Targets
 	for _, t := range sr.Targets {
-		if nameSet[t.Name()] {
+		if _, ok := nameSet[t.Name()]; ok {
 			result = append(result, t)
 		}
 	}

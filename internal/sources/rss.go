@@ -71,7 +71,7 @@ func (r *RSSSource) Publish(ctx context.Context, state types.StateAccessor) erro
 		}
 
 		item := r.convertToItem(feed.Items[i])
-		if err := q.Publish(ctx, stream, item, nil); err != nil {
+		if err := q.Publish(ctx, stream, types.Envelope{Item: item}); err != nil {
 			return err
 		}
 		logger.Debug("RSS source published item", "source", r.name, "index", i+1, "limit", limit, "item_id", item.ID)

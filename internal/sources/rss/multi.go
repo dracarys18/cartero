@@ -91,7 +91,7 @@ func (m *MultiRSSSource) fetchFeed(ctx context.Context, feed Feed, stream string
 		}
 
 		item := m.convertToItem(parsedFeed.Items[i], feed.Name)
-		if err := q.Publish(ctx, stream, item, nil); err != nil {
+		if err := q.Publish(ctx, stream, types.Envelope{Item: item}); err != nil {
 			logger.Error("MultiRSS failed to publish item", "source", m.name, "feed", feed.Name, "error", err)
 			return
 		}
