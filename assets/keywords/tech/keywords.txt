@@ -470,6 +470,7 @@ Swoole
 
 # === MODERN STYLING & CSS ===
 Tailwind CSS
+CSS
 PostCSS
 Sass
 Less
@@ -2056,7 +2057,7 @@ threshold cryptography
 # === WEB STANDARDS & BROWSER APIS ===
 Virtual DOM
 Custom Elements
-HTML5
+HTML
 CSS Grid
 CSS Flexbox
 CSS Variables
