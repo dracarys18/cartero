@@ -39,7 +39,6 @@ func GetDefaultBrowserHeaders() map[string]string {
 		"sec-fetch-mode":            "navigate",
 		"sec-fetch-user":            "?1",
 		"sec-fetch-dest":            "document",
-		"accept-encoding":           "gzip, deflate, br, zstd",
 		"accept-language":           "en-US,en;q=0.9",
 		"priority":                  "u=0, i",
 	}
