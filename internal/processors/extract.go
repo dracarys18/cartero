@@ -27,6 +27,7 @@ func (e *ExtractText) Initialize(_ context.Context, _ types.StateAccessor) error
 
 func (e *ExtractText) DependsOn() []string {
 	return []string{
+		names.Dedupe,
 		names.ScoreFilter,
 	}
 }
