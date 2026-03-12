@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"cartero/internal/components"
 	"cartero/internal/config"
 	"cartero/internal/processors/names"
 	"cartero/internal/types"
@@ -26,14 +27,29 @@ func (k *KeywordFilterProcessor) Name() string {
 	return k.name
 }
 
-func (k *KeywordFilterProcessor) Initialize(_ context.Context, st types.StateAccessor) error {
+func (k *KeywordFilterProcessor) Initialize(ctx context.Context, st types.StateAccessor) error {
 	cfg := st.GetConfig().Processors[k.name].Settings.KeywordFilterSettings
 	k.matcher = keywords.New(cfg.Keywords)
-	return nil
+
+	if cfg.EmbedModel == "" || len(cfg.Keywords) == 0 {
+		return nil
+	}
+
+	registry := st.GetRegistry()
+	pc := registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
+	ollamaClient := pc.OllamaPlatform(cfg.EmbedModel)
+
+	err := k.keywordCache.Load(func() (map[string][]float32, error) {
+		return buildKeywordEmbeddings(ctx, ollamaClient, cfg.Keywords)
+	})
+	if err == nil {
+		st.GetLogger().Info("keyword_filter: keyword embeddings initialized", "processor", k.name, "count", k.keywordCache.Len())
+	}
+	return err
 }
 
 func (k *KeywordFilterProcessor) DependsOn() []string {
-	return []string{names.ExtractText, names.EmbedCategory}
+	return []string{names.ExtractText, names.EmbedText}
 }
 
 func (k *KeywordFilterProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
@@ -49,11 +65,8 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, st types.StateAcce
 		return nil
 	}
 
-	if cfg.EmbedModel != "" && item.GetEmbedding() != nil {
-		err := k.processEmbedding(ctx, st, item)
-		if err != errEmbedUnavailable {
-			return err
-		}
+	if k.keywordCache.Len() > 0 && item.GetEmbedding() != nil {
+		return k.processEmbedding(st, item)
 	}
 
 	return k.processDensity(st, item)
@@ -69,6 +82,9 @@ func (k *KeywordFilterProcessor) matchTitle(cfg config.KeywordFilterSettings, it
 		}
 	}
 
+	if !cfg.TitleBypass {
+		return ""
+	}
 	return k.matcher.MatchTitle(title)
 }
 

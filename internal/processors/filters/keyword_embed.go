@@ -3,61 +3,33 @@ package filters
 import (
 	"cmp"
 	"context"
-	"errors"
 	"slices"
 
-	"cartero/internal/components"
+	"cartero/internal/platforms"
 	"cartero/internal/types"
 	"cartero/internal/utils"
 
 	"github.com/ollama/ollama/api"
 )
 
-var errEmbedUnavailable = errors.New("embed unavailable")
+func buildKeywordEmbeddings(ctx context.Context, client *platforms.OllamaPlatform, kws []string) (map[string][]float32, error) {
+	resp, err := client.Embed(ctx, &api.EmbedRequest{Input: kws})
+	if err != nil {
+		return nil, err
+	}
 
-func (k *KeywordFilterProcessor) processEmbedding(ctx context.Context, st types.StateAccessor, item *types.Item) error {
+	cache := make(map[string][]float32, len(kws))
+	for i, kw := range kws {
+		if i < len(resp.Embeddings) {
+			cache[kw] = resp.Embeddings[i]
+		}
+	}
+	return cache, nil
+}
+
+func (k *KeywordFilterProcessor) processEmbedding(st types.StateAccessor, item *types.Item) error {
 	cfg := st.GetConfig().Processors[k.name].Settings.KeywordFilterSettings
 	logger := st.GetLogger()
-
-	registry := st.GetRegistry()
-	pc := registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
-	ollamaClient := pc.OllamaPlatform(cfg.EmbedModel)
-
-	err := k.keywordCache.Load(func() (map[string][]float32, error) {
-		seen := make(map[string]struct{})
-		var allKeywords []string
-		for kw := range slices.Values(cfg.Keywords) {
-			if _, ok := seen[kw]; !ok {
-				seen[kw] = struct{}{}
-				allKeywords = append(allKeywords, kw)
-			}
-		}
-		for kw := range slices.Values(cfg.ExactKeyword) {
-			if _, ok := seen[kw]; !ok {
-				seen[kw] = struct{}{}
-				allKeywords = append(allKeywords, kw)
-			}
-		}
-
-		resp, err := ollamaClient.Embed(ctx, &api.EmbedRequest{Input: allKeywords})
-		if err != nil {
-			return nil, err
-		}
-
-		cache := make(map[string][]float32, len(allKeywords))
-		for i, kw := range allKeywords {
-			if i < len(resp.Embeddings) {
-				cache[kw] = resp.Embeddings[i]
-			}
-		}
-		logger.Info("keyword_filter: keyword cache initialized", "processor", k.name, "count", len(cache))
-		return cache, nil
-	})
-
-	if err != nil {
-		logger.Warn("keyword_filter: keyword cache init failed", "processor", k.name, "error", err)
-		return errEmbedUnavailable
-	}
 
 	type kwScore struct {
 		kw    string

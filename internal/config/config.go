@@ -131,7 +131,7 @@ type ProcessorSettings struct {
 	ExtractFieldsSettings
 	TemplateSettings
 	ExtractTextSettings
-	EmbedCategorySettings
+	EmbedTextSettings
 }
 
 type DedupeSettings struct {
@@ -153,7 +153,7 @@ type KeywordFilterSettings struct {
 	Threshold        float64  `toml:"threshold"`
 }
 
-type EmbedCategorySettings struct {
+type EmbedTextSettings struct {
 	Model      string `toml:"embedding_model"`
 	InputLimit int    `toml:"input_limit"`
 }
