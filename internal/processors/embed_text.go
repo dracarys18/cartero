@@ -45,12 +45,8 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 		return nil
 	}
 
-	limit := cfg.InputLimit
-	if limit == 0 {
-		limit = 1024
-	}
-	if len(text) > limit {
-		text = text[:limit]
+	if cfg.InputLimit > 0 && len(text) > cfg.InputLimit {
+		text = text[:cfg.InputLimit]
 	}
 
 	registry := st.GetRegistry()

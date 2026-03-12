@@ -1,13 +1,12 @@
 package filters
 
 import (
-	"cmp"
 	"context"
-	"slices"
 
 	"cartero/internal/platforms"
 	"cartero/internal/types"
 	"cartero/internal/utils"
+	"cartero/internal/utils/keywords"
 
 	"github.com/ollama/ollama/api"
 )
@@ -31,39 +30,24 @@ func (k *KeywordFilterProcessor) processEmbedding(st types.StateAccessor, item *
 	cfg := st.GetConfig().Processors[k.name].Settings.KeywordFilterSettings
 	logger := st.GetLogger()
 
-	type kwScore struct {
-		kw    string
-		score float64
-	}
-
 	itemEmbedding := item.GetEmbedding()
-	var bestKeyword string
-	var bestScore float64
-	var all []kwScore
+	topK := keywords.NewTopK(5)
 
 	for kw, kwEmb := range k.keywordCache.All() {
-		score := utils.CosineSimilarity(itemEmbedding, kwEmb)
-		all = append(all, kwScore{kw, score})
-		if score > bestScore {
-			bestScore = score
-			bestKeyword = kw
-		}
+		topK.Add(kw, utils.CosineSimilarity(itemEmbedding, kwEmb))
 	}
 
-	slices.SortFunc(all, func(a, b kwScore) int { return cmp.Compare(b.score, a.score) })
-	if len(all) > 5 {
-		all = all[:5]
-	}
-	logger.Debug("keyword_filter: top embedding matches", "item_id", item.ID, "top5", all)
+	logger.Debug("keyword_filter: top embedding matches", "item_id", item.ID, "top5", topK.Top(5))
 
-	if bestScore >= cfg.Threshold {
-		logger.Info("keyword_filter: matched via embedding similarity", "processor", k.name, "item_id", item.ID, "keyword", bestKeyword, "score", bestScore)
-		item.SetMatchedKeywords(bestKeyword)
-		return nil
+	best, ok := topK.Best()
+	if !ok || best.Score < cfg.Threshold {
+		logger.Info("keyword_filter: rejected item via embedding similarity", "processor", k.name, "item_id", item.ID, "best_score", best.Score, "threshold", cfg.Threshold)
+		return types.NewFilteredError(k.name, item.ID, "no keyword matched via embedding similarity").
+			WithDetail("best_score", best.Score).
+			WithDetail("threshold", cfg.Threshold)
 	}
 
-	logger.Info("keyword_filter: rejected item via embedding similarity", "processor", k.name, "item_id", item.ID, "best_score", bestScore, "threshold", cfg.Threshold)
-	return types.NewFilteredError(k.name, item.ID, "no keyword matched via embedding similarity").
-		WithDetail("best_score", bestScore).
-		WithDetail("threshold", cfg.Threshold)
+	logger.Info("keyword_filter: matched via embedding similarity", "processor", k.name, "item_id", item.ID, "keyword", best.Keyword, "score", best.Score)
+	item.SetMatchedKeywords(best.Keyword)
+	return nil
 }
