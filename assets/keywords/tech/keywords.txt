@@ -243,6 +243,8 @@ SPDX
 GitHub Actions
 GitLab CI
 CircleCI
+CI
+Continuous Integration
 Jenkins
 Tekton
 Dagger
@@ -325,7 +327,6 @@ NumPy
 Scipy
 Conda
 Pipenv
-Poetry
 Pytest
 Tox
 Ruff
@@ -333,7 +334,6 @@ Ruff
 # === RUST & SYSTEMS PROGRAMMING ===
 Rust
 Cargo
-CrabLang
 Actix
 Axum
 Rocket
