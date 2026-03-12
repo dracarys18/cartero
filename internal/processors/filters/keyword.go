@@ -5,14 +5,18 @@ import (
 	"slices"
 	"strings"
 
+	"cartero/internal/components"
+	"cartero/internal/config"
 	"cartero/internal/processors/names"
 	"cartero/internal/types"
+	"cartero/internal/utils"
 	"cartero/internal/utils/keywords"
 )
 
 type KeywordFilterProcessor struct {
-	name    string
-	matcher *keywords.Keywords
+	name         string
+	matcher      *keywords.Keywords
+	keywordCache utils.SyncCache[string, []float32]
 }
 
 func NewKeywordFilterProcessor(name string) *KeywordFilterProcessor {
@@ -26,20 +30,67 @@ func (k *KeywordFilterProcessor) Name() string {
 func (k *KeywordFilterProcessor) Initialize(ctx context.Context, st types.StateAccessor) error {
 	cfg := st.GetConfig().Processors[k.name].Settings.KeywordFilterSettings
 	k.matcher = keywords.New(cfg.Keywords)
-	return nil
+
+	if cfg.EmbedModel == "" || len(cfg.Keywords) == 0 {
+		return nil
+	}
+
+	registry := st.GetRegistry()
+	pc := registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
+	ollamaClient := pc.OllamaPlatform(cfg.EmbedModel)
+
+	err := k.keywordCache.Load(func() (map[string][]float32, error) {
+		return buildKeywordEmbeddings(ctx, ollamaClient, cfg.Keywords)
+	})
+	if err == nil {
+		st.GetLogger().Info("keyword_filter: keyword embeddings initialized", "processor", k.name, "count", k.keywordCache.Len())
+	}
+	return err
 }
 
 func (k *KeywordFilterProcessor) DependsOn() []string {
-	return []string{names.ExtractText}
+	return []string{names.ExtractText, names.EmbedText}
 }
 
 func (k *KeywordFilterProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
 	cfg := st.GetConfig().Processors[k.name].Settings.KeywordFilterSettings
-	logger := st.GetLogger()
 
 	if len(cfg.Keywords) == 0 && len(cfg.ExactKeyword) == 0 {
 		return nil
 	}
+
+	if matched := k.matchTitle(cfg, item); matched != "" {
+		st.GetLogger().Info("KeywordFilterProcessor matched via title", "processor", k.name, "item_id", item.ID, "keyword", matched)
+		item.SetMatchedKeywords(matched)
+		return nil
+	}
+
+	if k.keywordCache.Len() > 0 && item.GetEmbedding() != nil {
+		return k.processEmbedding(st, item)
+	}
+
+	return k.processDensity(st, item)
+}
+
+func (k *KeywordFilterProcessor) matchTitle(cfg config.KeywordFilterSettings, item *types.Item) string {
+	title := item.GetTitle()
+	titleLower := strings.ToLower(title)
+
+	for exactKeyword := range slices.Values(cfg.ExactKeyword) {
+		if strings.Contains(titleLower, strings.ToLower(exactKeyword)) {
+			return exactKeyword
+		}
+	}
+
+	if !cfg.TitleBypass {
+		return ""
+	}
+	return k.matcher.MatchTitle(title)
+}
+
+func (k *KeywordFilterProcessor) processDensity(st types.StateAccessor, item *types.Item) error {
+	cfg := st.GetConfig().Processors[k.name].Settings.KeywordFilterSettings
+	logger := st.GetLogger()
 
 	title := item.GetTitle()
 
@@ -48,22 +99,12 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, st types.StateAcce
 		content = article.Text
 	}
 
-	titleLower := strings.ToLower(title)
 	contentLower := strings.ToLower(content)
 
 	for exactKeyword := range slices.Values(cfg.ExactKeyword) {
-		kw := strings.ToLower(exactKeyword)
-		if strings.Contains(titleLower, kw) || strings.Contains(contentLower, kw) {
-			logger.Debug("KeywordFilterProcessor matched exact keyword", "processor", k.name, "item_id", item.ID, "keyword", exactKeyword)
+		if strings.Contains(contentLower, strings.ToLower(exactKeyword)) {
+			logger.Debug("KeywordFilterProcessor matched exact keyword in content", "processor", k.name, "item_id", item.ID, "keyword", exactKeyword)
 			item.SetMatchedKeywords(exactKeyword)
-			return nil
-		}
-	}
-
-	if cfg.TitleBypass {
-		if matched := k.matcher.MatchTitle(title); matched != "" {
-			logger.Info("KeywordFilterProcessor matched via title bypass", "processor", k.name, "item_id", item.ID, "keyword", matched)
-			item.SetMatchedKeywords(matched)
 			return nil
 		}
 	}

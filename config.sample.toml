@@ -89,6 +89,19 @@ order = 2
 [processors.score_filter.settings]
 min_score = 100
 
+[processors.extract_text]
+type = "extract_text"
+enabled = false
+[processors.extract_text.settings]
+min_content_length = 100
+
+[processors.embed]
+type = "embed_text"
+enabled = false
+[processors.embed.settings]
+embedding_model = "mxbai-embed-large"
+input_limit = 1800
+
 [processors.keyword_filter]
 type = "filter_keyword"
 enabled = false
@@ -96,8 +109,11 @@ order = 3
 [processors.keyword_filter.settings]
 keywords = ["AI", "Go", "Rust", "Encryption", "Database"]
 exact_keywords = ["Show HN"]
-mode = "include"
+keywords_file = ""
 keyword_threshold = 0.15
+title_bypass = true
+embed_model = "mxbai-embed-large"
+threshold = 0.60
 
 [processors.rate_limiter]
 type = "rate_limit"

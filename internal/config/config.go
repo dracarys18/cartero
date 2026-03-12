@@ -131,6 +131,7 @@ type ProcessorSettings struct {
 	ExtractFieldsSettings
 	TemplateSettings
 	ExtractTextSettings
+	EmbedTextSettings
 }
 
 type DedupeSettings struct {
@@ -148,6 +149,13 @@ type KeywordFilterSettings struct {
 	Mode             string   `toml:"mode"`
 	KeywordThreshold float64  `toml:"keyword_threshold"`
 	TitleBypass      bool     `toml:"title_bypass"`
+	EmbedModel       string   `toml:"embed_model"`
+	Threshold        float64  `toml:"threshold"`
+}
+
+type EmbedTextSettings struct {
+	Model      string `toml:"embedding_model"`
+	InputLimit int    `toml:"input_limit"`
 }
 
 type PublishedAtFilterSettings struct {

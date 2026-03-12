@@ -11,4 +11,5 @@ const (
 	FieldExtractor      = "extract_fields"
 	TemplateTransformer = "template"
 	MetadataFilter      = "filter_metadata"
+	EmbedText           = "embed_text"
 )
