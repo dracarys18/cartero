@@ -1047,8 +1047,6 @@ inference
 training
 pretraining
 post-training
-alignment
-safety
 hallucination
 grounding
 embeddings
@@ -1162,7 +1160,6 @@ Inferentia
 Trainium
 Gaudi
 RAM
-Memory
 DDR5
 DDR4
 HBM3
