@@ -2426,3 +2426,516 @@ array of structs
 cache-oblivious algorithm
 write combining
 reorder buffer
+
+# === MEMORY SYSTEMS ===
+memory allocator
+garbage collector
+page fault
+TLB miss
+TLB shootdown
+heap fragmentation
+stack overflow
+region-based memory
+slab allocator
+buddy allocator
+memory compaction
+write barrier
+read barrier
+safepoint
+object pinning
+finalizer
+weak reference
+phantom reference
+soft reference
+generational GC
+mark and sweep
+tri-color marking
+stop-the-world
+concurrent GC
+incremental GC
+reference counting cycle
+memory leak
+use-after-free
+dangling pointer
+double free
+buffer overflow
+heap spray
+stack canary
+ASLR
+NX bit
+ROP chain
+ret2libc
+shellcode
+exploit mitigation
+
+# === CPU ARCHITECTURE ===
+branch misprediction
+pipeline stall
+out-of-order execution
+store buffer
+load buffer
+reorder buffer
+register renaming
+superscalar
+VLIW
+hyperthreading
+SMT
+TurboBoost
+frequency scaling
+power state
+C-state
+P-state
+cache coherence protocol
+MOESI
+false sharing
+cache thrashing
+cache warming
+prefetch distance
+memory fence
+load fence
+store fence
+full fence
+atomic compare-and-swap
+lock-free stack
+wait-free queue
+memory ordering
+acquire-release
+sequentially consistent
+happens-before
+data race
+
+# === OS KERNEL INTERNALS ===
+process scheduler
+CFS scheduler
+real-time scheduler
+priority inversion
+priority inheritance
+deadline scheduling
+preemption
+voluntary preemption
+involuntary preemption
+kernel preemption
+user space
+kernel space
+system call overhead
+vDSO
+vsyscall
+signal handling
+signal mask
+process group
+session leader
+daemon process
+zombie process
+orphan process
+wait queue
+futex
+spinlock
+rwlock
+seqlock
+page table walk
+huge page
+memory overcommit
+OOM killer
+swappiness
+kprobe
+tracepoint
+perf event
+ftrace
+kmemleak
+KASAN
+KCSAN
+lockdep
+
+# === NETWORKING INTERNALS ===
+congestion window
+slow start
+congestion avoidance
+fast retransmit
+fast recovery
+selective acknowledgment
+SACK
+delayed ACK
+socket buffer
+receive window
+send window
+zero window
+window scaling
+RTT estimation
+RTO
+retransmission timeout
+TIME_WAIT
+CLOSE_WAIT
+FIN_WAIT
+connection tracking
+netfilter
+tc qdisc
+packet scheduler
+traffic shaping
+token bucket
+leaky bucket
+RED
+ECN
+DSCP
+multipath TCP
+MPTCP
+TCP fast open
+QUIC stream
+QUIC flow control
+HTTP/2 stream multiplexing
+HTTP/2 head-of-line blocking
+gRPC streaming
+websocket frame
+packet capture
+pcap
+tcpdump filter
+
+# === DATABASE ALGORITHMS ===
+buffer pool manager
+page eviction
+LRU eviction
+clock eviction
+dirty page tracking
+WAL replay
+crash recovery
+ARIES recovery
+undo log
+redo log
+logical logging
+physical logging
+physiological logging
+index only scan
+bitmap scan
+nested loop join
+hash join probe
+sort merge join
+grace hash join
+cost model
+statistics histogram
+cardinality estimation
+predicate selectivity
+join reordering
+subquery flattening
+lateral join
+window function
+grouping sets
+rollup
+materialized CTE
+recursive CTE
+partial index
+functional index
+expression index
+covering index
+index intersection
+index union
+deferred constraint
+row-level security
+column-level security
+table partitioning
+partition pruning
+partition-wise join
+parallel aggregate
+parallel hash join
+logical replication
+streaming replication
+slot replication
+connection pooling
+prepared statement
+plan caching
+adaptive query execution
+
+# === DISTRIBUTED SYSTEMS THEORY ===
+split brain
+network partition
+fencing token
+lease expiry
+epoch number
+term number
+log compaction
+read repair
+hinted handoff
+merkle tree reconciliation
+consistent hash ring
+virtual node
+data versioning
+hybrid logical clock
+HLC
+wall clock skew
+NTP drift
+linearizable read
+stale read
+bounded staleness
+external consistency
+session consistency
+monotonic reads
+monotonic writes
+read your writes
+tunable consistency
+quorum read
+quorum write
+sloppy quorum
+gossip protocol convergence
+anti-entropy repair
+fence pointer
+sparse index
+dense index
+
+# === SECURITY RESEARCH ===
+LFI
+RFI
+SSRF
+XXE
+deserialization attack
+prototype pollution
+second-order injection
+blind injection
+out-of-band injection
+type confusion
+integer overflow
+integer underflow
+sign extension
+format string bug
+command injection
+symlink attack
+TOCTOU
+race window
+kernel exploit
+container escape
+sandbox escape
+hypervisor escape
+browser exploit
+JIT spraying
+CFI bypass
+ASLR bypass
+heap grooming
+heap feng shui
+vtable hijacking
+return oriented programming
+jump oriented programming
+gadget chain
+SIGROP
+seccomp bypass
+capability abuse
+dirty pipe
+dirty cow
+log4shell
+spring4shell
+zero day
+CVSS score
+threat model
+attack surface
+defense in depth
+principle of least privilege
+security boundary
+trust boundary
+exploit chain
+bug bounty
+responsible disclosure
+patch diffing
+
+# === COMPILER & PL THEORY ===
+specialization
+devirtualization
+escape analysis
+inlining heuristic
+loop invariant code motion
+algebraic simplification
+strength reduction
+continuation passing style
+CPS transform
+closure conversion
+lambda lifting
+defunctionalization
+row polymorphism
+rank-N types
+existential type
+phantom type
+newtype
+typeclass
+trait object
+vtable dispatch
+monadic bind
+algebraic effects
+effect handler
+delimited continuation
+shift and reset
+call/cc
+unification algorithm
+Hindley-Milner
+bidirectional type checking
+gradual typing
+liquid types
+refinement types
+separation logic
+Hoare triple
+weakest precondition
+abstract interpretation
+pointer analysis
+alias analysis
+may-alias
+must-alias
+interprocedural analysis
+whole program analysis
+feedback-directed optimization
+hot path
+cold path
+deoptimization
+
+# === CONCURRENCY & PARALLELISM ===
+data parallelism
+task parallelism
+pipeline parallelism
+fork-join
+work stealing
+work sharing
+thread pool
+coroutine scheduler
+M:N threading
+continuation stealing
+fiber scheduling
+async runtime
+reactor pattern
+proactor pattern
+I/O multiplexing
+epoll edge-triggered
+epoll level-triggered
+io_uring submission
+io_uring completion
+kernel thread
+user thread
+cooperative scheduling
+preemptive scheduling
+lock contention
+lock convoy
+thundering herd
+reader-writer problem
+ABA problem solution
+hazard pointer
+epoch reclamation
+RCU read side
+RCU write side
+memory reclamation
+deferred deletion
+quiescent state
+grace period
+transactional memory
+STM
+HTM
+speculative lock elision
+optimistic concurrency
+pessimistic concurrency
+wound-wait
+wait-die
+timestamp ordering
+serialization graph
+
+# === VIRTUALIZATION & CONTAINERS ===
+hypervisor type 1
+hypervisor type 2
+KVM
+QEMU
+virtio
+paravirtualization
+hardware virtualization
+VT-x
+AMD-V
+EPT
+shadow page table
+VMCS
+VMEXIT
+VMENTRY
+container runtime
+container shim
+OCI runtime
+runc
+gVisor
+Firecracker
+microVM
+unikernel
+eBPF sandbox
+cgroup v2
+cgroup namespace
+user namespace
+mount namespace
+PID namespace
+IPC namespace
+UTS namespace
+overlay filesystem
+union filesystem
+content-addressable storage
+
+# === FORMAL METHODS & VERIFICATION ===
+model checking
+bounded model checking
+symbolic execution
+concolic testing
+SMT solver
+SAT solver
+DPLL algorithm
+CDCL algorithm
+inductive invariant
+loop invariant verification
+theorem prover
+proof assistant
+Coq proof
+Isabelle proof
+Lean proof
+TLA+ specification
+PlusCal algorithm
+temporal logic
+reachability analysis
+safety property
+liveness property
+deadlock freedom
+starvation freedom
+progress property
+trace equivalence
+bisimulation
+refinement mapping
+abstraction refinement
+CEGAR
+specification mining
+runtime verification
+property-based testing
+
+# === PERFORMANCE ENGINEERING ===
+latency percentile
+p50 p99 p999
+tail latency
+coordinated omission
+Little's law
+Amdahl's law
+Gustafson's law
+roofline model
+arithmetic intensity
+memory bandwidth bound
+compute bound
+latency bound
+throughput bound
+benchmark harness
+microbenchmark
+macrobenchmark
+profiling overhead
+sampling profiler
+instrumentation profiler
+off-CPU analysis
+on-CPU analysis
+wall clock profiling
+allocation profiling
+lock profiling
+hardware counter
+PMU event
+IPC measurement
+branch miss rate
+cache miss rate
+memory bandwidth utilization
+CPU utilization
+USE method
+RED method
+golden signals
+error budget
+burn rate
+load testing
+stress testing
+soak testing
+capacity planning
+back-of-envelope calculation
