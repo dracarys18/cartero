@@ -33,3 +33,8 @@ func (o *OllamaPlatform) Generate(ctx context.Context, request *api.GenerateRequ
 	request.Model = o.model
 	return o.Client().Generate(ctx, request, respFunc)
 }
+
+func (o *OllamaPlatform) Embed(ctx context.Context, req *api.EmbedRequest) (*api.EmbedResponse, error) {
+	req.Model = o.model
+	return o.Client().Embed(ctx, req)
+}

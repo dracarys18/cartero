@@ -307,6 +307,9 @@ func (s *State) createProcessor(name string, cfg config.ProcessorConfig) types.P
 	case "extract_text":
 		return processors.NewExtractProcessor(name)
 
+	case "embed_category":
+		return processors.NewEmbedCategoryProcessor(name)
+
 	default:
 		return nil
 	}

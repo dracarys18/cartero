@@ -42,7 +42,7 @@ func (ts *TopologicalSorter) Sort() ([]string, error) {
 
 		for _, dep := range n.dependsOn {
 			if _, ok := ts.nodes[dep]; !ok {
-				return nil, fmt.Errorf("node %s depends on %s which doesn't exist", name, dep)
+				continue
 			}
 			adjList[dep] = append(adjList[dep], name)
 			inDegree[name]++
