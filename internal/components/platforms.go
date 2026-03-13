@@ -64,8 +64,8 @@ func (c *PlatformComponent) Initialize(ctx context.Context) error {
 	}
 
 	for _, cfg := range c.config {
-		if cfg.Type == "ollama" && cfg.Settings.OllamaPlatformSettings.EmbeddingModel != "" {
-			c.embeddingPlatform = platforms.NewOllamaPlatform(cfg.Settings.OllamaPlatformSettings.EmbeddingModel)
+		if cfg.Type == "ollama" && cfg.Settings.EmbeddingModel != "" {
+			c.embeddingPlatform = platforms.NewOllamaPlatform(cfg.Settings.EmbeddingModel)
 			break
 		}
 	}
