@@ -482,11 +482,12 @@
     <script>
         function shareStory(btn, title, url) {
             const promo = 'Shared from ' + window.location.origin;
-            const text = title + '\n' + url + '\n\n' + promo;
             if (navigator.share) {
-                navigator.share(text).catch(() => {});
+                const shareText = url + '\n\n' + promo
+                navigator.share({text: shareText}).catch(() => {});
                 return;
             }
+            const text = title + '\n' + url + '\n\n' + promo;
             navigator.clipboard.writeText(text).then(() => {
                 const span = btn.querySelector('span');
                 span.textContent = 'copied!';
