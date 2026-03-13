@@ -1582,6 +1582,8 @@ I2P
 IPFS
 libp2p
 Noise Protocol
+IPv4
+IPv6
 
 # === VERSION CONTROL & COLLABORATION ===
 Git
