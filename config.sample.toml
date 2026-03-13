@@ -7,6 +7,11 @@ run_once = false
 type = "sqlite"
 path = "./cartero.db"
 
+[platforms.ollama]
+type = "ollama"
+[platforms.ollama.settings]
+embedding_model = "embeddinggemma:300m"
+
 [platforms.discord]
 type = "discord"
 sleep = "1s"
@@ -99,8 +104,7 @@ min_content_length = 100
 type = "embed_text"
 enabled = false
 [processors.embed.settings]
-embedding_model = "mxbai-embed-large"
-input_limit = 1800
+chunk_size = 7000
 
 [processors.keyword_filter]
 type = "filter_keyword"
@@ -110,10 +114,9 @@ order = 3
 keywords = ["AI", "Go", "Rust", "Encryption", "Database"]
 exact_keywords = ["Show HN"]
 keywords_file = ""
-keyword_threshold = 0.15
-title_bypass = true
-embed_model = "mxbai-embed-large"
-threshold = 0.60
+density_threshold = 0.15
+title_bypass = false
+embed_threshold = 0.42
 
 [processors.rate_limiter]
 type = "rate_limit"
