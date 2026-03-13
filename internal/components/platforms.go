@@ -8,10 +8,11 @@ import (
 )
 
 type PlatformComponent struct {
-	config          map[string]config.PlatformConfig
-	discordPlatform *platforms.DiscordPlatform
-	blueskyPlatform *platforms.BlueskyPlatform
-	ollamaPlatforms map[string]*platforms.OllamaPlatform
+	config            map[string]config.PlatformConfig
+	discordPlatform   *platforms.DiscordPlatform
+	blueskyPlatform   *platforms.BlueskyPlatform
+	ollamaPlatforms   map[string]*platforms.OllamaPlatform
+	embeddingPlatform *platforms.OllamaPlatform
 }
 
 func NewPlatformComponent(config map[string]config.PlatformConfig) *PlatformComponent {
@@ -61,6 +62,14 @@ func (c *PlatformComponent) Initialize(ctx context.Context) error {
 		}
 		c.blueskyPlatform = bluesky
 	}
+
+	for _, cfg := range c.config {
+		if cfg.Type == "ollama" && cfg.Settings.OllamaPlatformSettings.EmbeddingModel != "" {
+			c.embeddingPlatform = platforms.NewOllamaPlatform(cfg.Settings.OllamaPlatformSettings.EmbeddingModel)
+			break
+		}
+	}
+
 	return nil
 }
 
@@ -80,6 +89,10 @@ func (c *PlatformComponent) Discord() *platforms.DiscordPlatform {
 
 func (c *PlatformComponent) Bluesky() *platforms.BlueskyPlatform {
 	return c.blueskyPlatform
+}
+
+func (c *PlatformComponent) Embedder() *platforms.OllamaPlatform {
+	return c.embeddingPlatform
 }
 
 func (c *PlatformComponent) OllamaPlatform(model string) *platforms.OllamaPlatform {

@@ -25,7 +25,6 @@ Aider
 Continue
 Cline
 Roo Code
-v0
 Bolt
 Lovable
 
@@ -224,7 +223,6 @@ Veracode
 Semgrep
 SonarQube
 SonarCloud
-Wiz
 Prisma Cloud
 Aqua Security
 Trivy
@@ -266,7 +264,6 @@ Notion
 Obsidian
 Logseq
 Raycast
-Alfred
 Tmux
 Zsh
 Fish Shell
@@ -291,33 +288,19 @@ Remix
 Vue
 Nuxt
 Svelte
-SvelteKit
 Angular
-SolidJS
-Qwik
-Astro
-HTMX
-Alpine.js
 Vite
-Turbopack
 Webpack
 Rollup
 esbuild
 SWC
-Rspack
 Express
-NestJS
 Fastify
-Hono
-Elysia
 TRPC
 
 # === PYTHON ECOSYSTEM ===
 Python
 PyScript
-Django
-Flask
-FastAPI
 Pyramid
 Litestar
 SQLAlchemy
@@ -335,7 +318,6 @@ Ruff
 Rust
 Cargo
 Actix
-Axum
 Rocket
 Tokio
 Serde
@@ -370,22 +352,17 @@ zero-cost abstractions
 # === GO ECOSYSTEM ===
 Go
 Golang
-Gin
 Echo
 Fiber
 Buffalo
 Gorm
 Go-kit
 Templ
-air
 golangci-lint
 gopls
-fx
 wire
-ent
 sqlc
 pgx
-chi
 gorilla
 cobra
 viper
@@ -438,8 +415,6 @@ Kotlin Multiplatform
 KMP
 
 # === FUNCTIONAL & NICHE LANGUAGES ===
-Elixir
-Phoenix
 Erlang
 OTP
 Gleam
@@ -475,11 +450,7 @@ PostCSS
 Sass
 Less
 Stylus
-Panda CSS
-StyleX
-DaisyUI
 Shadcn
-Radix UI
 Chakra UI
 Headless UI
 
@@ -499,20 +470,14 @@ REST
 RESTful
 OpenAPI
 Swagger
-GraphQL
 Apollo Federation
 GraphOS
-gRPC
 Protobuf
 Protocol Buffers
 gRPC-Web
-Connect RPC
-tRPC
-WebSocket
 WebTransport
 QUIC
 HTTP/3
-SSE
 Server-Sent Events
 AsyncAPI
 CloudEvents
@@ -652,9 +617,6 @@ Interpreter
 Transpiler
 JIT
 AOT
-LLVM
-GCC
-Clang
 MLIR
 Intermediate Representation
 IR
@@ -686,8 +648,6 @@ LTO
 Link-Time Optimization
 PGO
 Profile-Guided Optimization
-WASM
-WASI
 Component Model
 
 # === DATABASE STORAGE ENGINES ===
@@ -795,7 +755,6 @@ In-memory Database
 # === QUERY OPTIMIZATION ===
 Query Optimizer
 Cost-Based Optimizer
-CBO
 Execution Plan
 Explain Plan
 Predicate Pushdown
@@ -969,7 +928,6 @@ DeepL
 Character.ai
 Midjourney
 DeepSeek
-xAI
 Stability AI
 Runway
 ElevenLabs
@@ -980,11 +938,9 @@ Llama
 Mistral
 Grok
 Qwen
-Phi
 Gemma
 Command R
 Sonar
-Nova
 LLM
 Large Language Model
 Foundation Model
@@ -1025,7 +981,6 @@ Ollama
 vLLM
 llama.cpp
 LM Studio
-Jan
 GPT4All
 Agentic AI
 AI Agents
@@ -1054,18 +1009,9 @@ tokenizer
 context length
 
 # === SECURITY & PRIVACY ===
-Zero Trust
-ZTNA
 IAM
-RBAC
-ABAC
 OAuth2
-OIDC
 SAML
-JWT
-WebAuthn
-Passkeys
-mTLS
 Secrets Management
 Vault
 Post-Quantum Cryptography
@@ -1082,7 +1028,6 @@ Differential Privacy
 TEE
 Trusted Execution Environment
 Enclave
-SBOM
 CVE
 
 # === KERNEL, OS & PERFORMANCE ===
@@ -1106,11 +1051,8 @@ Fedora
 Arch Linux
 Alpine Linux
 Gentoo
-eBPF
-XDP
 io_uring
 Zero-Copy
-Kernel Bypass
 DPDK
 SPDK
 System Calls
@@ -1151,7 +1093,6 @@ GB200
 GH200
 Blackwell
 Hopper
-Ada Lovelace
 TPU
 NPU
 Neural Processing Unit
@@ -1179,7 +1120,6 @@ Framework Laptop
 Purism
 Pine64
 MNT Reform
-NUC
 Mini PC
 TinyMiniMicro
 OptiPlex
@@ -1264,7 +1204,6 @@ Micron
 Arm Holdings
 GlobalFoundries
 Texas Instruments
-ASML
 Infineon
 STMicroelectronics
 NXP
@@ -1284,7 +1223,6 @@ IBM
 Workday
 VMware
 Red Hat
-Databricks
 Palantir
 Atlassian
 Autodesk
@@ -1317,7 +1255,6 @@ Deno Deploy
 
 # === NEOCLOUDS & AI INFRA ===
 CoreWeave
-Lambda Labs
 Crusoe
 Nebius
 Together AI
@@ -1444,15 +1381,12 @@ LEO Satellite
 Starlink
 Project Kuiper
 Satellite Internet
-6G
-5G-Advanced
 Massive MIMO
 Software-Defined Radio
 
 # === GAMING & IMMERSIVE TECH ===
 Spatial Computing
 Augmented Reality
-AR
 Virtual Reality
 VR
 Mixed Reality
@@ -1489,10 +1423,8 @@ CSV
 TSV
 Parquet
 Avro
-Protobuf
 MessagePack
 CBOR
-FlatBuffers
 Cap'n Proto
 Thrift
 BSON
@@ -1501,7 +1433,6 @@ HDF5
 NetCDF
 JSON Lines
 NDJSON
-JSON Schema
 XML Schema
 XSD
 XSLT
@@ -1512,15 +1443,11 @@ DTD
 # === QUERY & TRANSFORMATION TOOLS ===
 jq
 yq
-xq
 jqplay
 gron
-fq
 dasel
 Miller
 csvkit
-xsv
-q
 SQLite CLI
 DuckDB CLI
 Polars
@@ -1537,7 +1464,6 @@ data contracts
 
 # === SHELL & CLI TOOLS ===
 Bash
-Zsh
 Fish
 PowerShell
 Nushell
@@ -1548,63 +1474,42 @@ tmux
 screen
 fzf
 ripgrep
-fd
-bat
-eza
-lsd
 delta
 difftastic
 zoxide
 atuin
 mcfly
-Starship
 direnv
 asdf
 mise
 nvm
 pyenv
 rbenv
-gvm
 volta
-fnm
 pnpm
-Bun
 Yarn
 npm
-Homebrew
 Scoop
 Chocolatey
 WinGet
-Nix
-Flox
-Devbox
 devenv
 pkgx
 
 # === BUILD SYSTEMS & TASK RUNNERS ===
 Make
 Makefile
-CMake
 Bazel
 Buck2
 Pants
 Nx
 Turborepo
-Gradle
-Maven
 sbt
 Mill
 Leiningen
-Mix
 Rebar3
-Cargo
-Meson
 Ninja
 SCons
-Tup
-just
 Task
-xc
 Earthly
 
 # === OBSERVABILITY & MONITORING ===
@@ -1615,10 +1520,8 @@ Zipkin
 Tempo
 Grafana
 Grafana Loki
-Prometheus
 Alertmanager
 Thanos
-Cortex
 DataDog
 New Relic
 Dynatrace
@@ -1654,7 +1557,6 @@ HTTP
 HTTPS
 HTTP2
 HTTP3
-QUIC
 DNS
 DoH
 DoT
@@ -1664,7 +1566,6 @@ OSPF
 MPLS
 VPN
 IPSec
-WireGuard
 OpenVPN
 SSH
 SFTP
@@ -1735,8 +1636,6 @@ MkDocs
 Docusaurus
 Mintlify
 GitBook
-Notion
-Confluence
 Backstage TechDocs
 Architecture Decision Records
 ADR
@@ -2321,19 +2220,14 @@ UART
 CAN bus
 LIN bus
 Modbus
-PWM
-ADC
-DAC
 hardware description language
 Verilog
 VHDL
 SystemVerilog
-UVM
 cocotb
 verilator
 OpenOCD
 JTAG
-SWD
 logic analyzer
 oscilloscope
 signal integrity
@@ -2359,9 +2253,7 @@ deferred rendering
 forward rendering
 physically based rendering
 global illumination
-ambient occlusion
 shadow mapping
-anti-aliasing
 procedural generation
 Perlin noise
 simplex noise
@@ -2372,7 +2264,6 @@ steering behavior
 inverse kinematics
 skeletal animation
 blend tree
-animation graph
 particle system
 visual scripting
 GDScript
@@ -2433,7 +2324,6 @@ TLB shootdown
 heap fragmentation
 stack overflow
 region-based memory
-slab allocator
 buddy allocator
 memory compaction
 write barrier
@@ -2468,10 +2358,8 @@ exploit mitigation
 # === CPU ARCHITECTURE ===
 branch misprediction
 pipeline stall
-out-of-order execution
 store buffer
 load buffer
-reorder buffer
 register renaming
 superscalar
 VLIW
@@ -2484,7 +2372,6 @@ C-state
 P-state
 cache coherence protocol
 MOESI
-false sharing
 cache thrashing
 cache warming
 prefetch distance
@@ -2495,7 +2382,6 @@ full fence
 atomic compare-and-swap
 lock-free stack
 wait-free queue
-memory ordering
 acquire-release
 sequentially consistent
 happens-before
@@ -2545,7 +2431,6 @@ lockdep
 
 # === NETWORKING INTERNALS ===
 congestion window
-slow start
 congestion avoidance
 fast retransmit
 fast recovery
@@ -2635,7 +2520,6 @@ parallel hash join
 logical replication
 streaming replication
 slot replication
-connection pooling
 prepared statement
 plan caching
 adaptive query execution
@@ -2778,9 +2662,7 @@ cold path
 deoptimization
 
 # === CONCURRENCY & PARALLELISM ===
-data parallelism
 task parallelism
-pipeline parallelism
 fork-join
 work stealing
 work sharing
@@ -2861,9 +2743,7 @@ union filesystem
 content-addressable storage
 
 # === FORMAL METHODS & VERIFICATION ===
-model checking
 bounded model checking
-symbolic execution
 concolic testing
 SMT solver
 SAT solver
@@ -2892,7 +2772,6 @@ abstraction refinement
 CEGAR
 specification mining
 runtime verification
-property-based testing
 
 # === PERFORMANCE ENGINEERING ===
 latency percentile
@@ -2929,10 +2808,436 @@ CPU utilization
 USE method
 RED method
 golden signals
-error budget
 burn rate
-load testing
-stress testing
-soak testing
 capacity planning
 back-of-envelope calculation
+
+# === LSP & EDITOR TOOLING ===
+LSP
+language server
+hover provider
+code completion
+document symbols
+workspace symbols
+semantic tokens
+call hierarchy
+type hierarchy
+folding range
+selection range
+text synchronization
+workspace edit
+JSON-RPC protocol
+LSP client
+LSP server
+language client
+language intelligence
+editor integration
+IDE integration
+editor plugin
+IDE plugin
+editor extension
+developer tooling
+build tooling
+static analysis tool
+linter integration
+formatter integration
+code navigation
+symbol search
+signature help
+outline view
+
+# === VCS & WORKFLOW TOOLING ===
+working copy
+changeset
+stack-based workflow
+stacked diffs
+VCS integration
+diff algorithm
+merge tool
+rebase strategy
+monorepo tooling
+version control workflow
+patch workflow
+amend commit
+interactive rebase
+jj workflow
+fossil SCM
+Darcs
+
+# === PROGRAMMING LANGUAGES & RUNTIMES ===
+Mojo programming language
+Python alternative
+Python compatibility
+compiled Python
+Python performance
+ML systems programming
+AI programming language
+language benchmark
+language interoperability
+memory ownership
+language runtime
+LLVM backend
+LLVM IR
+Python FFI
+Python superset
+language ergonomics
+ownership model
+systems language
+language design
+language specification
+language semantics
+bytecode compilation
+JIT compilation
+AOT compilation
+interpreter overhead
+garbage collected language
+reference implementation
+PEP proposal
+CPython
+PyPy
+GraalPy
+Cython
+Numba
+Triton
+CUDA kernel
+GPU programming
+SIMD vectorization
+loop unrolling
+register pressure
+calling convention
+ABI compatibility
+name mangling
+symbol table
+linker script
+dynamic linking
+static linking
+shared library
+object file
+relocation
+position independent code
+stack frame
+return value optimization
+copy elision
+move semantics
+value semantics
+reference semantics
+pointer arithmetic
+memory layout
+struct padding
+alignment requirement
+cache line alignment
+happens-before relation
+sequential consistency
+relaxed ordering
+atomic operation
+lock-free algorithm
+wait-free algorithm
+fetch-and-add
+
+# === TYPE THEORY & PL THEORY ===
+effect types
+substructural types
+affine types
+uniqueness types
+capability types
+typestate
+refinement type
+predicate type
+sum type
+product type
+recursive type
+polymorphic type
+parametric polymorphism
+ad-hoc polymorphism
+structural subtyping
+nominal subtyping
+covariance
+contravariance
+invariance
+type erasure
+type reification
+generics monomorphization
+dictionary passing
+vtable
+witness table
+protocol conformance
+trait bound
+where clause
+associated type
+higher kinded type
+type family
+type lambda
+type application
+kind system
+universe polymorphism
+impredicativity
+skolemization
+type class instance
+coherence
+orphan rule
+newtype deriving
+deriving mechanism
+macro hygiene
+procedural macro
+declarative macro
+syntax extension
+compiler plugin
+language extension
+pragma
+attribute
+annotation processor
+bytecode verifier
+abstract machine
+operational semantics
+denotational semantics
+axiomatic semantics
+small-step reduction
+big-step evaluation
+continuation
+delimited control
+algebraic effect
+free monad
+tagless final
+finally tagless
+initial encoding
+final encoding
+deep embedding
+shallow embedding
+
+# === DATABASE INTERNALS ===
+tuple visibility
+dead tuple
+heap tuple
+heap file
+page layout
+MVCC snapshot
+index bloat
+dead row
+autovacuum
+VACUUM analyze
+query planner
+plan cache invalidation
+plan regression
+LSN
+checksum verification
+shared buffer pool
+wal_level
+replication slot
+logical decoding
+slot invalidation
+index-only scan
+bitmap heap scan
+sequential scan
+nested loop join
+hash aggregate
+sort spill
+work_mem
+connection pooling PgBouncer
+statement timeout
+lock timeout
+deadlock detection
+table bloat
+index fragmentation
+partial index scan
+parallel hash
+partition exclusion
+foreign key lock
+advisory lock
+
+# === COMPILER INTERNALS ===
+SSA form
+phi node
+dominator tree
+basic block
+register allocation
+graph coloring register
+instruction selection
+dead store elimination
+loop vectorization
+peephole optimization
+global value numbering
+sparse conditional constant
+points-to analysis
+taint analysis
+sanitizer
+undefined behavior
+strict aliasing
+compiler intrinsic
+LLVM pass
+MLIR dialect
+target triple
+cross compilation
+link time optimization
+profile guided optimization
+instrumentation pass
+asm volatile
+inline assembly
+
+# === OS & SYSTEMS ===
+mmap
+VFS layer
+inode table
+dentry cache
+page reclaim
+kswapd
+memory pressure
+CPU affinity
+NUMA topology
+zero-copy networking
+sendfile syscall
+splice syscall
+interrupt coalescing
+NAPI polling
+kernel bypass networking
+DPDK
+io_uring ring buffer
+BPF map
+cgroup memory limit
+OOM score
+swap pressure
+transparent hugepage
+direct I/O
+buffered I/O
+fsync
+fdatasync
+O_DIRECT
+copy-on-write fork
+process isolation
+seccomp filter
+capability dropping
+mount propagation
+pivot root
+overlay network
+veth pair
+network namespace isolation
+
+# === ML SYSTEMS ===
+model quantization
+INT8 quantization
+FP16 inference
+BF16 training
+knowledge distillation
+KV cache
+speculative decoding
+flash attention
+tensor parallelism
+gradient checkpointing
+mixed precision training
+activation checkpointing
+model sharding
+pipeline parallelism training
+inference optimization
+continuous batching
+paged attention
+CUDA graph
+triton kernel
+custom CUDA kernel
+model serving
+model registry
+experiment tracking
+hyperparameter tuning
+neural architecture search
+weight tying
+attention head pruning
+LoRA fine-tuning
+PEFT
+RLHF
+reward model
+DPO training
+SFT
+constitutional AI
+
+# === SECURITY SPECIFICS ===
+certificate pinning
+certificate transparency
+hardware security module
+FIDO2
+credential stuffing
+timing side channel
+padding oracle attack
+memory safety bug
+spatial memory safety
+temporal memory safety
+firmware security
+measured boot
+TPM attestation
+supply chain integrity
+dependency confusion
+typosquatting attack
+prototype pollution
+deserialization gadget chain
+SSRF escalation
+XXE injection
+GraphQL introspection abuse
+mass assignment
+insecure direct object reference
+JWT algorithm confusion
+OAuth token leakage
+PKCE
+mTLS mutual authentication
+zero trust architecture
+workload identity
+SPIFFE
+SPIRE
+
+# === DISTRIBUTED SYSTEMS SPECIFICS ===
+Lamport timestamp
+causal consistency
+causal broadcast
+chain replication
+viewstamped replication
+distributed snapshot
+Chandy-Lamport
+lease-based coordination
+clock synchronization
+NTP stratum
+GPS-disciplined oscillator
+hybrid logical clock
+conflict-free data type
+operation-based CRDT
+state-based CRDT
+delta CRDT
+Byzantine fault tolerance
+Byzantine generals
+erasure coding
+Reed-Solomon
+quorum intersection
+flexible quorum
+reconfiguration protocol
+membership protocol
+failure detector
+phi accrual failure detector
+SWIM protocol
+consistent cut
+
+# === STORAGE SYSTEMS ===
+extent-based storage
+write stall
+block device
+storage engine internals
+compaction throttle
+tiered storage
+hot cold separation
+object lifecycle policy
+erasure coded storage
+data placement
+CRUSH algorithm
+placement group
+rebalancing
+scrubbing
+background compaction
+bloom filter false positive rate
+dictionary compression
+prefix compression
+run-length encoding
+delta encoding storage
+columnar compression
+vectorized execution
+late materialization
+predicate pushdown
+partition pruning statistics
+zone map
+min-max index
+rough index
+adaptive indexing
+database cracking

@@ -28,19 +28,22 @@ func (k *KeywordFilterProcessor) Name() string {
 }
 
 func (k *KeywordFilterProcessor) Initialize(ctx context.Context, st types.StateAccessor) error {
-	cfg := st.GetConfig().Processors[k.name].Settings.KeywordFilterSettings
-	k.matcher = keywords.New(cfg.Keywords)
+	kwCfg := st.GetConfig().Processors[k.name].Settings.KeywordFilterSettings
+	k.matcher = keywords.New(kwCfg.Keywords)
 
-	if cfg.EmbedModel == "" || len(cfg.Keywords) == 0 {
+	if len(kwCfg.Keywords) == 0 {
 		return nil
 	}
 
 	registry := st.GetRegistry()
 	pc := registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
-	ollamaClient := pc.OllamaPlatform(cfg.EmbedModel)
+	embedder := pc.Embedder()
+	if embedder == nil {
+		return nil
+	}
 
 	err := k.keywordCache.Load(func() (map[string][]float32, error) {
-		return buildKeywordEmbeddings(ctx, ollamaClient, cfg.Keywords)
+		return buildKeywordEmbeddings(ctx, embedder, kwCfg.Keywords)
 	})
 	if err == nil {
 		st.GetLogger().Info("keyword_filter: keyword embeddings initialized", "processor", k.name, "count", k.keywordCache.Len())
@@ -111,16 +114,16 @@ func (k *KeywordFilterProcessor) processDensity(st types.StateAccessor, item *ty
 
 	matchedKeyword, density := k.matcher.Match(title, content)
 
-	logger.Debug("KeywordFilterProcessor density calculated", "processor", k.name, "item_id", item.ID, "density", density*100, "keywords", matchedKeyword, "threshold", cfg.KeywordThreshold*100)
+	logger.Debug("KeywordFilterProcessor density calculated", "processor", k.name, "item_id", item.ID, "density", density*100, "keywords", matchedKeyword, "threshold", cfg.DensityThreshold*100)
 
-	if density >= cfg.KeywordThreshold {
+	if density >= cfg.DensityThreshold {
 		logger.Info("KeywordFilterProcessor matched via density", "processor", k.name, "item_id", item.ID, "density", density*100, "keywords", matchedKeyword)
 		item.SetMatchedKeywords(matchedKeyword)
 		return nil
 	}
 
-	logger.Info("KeywordFilterProcessor rejected item", "processor", k.name, "item_id", item.ID, "density", density*100, "threshold", cfg.KeywordThreshold*100)
+	logger.Info("KeywordFilterProcessor rejected item", "processor", k.name, "item_id", item.ID, "density", density*100, "threshold", cfg.DensityThreshold*100)
 	return types.NewFilteredError(k.name, item.ID, "keyword density below threshold").
 		WithDetail("density_percentage", density*100).
-		WithDetail("threshold_percentage", cfg.KeywordThreshold*100)
+		WithDetail("threshold_percentage", cfg.DensityThreshold*100)
 }

@@ -2,7 +2,9 @@ package processors
 
 import (
 	"context"
-	"strings"
+
+	"github.com/tmc/langchaingo/textsplitter"
+	"github.com/viterin/vek/vek32"
 
 	"cartero/internal/components"
 	procnames "cartero/internal/processors/names"
@@ -39,21 +41,36 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 	if article := item.GetArticle(); article != nil {
 		body = article.Text
 	}
-	text := strings.TrimSpace(item.GetTitle() + " " + body)
+	text := item.GetTitle() + " " + body
 
 	if text == "" {
 		return nil
 	}
 
-	if cfg.InputLimit > 0 && len(text) > cfg.InputLimit {
-		text = text[:cfg.InputLimit]
+	chunkSize := cfg.ChunkSize
+	if chunkSize == 0 {
+		chunkSize = 400
+	}
+
+	splitter := textsplitter.NewRecursiveCharacter(
+		textsplitter.WithChunkSize(chunkSize),
+		textsplitter.WithChunkOverlap(chunkSize/8),
+	)
+
+	chunks, err := splitter.SplitText(text)
+	if err != nil || len(chunks) == 0 {
+		logger.Warn("embed_text: failed to split text", "processor", e.name, "item_id", item.ID, "error", err)
+		return nil
 	}
 
 	registry := st.GetRegistry()
 	pc := registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
-	ollamaClient := pc.OllamaPlatform(cfg.Model)
+	embedder := pc.Embedder()
+	if embedder == nil {
+		return nil
+	}
 
-	resp, err := ollamaClient.Embed(ctx, &api.EmbedRequest{Input: text})
+	resp, err := embedder.Embed(ctx, &api.EmbedRequest{Input: chunks})
 	if err != nil {
 		logger.Warn("embed_text: failed to embed item", "processor", e.name, "item_id", item.ID, "error", err)
 		return nil
@@ -64,7 +81,19 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 		return nil
 	}
 
-	item.SetEmbedding(resp.Embeddings[0])
-	logger.Debug("embed_text: stored embedding", "processor", e.name, "item_id", item.ID, "dim", len(resp.Embeddings[0]))
+	item.SetEmbedding(averageEmbeddings(resp.Embeddings))
+	logger.Debug("embed_text: stored embedding", "processor", e.name, "item_id", item.ID, "chunks", len(chunks), "dim", len(resp.Embeddings[0]))
 	return nil
+}
+
+func averageEmbeddings(vecs [][]float32) []float32 {
+	if len(vecs) == 0 {
+		return nil
+	}
+	result := make([]float32, len(vecs[0]))
+	for _, v := range vecs {
+		vek32.Add_Inplace(result, v)
+	}
+	vek32.DivNumber_Inplace(result, float32(len(vecs)))
+	return result
 }

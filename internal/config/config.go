@@ -57,7 +57,8 @@ type DiscordPlatformSettings struct {
 }
 
 type OllamaPlatformSettings struct {
-	Model string `toml:"model"`
+	Model          string `toml:"model"`
+	EmbeddingModel string `toml:"embedding_model"`
 }
 
 type BlueskyPlatformSettings struct {
@@ -147,15 +148,13 @@ type KeywordFilterSettings struct {
 	ExactKeyword     []string `toml:"exact_keywords"`
 	KeywordsFile     string   `toml:"keywords_file"`
 	Mode             string   `toml:"mode"`
-	KeywordThreshold float64  `toml:"keyword_threshold"`
+	DensityThreshold float64  `toml:"density_threshold"`
 	TitleBypass      bool     `toml:"title_bypass"`
-	EmbedModel       string   `toml:"embed_model"`
-	Threshold        float64  `toml:"threshold"`
+	EmbedThreshold   float64  `toml:"embed_threshold"`
 }
 
 type EmbedTextSettings struct {
-	Model      string `toml:"embedding_model"`
-	InputLimit int    `toml:"input_limit"`
+	ChunkSize int `toml:"chunk_size"`
 }
 
 type PublishedAtFilterSettings struct {
