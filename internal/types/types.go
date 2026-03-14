@@ -34,11 +34,6 @@ type Article struct {
 	Description string
 }
 
-type Keywords struct {
-	keyword string
-	context string
-}
-
 func (i *Item) GetID() string {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
