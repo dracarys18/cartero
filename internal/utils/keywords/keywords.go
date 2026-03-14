@@ -7,19 +7,24 @@ import (
 
 var tokenRegex = regexp.MustCompile(`[a-zA-Z0-9]+`)
 
+type KeywordWithContext struct {
+	Keyword string
+	Context string
+}
+
 type Keywords struct {
 	byNGram map[int][]string
 }
 
-func New(kws []string) *Keywords {
+func New(kws []KeywordWithContext) *Keywords {
 	byNGram := make(map[int][]string)
 	for _, kw := range kws {
-		tokens := tokenRegex.FindAllString(kw, -1)
+		tokens := tokenRegex.FindAllString(kw.Keyword, -1)
 		n := len(tokens)
 		if n == 0 {
 			continue
 		}
-		byNGram[n] = append(byNGram[n], strings.ToLower(kw))
+		byNGram[n] = append(byNGram[n], strings.ToLower(kw.Keyword))
 	}
 	return &Keywords{byNGram: byNGram}
 }
