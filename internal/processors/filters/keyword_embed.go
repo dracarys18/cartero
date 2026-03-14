@@ -27,7 +27,7 @@ func buildKeywordEmbeddings(ctx context.Context, client *platforms.OllamaPlatfor
 	cache := make(map[string][]float32, len(kws))
 	for i, kw := range kws {
 		if i < len(resp.Embeddings) {
-			cache[kw.Context] = resp.Embeddings[i]
+			cache[kw.Keyword] = resp.Embeddings[i]
 		}
 	}
 	return cache, nil

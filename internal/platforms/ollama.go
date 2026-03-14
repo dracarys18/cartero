@@ -36,5 +36,5 @@ func (o *OllamaPlatform) Generate(ctx context.Context, request *api.GenerateRequ
 
 func (o *OllamaPlatform) Embed(ctx context.Context, req *api.EmbedRequest) (*api.EmbedResponse, error) {
 	req.Model = o.model
-	return o.Client().Embed(ctx, req)
+	return o.Client().Embeddings(ctx, req)
 }
