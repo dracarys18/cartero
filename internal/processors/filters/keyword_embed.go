@@ -13,10 +13,10 @@ import (
 
 const queryPrefix = "Retrieve technical articles about: "
 
-func buildKeywordEmbeddings(ctx context.Context, client *platforms.OllamaPlatform, kws []string) (map[string][]float32, error) {
+func buildKeywordEmbeddings(ctx context.Context, client *platforms.OllamaPlatform, kws []keywords.KeywordWithContext) (map[string][]float32, error) {
 	prefixed := make([]string, len(kws))
 	for i, kw := range kws {
-		prefixed[i] = queryPrefix + kw
+		prefixed[i] = queryPrefix + kw.Context
 	}
 
 	resp, err := client.Embed(ctx, &api.EmbedRequest{Input: prefixed})
@@ -27,7 +27,7 @@ func buildKeywordEmbeddings(ctx context.Context, client *platforms.OllamaPlatfor
 	cache := make(map[string][]float32, len(kws))
 	for i, kw := range kws {
 		if i < len(resp.Embeddings) {
-			cache[kw] = resp.Embeddings[i]
+			cache[kw.Context] = resp.Embeddings[i]
 		}
 	}
 	return cache, nil
