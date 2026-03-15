@@ -47,6 +47,7 @@ func main() {
 		Password:      cfg.Redis.Password,
 		DB:            cfg.Redis.DB,
 		UnstableResp3: true,
+		Protocol:      3,
 	})
 	defer redisClient.Close()
 

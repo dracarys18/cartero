@@ -91,7 +91,7 @@ func (c *PlatformComponent) Bluesky() *platforms.BlueskyPlatform {
 	return c.blueskyPlatform
 }
 
-func (c *PlatformComponent) Embedder() platforms.Embedder {
+func (c *PlatformComponent) Embedder() *platforms.OllamaPlatform {
 	return c.embeddingPlatform
 }
 
