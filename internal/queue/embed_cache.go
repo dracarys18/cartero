@@ -19,7 +19,7 @@ const (
 	embeddingField   = "embedding"
 )
 
-type KNNResult struct {
+type SearchResult struct {
 	Keyword string
 	Score   float64
 }
@@ -131,9 +131,10 @@ func (e *EmbedCache) EnsureIndex(ctx context.Context, dims int) error {
 	).Err()
 }
 
-func (e *EmbedCache) KNNSearch(ctx context.Context, k int, queryVec []float32) ([]KNNResult, error) {
+func (e *EmbedCache) Search(ctx context.Context, k int, queryVec []float32) ([]SearchResult, error) {
 	scoreField := fmt.Sprintf("__%s_score", embeddingField)
 	query := fmt.Sprintf("(*)=>[KNN %d @%s $vec AS %s]", k, embeddingField, scoreField)
+
 	raw, err := e.client.Do(ctx,
 		"FT.SEARCH", e.indexName, query,
 		"PARAMS", "2", "vec", encodeVec(queryVec),
@@ -142,17 +143,17 @@ func (e *EmbedCache) KNNSearch(ctx context.Context, k int, queryVec []float32) (
 		"DIALECT", "2",
 	).Result()
 	if err != nil {
-		return nil, fmt.Errorf("KNNSearch: %w", err)
+		return nil, fmt.Errorf("Search: %w", err)
 	}
 
 	resp, ok := raw.(map[interface{}]interface{})
 	if !ok {
-		return nil, fmt.Errorf("KNNSearch: unexpected result type %T", raw)
+		return nil, fmt.Errorf("Search: unexpected response type %T", raw)
 	}
-
 	docs, _ := resp["results"].([]interface{})
+
 	kwPrefix := e.prefix + embedKeyPrefix
-	results := make([]KNNResult, 0, len(docs))
+	results := make([]SearchResult, 0, len(docs))
 	for _, d := range docs {
 		doc, ok := d.(map[interface{}]interface{})
 		if !ok {
@@ -165,7 +166,7 @@ func (e *EmbedCache) KNNSearch(ctx context.Context, k int, queryVec []float32) (
 		if err != nil {
 			continue
 		}
-		results = append(results, KNNResult{
+		results = append(results, SearchResult{
 			Keyword: id[len(kwPrefix):],
 			Score:   1 - dist,
 		})

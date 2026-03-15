@@ -15,11 +15,11 @@ import (
 
 const queryPrefix = "Retrieve technical articles about: "
 
-func buildKeywordEmbeddings(ctx context.Context, client *platforms.OllamaPlatform, embedCache *queue.EmbedCache, kws []keywords.KeywordWithContext) error {
+func buildKeywordEmbeddings(ctx context.Context, client platforms.Embedder, embedCache *queue.EmbedCache, kws []keywords.KeywordWithContext) error {
 	return SeedKeywordEmbeddings(ctx, client, embedCache, kws, nil)
 }
 
-func SeedKeywordEmbeddings(ctx context.Context, client *platforms.OllamaPlatform, embedCache *queue.EmbedCache, kws []keywords.KeywordWithContext, logger *slog.Logger) error {
+func SeedKeywordEmbeddings(ctx context.Context, client platforms.Embedder, embedCache *queue.EmbedCache, kws []keywords.KeywordWithContext, logger *slog.Logger) error {
 	var misses []keywords.KeywordWithContext
 	for _, kw := range kws {
 		_, ok, err := embedCache.Get(ctx, kw.Keyword)
@@ -116,7 +116,7 @@ func (k *KeywordFilterProcessor) processEmbedding(ctx context.Context, st types.
 			WithDetail("title", item.GetTitle())
 	}
 
-	results, err := k.embedCache.KNNSearch(ctx, 5, item.GetEmbedding())
+	results, err := k.embedCache.Search(ctx, 5, item.GetEmbedding())
 	if err != nil {
 		return fmt.Errorf("KNN search: %w", err)
 	}
