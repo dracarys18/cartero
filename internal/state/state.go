@@ -19,6 +19,8 @@ import (
 	"cartero/internal/targets"
 	"cartero/internal/types"
 	"log/slog"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type State struct {
@@ -28,6 +30,7 @@ type State struct {
 	Storage         storage.StorageInterface
 	Chain           types.ProcessorChain
 	Queue           *queue.Queue
+	RedisConn       *queue.RedisConnection
 	Logger          *slog.Logger
 	EmbeddedScripts embed.FS
 }
@@ -56,6 +59,7 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to redis: %w", err)
 	}
+	s.RedisConn = conn
 	s.Queue = queue.New(conn, s.Config.Redis.StreamMaxLen, consumerName())
 
 	s.Registry = components.NewRegistry()
@@ -140,6 +144,10 @@ func (s *State) GetLogger() *slog.Logger {
 
 func (s *State) GetQueue() types.Queue {
 	return s.Queue
+}
+
+func (s *State) GetRedisClient() *redis.Client {
+	return s.RedisConn.Client()
 }
 
 func (s *State) buildPlatformComponent() *components.PlatformComponent {

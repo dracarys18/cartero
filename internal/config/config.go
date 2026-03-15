@@ -1,9 +1,11 @@
 package config
 
 import (
+	"cartero/internal/utils/keywords"
+	"encoding/json"
 	"fmt"
+	"log"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -108,10 +110,10 @@ type LessWrongSettings struct {
 }
 
 type ScraperSettings struct {
-	ScraperType string                 `toml:"scraper_type"`
-	ScraperName string                 `toml:"scraper_name"`
-	ScriptPath  string                 `toml:"script_path"`
-	Config      map[string]interface{} `toml:"config"`
+	ScraperType string         `toml:"scraper_type"`
+	ScraperName string         `toml:"scraper_name"`
+	ScriptPath  string         `toml:"script_path"`
+	Config      map[string]any `toml:"config"`
 }
 
 type ProcessorConfig struct {
@@ -144,13 +146,13 @@ type ScoreFilterSettings struct {
 }
 
 type KeywordFilterSettings struct {
-	Keywords         []string `toml:"keywords"`
-	ExactKeyword     []string `toml:"exact_keywords"`
-	KeywordsFile     string   `toml:"keywords_file"`
-	Mode             string   `toml:"mode"`
-	DensityThreshold float64  `toml:"density_threshold"`
-	TitleBypass      bool     `toml:"title_bypass"`
-	EmbedThreshold   float64  `toml:"embed_threshold"`
+	Keywords         []keywords.KeywordWithContext `toml:"keywords"`
+	ExactKeyword     []string                      `toml:"exact_keywords"`
+	KeywordsFile     string                        `toml:"keywords_file"`
+	Mode             string                        `toml:"mode"`
+	DensityThreshold float64                       `toml:"density_threshold"`
+	TitleBypass      bool                          `toml:"title_bypass"`
+	EmbedThreshold   float64                       `toml:"embed_threshold"`
 }
 
 type EmbedTextSettings struct {
@@ -252,13 +254,11 @@ func loadKeywordFiles(config *Config) error {
 			return fmt.Errorf("processor %q: %w", name, err)
 		}
 
-		var keywords []string
-		for _, line := range strings.Split(string(data), "\n") {
-			line = strings.TrimSpace(line)
-			if line == "" || strings.HasPrefix(line, "#") {
-				continue
-			}
-			keywords = append(keywords, line)
+		var keywords []keywords.KeywordWithContext
+		err = json.Unmarshal(data, &keywords)
+
+		if err != nil {
+			log.Fatalf("processor %q: failed to parse keywords file: %v", name, err)
 		}
 
 		settings := proc.Settings

@@ -1,4 +1,4 @@
-.PHONY: all build clean run test install deps fmt vet lint
+.PHONY: all build build-seed clean run test install deps fmt vet lint
 
 all: build
 
@@ -8,6 +8,9 @@ deps:
 
 build:
 	go build -o bin/cartero ./cmd/cartero
+
+build-seed:
+	go build -o bin/seed-embeddings ./cmd/seed-embeddings
 
 install:
 	go install ./cmd/cartero
@@ -34,6 +37,7 @@ lint: fmt vet
 help:
 	@echo "Available targets:"
 	@echo "  build     - Build the bot binary"
+	@echo "  build-seed - Build the seed-embeddings utility"
 	@echo "  run       - Run the bot with config.toml"
 	@echo "  clean     - Clean build artifacts and databases"
 	@echo "  deps      - Download dependencies"

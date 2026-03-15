@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type Item struct {
@@ -256,6 +258,7 @@ type StateAccessor interface {
 	GetPipeline() interface{}
 	GetChain() ProcessorChain
 	GetQueue() Queue
+	GetRedisClient() *redis.Client
 }
 
 type ProcessorChain interface {
