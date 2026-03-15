@@ -4,6 +4,7 @@ import (
 	"cartero/internal/utils/keywords"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -255,6 +256,10 @@ func loadKeywordFiles(config *Config) error {
 
 		var keywords []keywords.KeywordWithContext
 		err = json.Unmarshal(data, &keywords)
+
+		if err != nil {
+			log.Fatalf("processor %q: failed to parse keywords file: %v", name, err)
+		}
 
 		settings := proc.Settings
 		settings.Keywords = append(settings.Keywords, keywords...)
