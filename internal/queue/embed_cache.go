@@ -9,6 +9,8 @@ import (
 	"os"
 	"strconv"
 
+	"cartero/internal/utils/keywords"
+
 	"github.com/redis/go-redis/v9"
 )
 
@@ -19,10 +21,7 @@ const (
 	embeddingField   = "embedding"
 )
 
-type KNNResult struct {
-	Keyword string
-	Score   float64
-}
+type KNNResult = keywords.Score
 
 type EmbedCache struct {
 	client    *redis.Client
@@ -152,7 +151,7 @@ func (e *EmbedCache) KNNSearch(ctx context.Context, k int, queryVec []float32) (
 
 	docs, _ := resp["results"].([]interface{})
 	kwPrefix := e.prefix + embedKeyPrefix
-	results := make([]KNNResult, 0, len(docs))
+	topK := keywords.NewTopK(k)
 	for _, d := range docs {
 		doc, ok := d.(map[interface{}]interface{})
 		if !ok {
@@ -165,10 +164,7 @@ func (e *EmbedCache) KNNSearch(ctx context.Context, k int, queryVec []float32) (
 		if err != nil {
 			continue
 		}
-		results = append(results, KNNResult{
-			Keyword: id[len(kwPrefix):],
-			Score:   1 - dist,
-		})
+		topK.Add(id[len(kwPrefix):], 1-dist)
 	}
-	return results, nil
+	return topK.Top(k), nil
 }
