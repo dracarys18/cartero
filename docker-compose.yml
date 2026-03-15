@@ -1,9 +1,10 @@
 services:
   redis:
-    image: redis:7-alpine
+    image: redis/redis-stack:latest
     container_name: cartero-redis
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
     volumes:
       - redis-data:/data
     networks:
@@ -17,7 +18,7 @@ services:
       - redis
     volumes:
       - ./config.toml:/app/config.toml:ro
-      - ./keywords.txt:/app/keywords.txt:ro
+      - ./assets/keywords/tech/contextual_keywords.json:/app/assets/keywords/tech/contextual_keywords.json:ro
       - cartero-data:/app/data
     environment:
       - TZ=UTC

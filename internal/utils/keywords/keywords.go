@@ -8,8 +8,8 @@ import (
 var tokenRegex = regexp.MustCompile(`[a-zA-Z0-9]+`)
 
 type KeywordWithContext struct {
-	Keyword string
-	Context string
+	Keyword string `json:"keyword"`
+	Context string `json:"context_string"`
 }
 
 type Keywords struct {

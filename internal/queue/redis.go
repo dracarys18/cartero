@@ -14,9 +14,10 @@ type RedisConnection struct {
 
 func NewRedisConnection(addr, password string, db int) (*RedisConnection, error) {
 	client := redis.NewClient(&redis.Options{
-		Addr:     addr,
-		Password: password,
-		DB:       db,
+		Addr:          addr,
+		Password:      password,
+		DB:            db,
+		UnstableResp3: true,
 	})
 
 	if err := client.Ping(context.Background()).Err(); err != nil {
@@ -75,6 +76,10 @@ func (r *RedisConnection) Consume(ctx context.Context, stream, group, consumer s
 
 func (r *RedisConnection) Ack(ctx context.Context, stream, group string, ids ...string) error {
 	return r.client.XAck(ctx, stream, group, ids...).Err()
+}
+
+func (r *RedisConnection) Client() *redis.Client {
+	return r.client
 }
 
 func (r *RedisConnection) Close() error {
