@@ -36,12 +36,10 @@ func GetArticle(u string, limit int, mod ...readability.RequestWith) (*types.Art
 
 	client := surfClient.Std()
 	resp, err := client.Get(u)
-
-	defer resp.Body.Close()
-
 	if err != nil {
-		fmt.Println("Error reading body:", err)
+		return nil, fmt.Errorf("failed to fetch URL: %w", err)
 	}
+	defer resp.Body.Close()
 
 	article, err := readability.FromReader(resp.Body, parsedUrl)
 
