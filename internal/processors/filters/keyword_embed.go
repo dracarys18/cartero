@@ -13,7 +13,7 @@ import (
 	"github.com/ollama/ollama/api"
 )
 
-const queryPrefix = "Retrieve technical articles about: "
+const queryPrefix = "Represent this sentence for searching relevant passages: "
 
 func buildKeywordEmbeddings(ctx context.Context, client *platforms.OllamaPlatform, embedCache *queue.EmbedCache, kws []keywords.KeywordWithContext) error {
 	return SeedKeywordEmbeddings(ctx, client, embedCache, kws, nil)
