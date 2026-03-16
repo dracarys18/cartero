@@ -43,8 +43,6 @@ func (e *ExtractText) Process(ctx context.Context, st types.StateAccessor, item 
 		return nil
 	}
 
-	httpMod := utils.BrowserHeadersModifier()
-
 	article, err := utils.GetArticle(urlStr, limit, httpMod)
 	if err != nil {
 		logger.Error("ExtractText processor failed to extract article text", "processor", e.name, "item_id", item.ID, "error", err)
