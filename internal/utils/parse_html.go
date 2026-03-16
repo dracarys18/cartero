@@ -39,7 +39,8 @@ func GetArticle(u string, limit int, mod ...readability.RequestWith) (*types.Art
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch URL: %w", err)
 	}
-	defer resp.Body.Close()
+
+	defer func() { _ = resp.Body.Close() }()
 
 	article, err := readability.FromReader(resp.Body, parsedUrl)
 
