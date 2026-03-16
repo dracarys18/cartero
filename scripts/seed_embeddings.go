@@ -24,7 +24,7 @@ type entry struct {
 func main() {
 	ctx := context.Background()
 
-	cfg, err := config.Load("config.toml")
+	cfg, err := config.Load("config-seed.toml")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "load config: %v\n", err)
 		os.Exit(1)

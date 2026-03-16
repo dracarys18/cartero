@@ -41,8 +41,8 @@ func main() {
 	embedder := platforms.NewOllamaPlatform(ollamaCfg.Settings.EmbeddingModel)
 
 	splitter := textsplitter.NewRecursiveCharacter(
-		textsplitter.WithChunkSize(400),
-		textsplitter.WithChunkOverlap(50),
+		textsplitter.WithChunkSize(1800),
+		textsplitter.WithChunkOverlap(1800/8),
 	)
 
 	chunks, err := splitter.SplitText(text)
