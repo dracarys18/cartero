@@ -18,7 +18,6 @@ services:
       - redis
     volumes:
       - ./config.toml:/app/config.toml:ro
-      - ./assets/keywords/tech/contextual_keywords.json:/app/assets/keywords/tech/contextual_keywords.json:ro
       - cartero-data:/app/data
     environment:
       - TZ=UTC
