@@ -1,6 +1,7 @@
 package config
 
 import (
+	"cartero/internal/utils/file"
 	"cartero/internal/utils/keywords"
 	"encoding/json"
 	"fmt"
@@ -249,7 +250,8 @@ func loadKeywordFiles(config *Config) error {
 			continue
 		}
 
-		data, err := os.ReadFile(proc.Settings.KeywordsFile)
+		file := file.NewFile(proc.Settings.KeywordsFile)
+		data, err := file.Get()
 		if err != nil {
 			return fmt.Errorf("processor %q: %w", name, err)
 		}
@@ -308,8 +310,6 @@ func validateConfig(config *Config) error {
 
 	return nil
 }
-
-// Helpers
 
 func ParseDuration(d string, def time.Duration) time.Duration {
 	if d == "" {
