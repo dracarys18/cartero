@@ -11,6 +11,7 @@ import (
 	"cartero/internal/config"
 	"cartero/internal/platforms"
 	"cartero/internal/queue"
+	"cartero/internal/utils/file"
 
 	ollamaapi "github.com/ollama/ollama/api"
 	"github.com/redis/go-redis/v9"
@@ -30,7 +31,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	data, err := os.ReadFile("assets/keywords/tech/contextual_keywords.json")
+	data, err := loadKeywordFiles(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "read keywords: %v\n", err)
 		os.Exit(1)
@@ -118,4 +119,22 @@ func main() {
 
 	fmt.Printf("stored: %d  dims: %d  HNSW index ready\n", len(missing), dims)
 	fmt.Println("done")
+}
+
+func loadKeywordFiles(config *config.Config) ([]byte, error) {
+	for name, proc := range config.Processors {
+		if proc.Settings.KeywordsFile == "" {
+			continue
+		}
+
+		file := file.NewFile(proc.Settings.KeywordsFile)
+		data, err := file.Get()
+		if err != nil {
+			return nil, fmt.Errorf("processor %q: %w", name, err)
+		} else {
+			return data, nil
+		}
+
+	}
+	return nil, nil
 }
