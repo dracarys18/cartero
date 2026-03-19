@@ -14,7 +14,7 @@ import (
 	"github.com/ollama/ollama/api"
 )
 
-const taskDescription = "Given a web search query, retrieve relevant passages that answer the query"
+const taskDescription = "Represent this sentence for searching relevant passages: "
 
 type EmbedTextProcessor struct {
 	name string
