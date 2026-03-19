@@ -2,6 +2,7 @@ package processors
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/tmc/langchaingo/textsplitter"
 	"github.com/viterin/vek/vek32"
@@ -12,6 +13,8 @@ import (
 
 	"github.com/ollama/ollama/api"
 )
+
+const taskDescription = "Given a web search query, retrieve relevant passages that answer the query"
 
 type EmbedTextProcessor struct {
 	name string
@@ -62,6 +65,7 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 		logger.Warn("embed_text: failed to split text", "processor", e.name, "item_id", item.ID, "error", err)
 		return nil
 	}
+	e.AppendToQuery(&chunks)
 
 	registry := st.GetRegistry()
 	pc := registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
@@ -96,4 +100,10 @@ func averageEmbeddings(vecs [][]float32) []float32 {
 	}
 	vek32.DivNumber_Inplace(result, float32(len(vecs)))
 	return result
+}
+
+func (e *EmbedTextProcessor) AppendToQuery(chunks *[]string) {
+	for i, c := range *chunks {
+		(*chunks)[i] = fmt.Sprintf("Instruct: %s\nQuery: %s", taskDescription, c)
+	}
 }

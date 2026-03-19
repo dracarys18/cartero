@@ -13,8 +13,6 @@ import (
 	"github.com/ollama/ollama/api"
 )
 
-const queryPrefix = "Given a web search query, retrieve relevant passages that answer the query: "
-
 func buildKeywordEmbeddings(ctx context.Context, client *platforms.OllamaPlatform, embedCache *queue.EmbedCache, kws []keywords.KeywordWithContext) error {
 	return SeedKeywordEmbeddings(ctx, client, embedCache, kws, nil)
 }
@@ -48,7 +46,7 @@ func SeedKeywordEmbeddings(ctx context.Context, client *platforms.OllamaPlatform
 
 	prefixed := make([]string, len(misses))
 	for i, kw := range misses {
-		prefixed[i] = queryPrefix + kw.Context
+		prefixed[i] = kw.Context
 	}
 
 	if logger != nil {
