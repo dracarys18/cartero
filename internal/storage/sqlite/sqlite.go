@@ -24,7 +24,7 @@ type SQLiteStorage struct {
 }
 
 func New(dbPath string) (storage.StorageInterface, error) {
-	dbPath = fmt.Sprintf("file:%s?cache=shared&mode=rwc&_journal_mode=WAL", dbPath)
+	dbPath = fmt.Sprintf("file:%s?mode=rwc&_journal_mode=WAL&_busy_timeout=5000", dbPath)
 	conn, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
