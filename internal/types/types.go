@@ -4,6 +4,7 @@ import (
 	"cartero/internal/components"
 	"cartero/internal/config"
 	"cartero/internal/storage"
+	strutils "cartero/internal/utils/string"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -47,7 +48,7 @@ func (i *Item) GetSource() string {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 
-	return i.Source
+	return strutils.Readable(i.Source)
 }
 
 func (i *Item) GetContent() interface{} {
