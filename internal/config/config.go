@@ -52,6 +52,7 @@ type PlatformSettings struct {
 	DiscordPlatformSettings
 	OllamaPlatformSettings
 	BlueskyPlatformSettings
+	TelegramPlatformSettings
 }
 
 type DiscordPlatformSettings struct {
@@ -67,6 +68,10 @@ type OllamaPlatformSettings struct {
 type BlueskyPlatformSettings struct {
 	Identifier string `toml:"identifier"`
 	Password   string `toml:"password"`
+}
+
+type TelegramPlatformSettings struct {
+	BotToken string `toml:"bot_token"`
 }
 
 type SourceConfig struct {
@@ -203,6 +208,7 @@ type TargetSettings struct {
 	DiscordTargetSettings
 	FeedTargetSettings
 	BlueskyTargetSettings
+	TelegramTargetSettings
 }
 
 type DiscordTargetSettings struct {
@@ -218,6 +224,10 @@ type FeedTargetSettings struct {
 
 type BlueskyTargetSettings struct {
 	Languages []string `toml:"languages"`
+}
+
+type TelegramTargetSettings struct {
+	ChatID int64 `toml:"chat_id"`
 }
 
 func Load(path string) (*Config, error) {

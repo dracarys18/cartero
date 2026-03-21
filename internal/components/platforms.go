@@ -11,6 +11,7 @@ type PlatformComponent struct {
 	config            map[string]config.PlatformConfig
 	discordPlatform   *platforms.DiscordPlatform
 	blueskyPlatform   *platforms.BlueskyPlatform
+	telegramPlatform  *platforms.TelegramPlatform
 	ollamaPlatforms   map[string]*platforms.OllamaPlatform
 	embeddingPlatform *platforms.OllamaPlatform
 }
@@ -63,6 +64,20 @@ func (c *PlatformComponent) Initialize(ctx context.Context) error {
 		c.blueskyPlatform = bluesky
 	}
 
+	if tgCfg, exists := c.config["telegram"]; exists && tgCfg.Enabled {
+		telegram, err := platforms.NewTelegramPlatform(&tgCfg.Settings.TelegramPlatformSettings)
+		if err != nil {
+			return fmt.Errorf("failed to create telegram platform: %w", err)
+		}
+		if err := telegram.Validate(); err != nil {
+			return fmt.Errorf("telegram platform validation failed: %w", err)
+		}
+		if err := telegram.Initialize(ctx); err != nil {
+			return fmt.Errorf("telegram platform initialization failed: %w", err)
+		}
+		c.telegramPlatform = telegram
+	}
+
 	for _, cfg := range c.config {
 		if cfg.Type == "ollama" && cfg.Settings.EmbeddingModel != "" {
 			c.embeddingPlatform = platforms.NewOllamaPlatform(cfg.Settings.EmbeddingModel)
@@ -80,6 +95,9 @@ func (c *PlatformComponent) Close(ctx context.Context) error {
 	if c.blueskyPlatform != nil {
 		_ = c.blueskyPlatform.Close(ctx)
 	}
+	if c.telegramPlatform != nil {
+		_ = c.telegramPlatform.Close(ctx)
+	}
 	return nil
 }
 
@@ -89,6 +107,10 @@ func (c *PlatformComponent) Discord() *platforms.DiscordPlatform {
 
 func (c *PlatformComponent) Bluesky() *platforms.BlueskyPlatform {
 	return c.blueskyPlatform
+}
+
+func (c *PlatformComponent) Telegram() *platforms.TelegramPlatform {
+	return c.telegramPlatform
 }
 
 func (c *PlatformComponent) Embedder() *platforms.OllamaPlatform {

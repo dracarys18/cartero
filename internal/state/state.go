@@ -339,6 +339,13 @@ func (s *State) createTarget(name string, cfg config.TargetConfig) types.Target 
 		bskyCfg := cfg.Settings.BlueskyTargetSettings
 		return targets.NewBlueskyTarget(name, bskyCfg.Languages, s.Registry)
 
+	case "telegram":
+		tgCfg := cfg.Settings.TelegramTargetSettings
+		if tgCfg.ChatID == 0 {
+			return nil
+		}
+		return targets.NewTelegramTarget(name, tgCfg.ChatID, s.Registry)
+
 	default:
 		return nil
 	}
