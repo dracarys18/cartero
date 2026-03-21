@@ -1,0 +1,16 @@
+{{- $score := index .Metadata "score" -}}
+{{- $author := index .Metadata "author" -}}
+{{- $comments := index .Metadata "comments" -}}
+{{- $commentCount := index .Metadata "comment_count" -}}
+{{- $summary := index .Metadata "summary" -}}
+<b><a href="{{ .URL }}">{{ .Title }}</a></b>
+{{ if or $score $author -}}
+{{ if $score }}⬆ {{ $score }}  {{ end }}{{ if $author }}✍ {{ $author }}{{ end }}
+{{ end -}}
+{{ if $comments -}}
+💬 <a href="{{ $comments }}">Discussion{{ if $commentCount }} ({{ $commentCount }}){{ end }}</a>
+{{ end -}}
+{{ if $summary -}}
+<i>{{ slice $summary 0 800 }}</i>
+{{ end -}}
+<i>Source: {{ .Source }}</i>

@@ -26,6 +26,12 @@ enabled = false
 identifier = "your-handle.bsky.social"
 password = "your-app-password"
 
+[platforms.telegram]
+type = "telegram"
+enabled = false
+[platforms.telegram.settings]
+bot_token = "YOUR_TELEGRAM_BOT_TOKEN_HERE"
+
 [sources.hackernews]
 type = "hackernews"
 enabled = true
@@ -156,6 +162,13 @@ enabled = false
 platform = "bluesky"
 [targets.bluesky_example.settings]
 languages = ["en"]
+
+[targets.telegram_hn]
+type = "telegram"
+enabled = false
+platform = "telegram"
+[targets.telegram_hn.settings]
+chat_id = -1001234567890
 
 [targets.feed_target]
 type = "feed"
