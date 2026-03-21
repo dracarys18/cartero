@@ -47,11 +47,7 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 		description = article.Description
 	}
 
-	text := fmt.Sprintf("%s %s %s", item.GetTitle(), description, body)
-
-	if text == "" {
-		return nil
-	}
+	chunks := []string{item.GetTitle(), description}
 
 	chunkSize := cfg.ChunkSize
 	if chunkSize == 0 {
@@ -63,7 +59,9 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 		textsplitter.WithChunkOverlap(chunkSize/8),
 	)
 
-	chunks, err := splitter.SplitText(text)
+	bodyChunk, err := splitter.SplitText(body)
+	chunks = append(chunks, bodyChunk...)
+
 	if err != nil || len(chunks) == 0 {
 		logger.Warn("embed_text: failed to split text", "processor", e.name, "item_id", item.ID, "error", err)
 		return nil
