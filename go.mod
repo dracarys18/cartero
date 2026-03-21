@@ -15,13 +15,13 @@ require (
 	github.com/bwmarrin/discordgo v0.29.0
 	github.com/cjoudrey/gluahttp v0.0.0-20201111170219-25003d9adfa9
 	github.com/enetx/surf v1.0.197
+	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/gorilla/feeds v1.1.2
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/mmcdole/gofeed v1.3.0
 	github.com/ollama/ollama v0.13.5
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/tmc/langchaingo v0.1.14
-	github.com/viterin/vek v0.4.3
 	github.com/yuin/gopher-lua v1.1.1
 	golang.org/x/text v0.35.0
 	layeh.com/gopher-json v0.0.0-20201124131017-552bb3c4c3bf
@@ -33,7 +33,6 @@ require (
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de // indirect
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/chewxy/math32 v1.11.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/earthboundkid/versioninfo/v2 v2.24.1 // indirect
@@ -46,7 +45,6 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-shiori/dom v0.0.0-20230515143342-73569d674e1c // indirect
-	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/gogs/chardet v0.0.0-20211120154057-b7413eaefb8f // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -89,7 +87,6 @@ require (
 	github.com/quic-go/quic-go v0.59.0 // indirect
 	github.com/refraction-networking/utls v1.8.3-0.20260301010127-aa6edf4b11af // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
-	github.com/viterin/partial v1.1.0 // indirect
 	github.com/whyrusleeping/cbor-gen v0.2.1-0.20241030202151-b7a6831be65e // indirect
 	github.com/wzshiming/socks5 v0.7.0 // indirect
 	gitlab.com/golang-commonmark/html v0.0.0-20191124015941-a22733972181 // indirect
@@ -108,7 +105,6 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.49.0 // indirect
-	golang.org/x/exp v0.0.0-20250218142911-aa4b98e5adaa // indirect
 	golang.org/x/net v0.52.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect

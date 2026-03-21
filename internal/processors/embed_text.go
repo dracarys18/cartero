@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/tmc/langchaingo/textsplitter"
-	"github.com/viterin/vek/vek32"
 
 	"cartero/internal/components"
 	procnames "cartero/internal/processors/names"
@@ -41,10 +40,14 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 	logger := st.GetLogger()
 
 	var body string
+	var description string
+
 	if article := item.GetArticle(); article != nil {
 		body = article.Text
+		description = article.Description
 	}
-	text := item.GetTitle() + " " + body
+
+	text := fmt.Sprintf("%s %s %s", item.GetTitle(), description, body)
 
 	if text == "" {
 		return nil
@@ -85,21 +88,9 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 		return nil
 	}
 
-	item.SetEmbedding(averageEmbeddings(resp.Embeddings))
+	item.SetEmbedding(resp.Embeddings)
 	logger.Debug("embed_text: stored embedding", "processor", e.name, "item_id", item.ID, "chunks", len(chunks), "dim", len(resp.Embeddings[0]))
 	return nil
-}
-
-func averageEmbeddings(vecs [][]float32) []float32 {
-	if len(vecs) == 0 {
-		return nil
-	}
-	result := make([]float32, len(vecs[0]))
-	for _, v := range vecs {
-		vek32.Add_Inplace(result, v)
-	}
-	vek32.DivNumber_Inplace(result, float32(len(vecs)))
-	return result
 }
 
 func (e *EmbedTextProcessor) AppendToQuery(chunks *[]string) {

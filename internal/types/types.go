@@ -27,7 +27,7 @@ type Item struct {
 	TextContent     *Article
 	MatchedKeywords string
 	Timestamp       time.Time
-	Embedding       []float32 `json:"-"`
+	Embedding       [][]float32 `json:"-"`
 	mu              sync.RWMutex
 }
 
@@ -155,13 +155,13 @@ func (i *Item) SetMatchedKeywords(keywords string) {
 	i.MatchedKeywords = keywords
 }
 
-func (i *Item) GetEmbedding() []float32 {
+func (i *Item) GetEmbedding() [][]float32 {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 	return i.Embedding
 }
 
-func (i *Item) SetEmbedding(v []float32) {
+func (i *Item) SetEmbedding(v [][]float32) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	i.Embedding = v
