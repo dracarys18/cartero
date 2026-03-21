@@ -30,7 +30,7 @@ password = "your-app-password"
 type = "telegram"
 enabled = false
 [platforms.telegram.settings]
-bot_token = "YOUR_TELEGRAM_BOT_TOKEN_HERE"
+tg_bot_token = "YOUR_TELEGRAM_BOT_TOKEN_HERE"
 
 [sources.hackernews]
 type = "hackernews"

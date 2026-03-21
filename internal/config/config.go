@@ -71,7 +71,7 @@ type BlueskyPlatformSettings struct {
 }
 
 type TelegramPlatformSettings struct {
-	BotToken string `toml:"bot_token"`
+	BotToken string `toml:"tg_bot_token"`
 }
 
 type SourceConfig struct {
