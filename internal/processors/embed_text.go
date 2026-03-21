@@ -2,7 +2,7 @@ package processors
 
 import (
 	"context"
-	"fmt"
+	"strings"
 
 	"github.com/tmc/langchaingo/textsplitter"
 
@@ -12,8 +12,6 @@ import (
 
 	"github.com/ollama/ollama/api"
 )
-
-const taskDescription = "Represent this sentence for searching relevant passages: "
 
 type EmbedTextProcessor struct {
 	name string
@@ -47,35 +45,56 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 		description = article.Description
 	}
 
-	chunks := []string{item.GetTitle(), description}
+	chunks := []string{}
+
+	if item.GetTitle() != "" {
+		chunks = append(chunks, item.GetTitle())
+	}
+
+	if description != "" {
+		chunks = append(chunks, description)
+	}
 
 	chunkSize := cfg.ChunkSize
 	if chunkSize == 0 {
 		chunkSize = 400
 	}
 
-	splitter := textsplitter.NewRecursiveCharacter(
-		textsplitter.WithChunkSize(chunkSize),
-		textsplitter.WithChunkOverlap(chunkSize/8),
-	)
+	if body != "" {
+		splitter := textsplitter.NewRecursiveCharacter(
+			textsplitter.WithChunkSize(chunkSize),
+			textsplitter.WithChunkOverlap(chunkSize/8),
+		)
 
-	bodyChunk, err := splitter.SplitText(body)
-	chunks = append(chunks, bodyChunk...)
+		bodyChunk, err := splitter.SplitText(body)
 
-	if err != nil || len(chunks) == 0 {
-		logger.Warn("embed_text: failed to split text", "processor", e.name, "item_id", item.ID, "error", err)
+		if err != nil {
+			logger.Warn("embed_text: failed to split text", "processor", e.name, "item_id", item.ID, "error", err)
+		} else if len(bodyChunk) > 0 {
+			chunks = append(chunks, bodyChunk...)
+		}
+	}
+
+	var cleanChunks []string
+	for _, chunk := range chunks {
+		trimmed := strings.TrimSpace(chunk)
+		cleanChunks = append(cleanChunks, trimmed)
+	}
+
+	if len(cleanChunks) == 0 {
 		return nil
 	}
-	e.AppendToQuery(&chunks)
 
 	registry := st.GetRegistry()
 	pc := registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
 	embedder := pc.Embedder()
+
 	if embedder == nil {
 		return nil
 	}
 
-	resp, err := embedder.Embed(ctx, &api.EmbedRequest{Input: chunks})
+	resp, err := embedder.Embed(ctx, &api.EmbedRequest{Input: cleanChunks})
+
 	if err != nil {
 		logger.Warn("embed_text: failed to embed item", "processor", e.name, "item_id", item.ID, "error", err)
 		return nil
@@ -87,12 +106,6 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 	}
 
 	item.SetEmbedding(resp.Embeddings)
-	logger.Debug("embed_text: stored embedding", "processor", e.name, "item_id", item.ID, "chunks", len(chunks), "dim", len(resp.Embeddings[0]))
+	logger.Debug("embed_text: stored embedding", "processor", e.name, "item_id", item.ID, "chunks", len(cleanChunks), "dim", len(resp.Embeddings[0]))
 	return nil
-}
-
-func (e *EmbedTextProcessor) AppendToQuery(chunks *[]string) {
-	for i, c := range *chunks {
-		(*chunks)[i] = fmt.Sprintf("Instruct: %s\nQuery: %s", taskDescription, c)
-	}
 }
