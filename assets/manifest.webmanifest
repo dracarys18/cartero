@@ -1,0 +1,16 @@
+{
+  "name": "Cartero",
+  "short_name": "Cartero",
+  "description": "Content aggregation feed from Cartero",
+  "start_url": "/?source=pwa",
+  "display": "standalone",
+  "background_color": "#fafafa",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/assets/favicon.jpg",
+      "sizes": "any",
+      "type": "image/jpeg"
+    }
+  ]
+}

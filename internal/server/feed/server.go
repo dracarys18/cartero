@@ -103,6 +103,7 @@ func (s *Server) Start(ctx context.Context) error {
 	mux.HandleFunc("/feed.atom", s.handleAtomFeed)
 	mux.HandleFunc("/feed.json", s.handleJSONFeed)
 	mux.HandleFunc("/feed.health", s.handleHealth)
+	mux.HandleFunc("/sw.js", s.handleServiceWorker)
 
 	// Serve static assets
 	fileServer := http.FileServer(http.Dir("assets"))
@@ -140,6 +141,13 @@ func (s *Server) Shutdown(ctx context.Context) error {
 
 	}
 	return nil
+}
+
+func (s *Server) handleServiceWorker(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/javascript")
+	w.Header().Set("Service-Worker-Allowed", "/")
+	w.Header().Set("Cache-Control", "no-cache")
+	http.ServeFile(w, r, "assets/sw.js")
 }
 
 func (s *Server) handleRSSFeed(w http.ResponseWriter, r *http.Request) {

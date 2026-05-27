@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cartero</title>
     <link rel="icon" type="image/jpeg" href="/assets/favicon.jpg">
+    <link rel="manifest" href="/assets/manifest.webmanifest">
+    <meta name="theme-color" content="#000000">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <style>
@@ -480,6 +482,12 @@
         <div>last updated: {{.Now.Format "Jan 2, 2006 15:04 MST"}}</div>
     </div>
     <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
+
         function shareStory(btn, title, url) {
             const promo = 'Shared from ' + window.location.origin;
             if (navigator.share) {
