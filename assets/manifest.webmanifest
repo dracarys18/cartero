@@ -4,8 +4,8 @@
   "description": "Content aggregation feed from Cartero",
   "start_url": "/?source=pwa",
   "display": "standalone",
-  "background_color": "#111111",
-  "theme_color": "#111111",
+  "background_color": "#161616",
+  "theme_color": "#161616",
   "icons": [
     {
       "src": "/assets/favicon.jpg",
