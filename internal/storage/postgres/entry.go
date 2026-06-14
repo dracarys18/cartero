@@ -21,12 +21,12 @@ func (s *entryStore) Store(ctx context.Context, item storage.Item) error {
 	h := hash.HashURL(item.GetURL())
 
 	query := `
-		INSERT INTO feed_entries (id, hash, source, entry_timestamp)
-		VALUES ($1, $2, $3, $4)
+		INSERT INTO feed_entries (id, hash, source, entry_timestamp, title)
+		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT(id) DO NOTHING
 	`
 
-	_, err := s.db.ExecContext(ctx, query, item.GetID(), h, item.GetSource(), item.GetTimestamp())
+	_, err := s.db.ExecContext(ctx, query, item.GetID(), h, item.GetSource(), item.GetTimestamp(), item.GetTitle())
 	if err != nil {
 		return fmt.Errorf("failed to store entry: %w", err)
 	}

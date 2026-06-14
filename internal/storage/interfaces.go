@@ -15,6 +15,7 @@ type StorageInterface interface {
 type Item interface {
 	GetID() string
 	GetURL() string
+	GetTitle() string
 	GetSource() string
 	GetTimestamp() time.Time
 }
