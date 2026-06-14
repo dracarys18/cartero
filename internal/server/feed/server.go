@@ -5,7 +5,6 @@ import (
 	"fmt"
 	htmltemplate "html/template"
 	"net/http"
-	"sort"
 	"strings"
 	"time"
 
@@ -233,10 +232,6 @@ func (s *Server) buildFeed(entries []storage.FeedEntry) *feeds.Feed {
 		}
 		items = append(items, item)
 	}
-
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].Created.After(items[j].Created)
-	})
 
 	if len(items) > s.config.MaxItems {
 		items = items[:s.config.MaxItems]

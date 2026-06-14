@@ -10,6 +10,27 @@ services:
     networks:
       - cartero-network
 
+  postgres:
+    image: postgres:17-alpine
+    container_name: cartero-postgres
+    restart: unless-stopped
+    profiles: [dev]
+    environment:
+      POSTGRES_USER: cartero
+      POSTGRES_PASSWORD: cartero
+      POSTGRES_DB: cartero
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cartero"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cartero-network
+
   cartero:
     image: ghcr.io/dracarys18/cartero:latest
     container_name: cartero
@@ -75,4 +96,6 @@ volumes:
   diun-data:
     driver: local
   redis-data:
+    driver: local
+  postgres-data:
     driver: local

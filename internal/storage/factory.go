@@ -24,5 +24,8 @@ func New(ctx context.Context, cfg config.StorageConfig) (StorageInterface, error
 		return nil, fmt.Errorf("unsupported storage type: %s", storageType)
 	}
 
+	if storageType == "postgres" {
+		return fn(cfg.DSN)
+	}
 	return fn(cfg.Path)
 }

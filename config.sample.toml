@@ -4,8 +4,13 @@ interval = "10m"
 run_once = false
 
 [storage]
+# SQLite (default)
 type = "sqlite"
 path = "./cartero.db"
+
+# Postgres
+# type = "postgres"
+# dsn  = "postgres://cartero:cartero@localhost:5432/cartero?sslmode=disable"
 
 [platforms.ollama]
 type = "ollama"

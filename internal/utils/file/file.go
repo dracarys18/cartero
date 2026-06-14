@@ -53,6 +53,6 @@ func getLinkContent(url string) ([]byte, error) {
 }
 
 func (f File) IsLink() bool {
-	_, err := url.Parse(f.Href)
-	return err == nil
+	u, err := url.Parse(f.Href)
+	return err == nil && u.Scheme != ""
 }

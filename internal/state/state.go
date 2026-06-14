@@ -15,6 +15,7 @@ import (
 	"cartero/internal/queue"
 	"cartero/internal/sources"
 	"cartero/internal/storage"
+	_ "cartero/internal/storage/postgres"
 	_ "cartero/internal/storage/sqlite"
 	"cartero/internal/targets"
 	"cartero/internal/types"

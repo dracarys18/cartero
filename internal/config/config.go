@@ -39,6 +39,7 @@ type BotConfig struct {
 type StorageConfig struct {
 	Type string `toml:"type"`
 	Path string `toml:"path"`
+	DSN  string `toml:"dsn"`
 }
 
 type PlatformConfig struct {
@@ -306,7 +307,13 @@ func validateConfig(config *Config) error {
 		config.Storage.Type = "sqlite"
 	}
 
-	if config.Storage.Path == "" {
+	if config.Storage.Type == "postgres" {
+		if config.Storage.DSN == "" {
+			return fmt.Errorf("storage.dsn is required when storage.type is postgres")
+		}
+	}
+
+	if config.Storage.Type == "sqlite" && config.Storage.Path == "" {
 		config.Storage.Path = "./cartero.db"
 	}
 
