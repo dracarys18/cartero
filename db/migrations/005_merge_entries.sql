@@ -3,8 +3,8 @@
 ALTER TABLE feed_entries ADD COLUMN hash TEXT;
 ALTER TABLE feed_entries ADD COLUMN entry_timestamp DATETIME;
 
-INSERT INTO feed_entries (id, hash, source, entry_timestamp, created_at)
-  SELECT i.id, i.hash, i.source, i.timestamp, i.created_at
+INSERT INTO feed_entries (id, hash, source, entry_timestamp, created_at, title)
+  SELECT i.id, i.hash, i.source, i.timestamp, i.created_at, ''
   FROM items i WHERE true
   ON CONFLICT(id) DO UPDATE SET hash = excluded.hash, entry_timestamp = excluded.entry_timestamp;
 
