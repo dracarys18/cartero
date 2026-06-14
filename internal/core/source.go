@@ -14,10 +14,10 @@ type SourceRoute struct {
 
 func (sr *SourceRoute) filterTargets(ctx context.Context, state types.StateAccessor, item *types.Item) Targets {
 	store := state.GetStorage()
-	items := store.Items()
+	entries := store.Entries()
 
 	predicate := func(target types.Target) bool {
-		published, _ := items.IsPublished(ctx, item.ID, target.Name())
+		published, _ := entries.IsPublished(ctx, item.ID, target.Name())
 		return !published
 	}
 
@@ -50,7 +50,7 @@ func (sr *SourceRoute) processItem(ctx context.Context, state types.StateAccesso
 		return err
 	}
 
-	if err := store.Items().Store(ctx, item); err != nil {
+	if err := store.Entries().Store(ctx, item); err != nil {
 		logger.Error("Error storing item", "source", sr.Source.Name(), "item_id", item.ID, "error", err)
 		return err
 	}

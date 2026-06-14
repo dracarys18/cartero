@@ -39,7 +39,7 @@ func (t Targets) Process(ctx context.Context, state types.StateAccessor, item *t
 
 			logger.Info("Successfully published item to target", "item_id", item.ID, "target", tgt.Name())
 
-			if err := store.Items().MarkPublished(ctx, item.ID, tgt.Name()); err != nil {
+			if err := store.Entries().MarkPublished(ctx, item.ID, tgt.Name()); err != nil {
 				logger.Error("Error marking item as published", "item_id", item.ID, "target", tgt.Name(), "error", err)
 				errChan <- err
 			}

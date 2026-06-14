@@ -18,9 +18,8 @@ func init() {
 }
 
 type SQLiteStorage struct {
-	conn  *sql.DB
-	items storage.ItemStore
-	feeds storage.FeedStore
+	conn    *sql.DB
+	entries storage.EntryStore
 }
 
 func New(dbPath string) (storage.StorageInterface, error) {
@@ -41,9 +40,8 @@ func New(dbPath string) (storage.StorageInterface, error) {
 	}
 
 	return &SQLiteStorage{
-		conn:  conn,
-		items: newItemStore(conn),
-		feeds: newFeedStore(conn),
+		conn:    conn,
+		entries: newEntryStore(conn),
 	}, nil
 }
 
@@ -71,12 +69,8 @@ func (s *SQLiteStorage) GetConnection() *sql.DB {
 	return s.conn
 }
 
-func (s *SQLiteStorage) Items() storage.ItemStore {
-	return s.items
-}
-
-func (s *SQLiteStorage) Feed() storage.FeedStore {
-	return s.feeds
+func (s *SQLiteStorage) Entries() storage.EntryStore {
+	return s.entries
 }
 
 func (s *SQLiteStorage) Close(ctx context.Context) error {

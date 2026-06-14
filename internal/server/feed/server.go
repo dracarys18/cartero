@@ -24,13 +24,13 @@ type Config struct {
 type Server struct {
 	name         string
 	config       Config
-	feedStore    storage.FeedStore
+	entryStore   storage.EntryStore
 	server       *http.Server
 	startCh      chan error
 	htmlTemplate *template.Template
 }
 
-func New(name string, config Config, feedStore storage.FeedStore) *Server {
+func New(name string, config Config, entryStore storage.EntryStore) *Server {
 	if config.Port == "" {
 		config.Port = "8080"
 	}
@@ -89,7 +89,7 @@ func New(name string, config Config, feedStore storage.FeedStore) *Server {
 	return &Server{
 		name:         name,
 		config:       config,
-		feedStore:    feedStore,
+		entryStore:   entryStore,
 		startCh:      make(chan error, 1),
 		htmlTemplate: tmpl,
 	}
@@ -150,7 +150,7 @@ func (s *Server) handleServiceWorker(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
-	entries, err := s.feedStore.ListRecentEntries(r.Context(), s.config.FeedSize)
+	entries, err := s.entryStore.ListRecentEntries(r.Context(), s.config.FeedSize)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = fmt.Fprintf(w, "Error: %v", err)
@@ -171,7 +171,7 @@ func (s *Server) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAtomFeed(w http.ResponseWriter, r *http.Request) {
-	entries, err := s.feedStore.ListRecentEntries(r.Context(), s.config.FeedSize)
+	entries, err := s.entryStore.ListRecentEntries(r.Context(), s.config.FeedSize)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = fmt.Fprintf(w, "Error: %v", err)
@@ -192,7 +192,7 @@ func (s *Server) handleAtomFeed(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleJSONFeed(w http.ResponseWriter, r *http.Request) {
-	entries, err := s.feedStore.ListRecentEntries(r.Context(), s.config.FeedSize)
+	entries, err := s.entryStore.ListRecentEntries(r.Context(), s.config.FeedSize)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = fmt.Fprintf(w, "Error: %v", err)
@@ -254,7 +254,7 @@ func (s *Server) handleHomepage(w http.ResponseWriter, r *http.Request) {
 
 	startDate, endDate := s.calculateDateRange(dateRange)
 
-	result, err := s.feedStore.ListEntriesPaginated(r.Context(), page, perPage, startDate, endDate)
+	result, err := s.entryStore.ListEntriesPaginated(r.Context(), page, perPage, startDate, endDate)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = fmt.Fprintf(w, "Error: %v", err)

@@ -47,17 +47,17 @@ func (c *ServerComponent) Validate() error {
 
 func (c *ServerComponent) Initialize(ctx context.Context) error {
 	storageComp := c.registry.Get(StorageComponentName).(*StorageComponent)
-	feedStore := storageComp.Store().Feed()
+	entryStore := storageComp.Store().Entries()
 
 	for _, cfg := range c.configs {
-		if err := c.startServer(ctx, cfg, feedStore); err != nil {
+		if err := c.startServer(ctx, cfg, entryStore); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (c *ServerComponent) startServer(ctx context.Context, cfg ServerConfig, feedStore storage.FeedStore) error {
+func (c *ServerComponent) startServer(ctx context.Context, cfg ServerConfig, entryStore storage.EntryStore) error {
 	if _, exists := c.servers[cfg.Name]; exists {
 		return nil
 	}
@@ -76,7 +76,7 @@ func (c *ServerComponent) startServer(ctx context.Context, cfg ServerConfig, fee
 		Port:     cfg.Port,
 		FeedSize: cfg.FeedSize,
 		MaxItems: cfg.MaxItems,
-	}, feedStore)
+	}, entryStore)
 
 	if err := server.Start(ctx); err != nil {
 		return fmt.Errorf("servers: failed to start feed server %s: %w", cfg.Name, err)

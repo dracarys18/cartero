@@ -2,25 +2,93 @@ package postgres
 
 import (
 	"cartero/internal/storage"
+	"cartero/internal/utils/hash"
 	"context"
 	"database/sql"
 	"fmt"
 	"time"
 )
 
-type feedStore struct {
+type entryStore struct {
 	db *sql.DB
 }
 
-func newFeedStore(db *sql.DB) storage.FeedStore {
-	return &feedStore{db: db}
+func newEntryStore(db *sql.DB) storage.EntryStore {
+	return &entryStore{db: db}
 }
 
-func (s *feedStore) InsertEntry(ctx context.Context, id, title, link, description, content, author, source, imageURL, matchedKeywords string, publishedAt time.Time) error {
+func (s *entryStore) Store(ctx context.Context, item storage.Item) error {
+	h := hash.HashURL(item.GetURL())
+
+	query := `
+		INSERT INTO feed_entries (id, hash, source, entry_timestamp)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT(id) DO NOTHING
+	`
+
+	_, err := s.db.ExecContext(ctx, query, item.GetID(), h, item.GetSource(), item.GetTimestamp())
+	if err != nil {
+		return fmt.Errorf("failed to store entry: %w", err)
+	}
+
+	return nil
+}
+
+func (s *entryStore) Exists(ctx context.Context, id string) (bool, error) {
+	var exists bool
+	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM feed_entries WHERE id = $1)`, id).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check existence: %w", err)
+	}
+	return exists, nil
+}
+
+func (s *entryStore) ExistsByHash(ctx context.Context, hash string) (bool, error) {
+	var exists bool
+	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM feed_entries WHERE hash = $1)`, hash).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check hash existence: %w", err)
+	}
+	return exists, nil
+}
+
+func (s *entryStore) MarkPublished(ctx context.Context, itemID, target string) error {
+	query := `
+		INSERT INTO published (item_id, target)
+		VALUES ($1, $2)
+		ON CONFLICT(item_id, target) DO NOTHING
+	`
+
+	_, err := s.db.ExecContext(ctx, query, itemID, target)
+	if err != nil {
+		return fmt.Errorf("failed to mark as published: %w", err)
+	}
+
+	return nil
+}
+
+func (s *entryStore) IsPublished(ctx context.Context, itemID, target string) (bool, error) {
+	var exists bool
+	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM published WHERE item_id = $1 AND target = $2)`, itemID, target).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check published status: %w", err)
+	}
+	return exists, nil
+}
+
+func (s *entryStore) InsertEntry(ctx context.Context, id, title, link, description, content, author, source, imageURL, matchedKeywords string, publishedAt time.Time) error {
 	query := `
 		INSERT INTO feed_entries (id, title, link, description, content, author, source, image_url, matched_keywords, published_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-		ON CONFLICT(id) DO NOTHING
+		ON CONFLICT(id) DO UPDATE SET
+			title = EXCLUDED.title,
+			link = EXCLUDED.link,
+			description = EXCLUDED.description,
+			content = EXCLUDED.content,
+			author = EXCLUDED.author,
+			image_url = EXCLUDED.image_url,
+			matched_keywords = EXCLUDED.matched_keywords,
+			published_at = EXCLUDED.published_at
 	`
 
 	publishedAtNull := sql.NullTime{Valid: !publishedAt.IsZero(), Time: publishedAt}
@@ -33,9 +101,9 @@ func (s *feedStore) InsertEntry(ctx context.Context, id, title, link, descriptio
 	return nil
 }
 
-func (s *feedStore) ListRecentEntries(ctx context.Context, limit int) ([]storage.FeedEntry, error) {
+func (s *entryStore) ListRecentEntries(ctx context.Context, limit int) ([]storage.FeedEntry, error) {
 	query := `
-		SELECT id, title, link, description, content, author, source, image_url, matched_keywords, published_at, created_at
+		SELECT id, title, link, description, content, author, source, image_url, matched_keywords, hash, entry_timestamp, published_at, created_at
 		FROM feed_entries
 		ORDER BY published_at DESC, created_at DESC
 		LIMIT $1
@@ -50,11 +118,11 @@ func (s *feedStore) ListRecentEntries(ctx context.Context, limit int) ([]storage
 	return s.scanEntries(rows, limit)
 }
 
-func (s *feedStore) ListEntriesPaginated(ctx context.Context, page, perPage int, startDate, endDate time.Time) (*storage.PaginationResult, error) {
+func (s *entryStore) ListEntriesPaginated(ctx context.Context, page, perPage int, startDate, endDate time.Time) (*storage.PaginationResult, error) {
 	offset := (page - 1) * perPage
 
 	query := `
-		SELECT id, title, link, description, content, author, source, image_url, matched_keywords, published_at, created_at,
+		SELECT id, title, link, description, content, author, source, image_url, matched_keywords, hash, entry_timestamp, published_at, created_at,
 		       COUNT(*) OVER() AS total_count
 		FROM feed_entries
 		WHERE created_at >= $1 AND created_at < $2
@@ -76,6 +144,8 @@ func (s *feedStore) ListEntriesPaginated(ctx context.Context, page, perPage int,
 		var publishedAt sql.NullTime
 		var imageURL sql.NullString
 		var matchedKeywords sql.NullString
+		var hash sql.NullString
+		var entryTimestamp sql.NullTime
 
 		err := rows.Scan(
 			&entry.ID,
@@ -87,6 +157,8 @@ func (s *feedStore) ListEntriesPaginated(ctx context.Context, page, perPage int,
 			&entry.Source,
 			&imageURL,
 			&matchedKeywords,
+			&hash,
+			&entryTimestamp,
 			&publishedAt,
 			&entry.CreatedAt,
 			&total,
@@ -105,6 +177,14 @@ func (s *feedStore) ListEntriesPaginated(ctx context.Context, page, perPage int,
 
 		if matchedKeywords.Valid {
 			entry.MatchedKeywords = matchedKeywords.String
+		}
+
+		if hash.Valid {
+			entry.Hash = hash.String
+		}
+
+		if entryTimestamp.Valid {
+			entry.EntryTimestamp = entryTimestamp.Time
 		}
 
 		entries = append(entries, entry)
@@ -130,13 +210,15 @@ func (s *feedStore) ListEntriesPaginated(ctx context.Context, page, perPage int,
 	}, nil
 }
 
-func (s *feedStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEntry, error) {
+func (s *entryStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEntry, error) {
 	entries := make([]storage.FeedEntry, 0, capacity)
 	for rows.Next() {
 		var entry storage.FeedEntry
 		var publishedAt sql.NullTime
 		var imageURL sql.NullString
 		var matchedKeywords sql.NullString
+		var hash sql.NullString
+		var entryTimestamp sql.NullTime
 
 		err := rows.Scan(
 			&entry.ID,
@@ -148,6 +230,8 @@ func (s *feedStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEnt
 			&entry.Source,
 			&imageURL,
 			&matchedKeywords,
+			&hash,
+			&entryTimestamp,
 			&publishedAt,
 			&entry.CreatedAt,
 		)
@@ -167,6 +251,14 @@ func (s *feedStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEnt
 			entry.MatchedKeywords = matchedKeywords.String
 		}
 
+		if hash.Valid {
+			entry.Hash = hash.String
+		}
+
+		if entryTimestamp.Valid {
+			entry.EntryTimestamp = entryTimestamp.Time
+		}
+
 		entries = append(entries, entry)
 	}
 
@@ -177,7 +269,7 @@ func (s *feedStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEnt
 	return entries, nil
 }
 
-func (s *feedStore) DeleteOlderThan(ctx context.Context, age time.Duration) error {
+func (s *entryStore) DeleteOlderThan(ctx context.Context, age time.Duration) error {
 	cutoff := time.Now().Add(-age)
 	query := `DELETE FROM feed_entries WHERE created_at < $1`
 

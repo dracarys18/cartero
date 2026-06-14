@@ -11,14 +11,14 @@ import (
 
 type Target struct {
 	name      string
-	feedStore storage.FeedStore
+	entryStore storage.EntryStore
 }
 
 func New(name string, registry *components.Registry) *Target {
 	store := registry.Get(components.StorageComponentName).(*components.StorageComponent).Store()
 	return &Target{
 		name:      name,
-		feedStore: store.Feed(),
+		entryStore: store.Entries(),
 	}
 }
 
@@ -37,7 +37,7 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 	entry := NewFeedEntry(item.ID, feedItem, item.Source, item.Timestamp)
 	entry.MatchedKeywords = item.GetMatchedKeywords()
 
-	err := InsertIntoStore(ctx, t.feedStore, entry)
+	err := InsertIntoStore(ctx, t.entryStore, entry)
 	if err != nil {
 		return nil, err
 	}

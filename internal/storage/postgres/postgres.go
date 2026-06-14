@@ -18,9 +18,8 @@ func init() {
 }
 
 type PostgresStorage struct {
-	conn  *sql.DB
-	items storage.ItemStore
-	feeds storage.FeedStore
+	conn    *sql.DB
+	entries storage.EntryStore
 }
 
 func New(dsn string) (storage.StorageInterface, error) {
@@ -43,9 +42,8 @@ func New(dsn string) (storage.StorageInterface, error) {
 	}
 
 	return &PostgresStorage{
-		conn:  conn,
-		items: newItemStore(conn),
-		feeds: newFeedStore(conn),
+		conn:    conn,
+		entries: newEntryStore(conn),
 	}, nil
 }
 
@@ -73,12 +71,8 @@ func (s *PostgresStorage) GetConnection() *sql.DB {
 	return s.conn
 }
 
-func (s *PostgresStorage) Items() storage.ItemStore {
-	return s.items
-}
-
-func (s *PostgresStorage) Feed() storage.FeedStore {
-	return s.feeds
+func (s *PostgresStorage) Entries() storage.EntryStore {
+	return s.entries
 }
 
 func (s *PostgresStorage) Close(ctx context.Context) error {

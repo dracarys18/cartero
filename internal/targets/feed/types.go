@@ -99,7 +99,7 @@ func NewFeedEntry(id string, item FeedItem, source string, publishedAt time.Time
 	}
 }
 
-func InsertIntoStore(ctx context.Context, store storage.FeedStore, entry FeedEntry) error {
+func InsertIntoStore(ctx context.Context, store storage.EntryStore, entry FeedEntry) error {
 	publishedAt := entry.PublishedAt
 	if publishedAt.IsZero() {
 		var err error

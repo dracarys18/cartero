@@ -29,7 +29,7 @@ func (d *DedupeProcessor) DependsOn() []string {
 
 func (d *DedupeProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
 	h := hash.HashURL(item.GetURL())
-	store := st.GetStorage().Items()
+	store := st.GetStorage().Entries()
 	logger := st.GetLogger()
 
 	exists, err := store.ExistsByHash(ctx, h)
