@@ -14,7 +14,6 @@ services:
     image: postgres:17-alpine
     container_name: cartero-postgres
     restart: unless-stopped
-    profiles: [dev]
     environment:
       POSTGRES_USER: cartero
       POSTGRES_PASSWORD: cartero
