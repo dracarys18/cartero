@@ -170,6 +170,7 @@ func (s *entryStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEn
 	entries := make([]storage.FeedEntry, 0, capacity)
 	for rows.Next() {
 		var entry storage.FeedEntry
+		var link, description, content, author sql.NullString
 		var publishedAt sql.NullTime
 		var imageURL sql.NullString
 		var matchedKeywords sql.NullString
@@ -179,10 +180,10 @@ func (s *entryStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEn
 		err := rows.Scan(
 			&entry.ID,
 			&entry.Title,
-			&entry.Link,
-			&entry.Description,
-			&entry.Content,
-			&entry.Author,
+			&link,
+			&description,
+			&content,
+			&author,
 			&entry.Source,
 			&imageURL,
 			&matchedKeywords,
@@ -213,6 +214,22 @@ func (s *entryStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEn
 
 		if entryTimestamp.Valid {
 			entry.EntryTimestamp = entryTimestamp.Time
+		}
+
+		if link.Valid {
+			entry.Link = link.String
+		}
+
+		if description.Valid {
+			entry.Description = description.String
+		}
+
+		if content.Valid {
+			entry.Content = content.String
+		}
+
+		if author.Valid {
+			entry.Author = author.String
 		}
 
 		entries = append(entries, entry)
