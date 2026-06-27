@@ -240,3 +240,11 @@ func (s *entryStore) DeleteOlderThan(ctx context.Context, age time.Duration) err
 
 	return nil
 }
+
+func (s *entryStore) SetEmbedding(ctx context.Context, id string, embedding []float32) error {
+	return nil
+}
+
+func (s *entryStore) FindNearestEmbedding(ctx context.Context, embedding []float32, threshold float64, since time.Time) (bool, error) {
+	return false, nil
+}

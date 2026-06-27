@@ -9,6 +9,7 @@ type KeywordFilterProcessor = filters.KeywordFilterProcessor
 type MetadataFilterProcessor = filters.MetadataFilterProcessor
 type PublishedAtFilterProcessor = filters.PublishedAtFilterProcessor
 type DedupeProcessor = filters.DedupeProcessor
+type EmbedDedupeProcessor = filters.EmbedDedupeProcessor
 type RateLimitProcessor = filters.RateLimitProcessor
 type TokenBucketProcessor = filters.TokenBucketProcessor
 
@@ -21,6 +22,7 @@ var (
 	MetadataFilter                = filters.MetadataFilter
 	PublishedAtFilter             = filters.PublishedAtFilter
 	NewDedupeProcessor            = filters.NewDedupeProcessor
+	NewEmbedDedupeProcessor       = filters.NewEmbedDedupeProcessor
 	NewRateLimitProcessor         = filters.NewRateLimitProcessor
 	NewTokenBucketProcessor       = filters.NewTokenBucketProcessor
 )

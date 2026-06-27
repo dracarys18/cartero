@@ -307,6 +307,9 @@ func (s *State) createProcessor(name string, cfg config.ProcessorConfig) types.P
 	case "dedupe":
 		return processors.NewDedupeProcessor(name)
 
+	case "embed_dedupe":
+		return processors.NewEmbedDedupeProcessor(name, cfg.Settings.DedupeSettings)
+
 	case "rate_limit":
 		return processors.NewRateLimitProcessor(name)
 

@@ -21,6 +21,7 @@ require (
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/mmcdole/gofeed v1.3.0
 	github.com/ollama/ollama v0.13.5
+	github.com/pgvector/pgvector-go v0.4.0
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/tmc/langchaingo v0.1.14
 	github.com/yuin/gopher-lua v1.1.1
