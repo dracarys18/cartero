@@ -12,4 +12,5 @@ const (
 	TemplateTransformer = "template"
 	MetadataFilter      = "filter_metadata"
 	EmbedText           = "embed_text"
+	EmbedDedupe         = "embed_dedupe"
 )

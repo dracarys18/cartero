@@ -94,9 +94,17 @@ custom_param = "value"
 [processors.dedupe]
 type = "dedupe"
 enabled = true
-order = 1
 [processors.dedupe.settings]
 ttl = "24h"
+
+# Semantic dedup: rejects items with embeddings too similar to existing ones
+# Must run after embed_text. Uses DedupeSettings for threshold/window.
+[processors.embed_dedupe]
+type = "embed_dedupe"
+enabled = false
+[processors.embed_dedupe.settings]
+embed_threshold = 0.9
+embed_window = "168h"
 
 [processors.score_filter]
 type = "filter_score"

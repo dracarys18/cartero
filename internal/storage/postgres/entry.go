@@ -7,6 +7,8 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+
+	"github.com/pgvector/pgvector-go"
 )
 
 type entryStore struct {
@@ -29,6 +31,13 @@ func (s *entryStore) Store(ctx context.Context, item storage.Item) error {
 	_, err := s.db.ExecContext(ctx, query, item.GetID(), h, item.GetSource(), item.GetTimestamp(), item.GetTitle())
 	if err != nil {
 		return fmt.Errorf("failed to store entry: %w", err)
+	}
+
+	embeddings := item.GetEmbedding()
+	if len(embeddings) > 0 {
+		if err := s.SetEmbedding(ctx, item.GetID(), embeddings[0]); err != nil {
+			return fmt.Errorf("failed to store embedding: %w", err)
+		}
 	}
 
 	return nil
@@ -283,4 +292,42 @@ func (s *entryStore) DeleteOlderThan(ctx context.Context, age time.Duration) err
 	}
 
 	return nil
+}
+
+func (s *entryStore) SetEmbedding(ctx context.Context, id string, embedding []float32) error {
+	query := `
+		INSERT INTO item_embeddings (id, embedding)
+		VALUES ($1, $2)
+		ON CONFLICT(id) DO NOTHING
+	`
+
+	_, err := s.db.ExecContext(ctx, query, id, pgvector.NewHalfVector(embedding))
+	if err != nil {
+		return fmt.Errorf("failed to store embedding: %w", err)
+	}
+
+	return nil
+}
+
+func (s *entryStore) FindNearestEmbedding(ctx context.Context, embedding []float32, threshold float64, since time.Time) (bool, error) {
+	vec := pgvector.NewHalfVector(embedding)
+
+	query := `
+		SELECT 1 - (embedding <=> $2) AS similarity
+		FROM item_embeddings
+		WHERE created_at >= $1
+		ORDER BY embedding <=> $2
+		LIMIT 1
+	`
+
+	var similarity float64
+	err := s.db.QueryRowContext(ctx, query, since, vec).Scan(&similarity)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("failed to search embeddings: %w", err)
+	}
+
+	return similarity >= threshold, nil
 }

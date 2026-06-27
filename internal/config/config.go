@@ -145,7 +145,10 @@ type ProcessorSettings struct {
 }
 
 type DedupeSettings struct {
-	TTL string `toml:"ttl"`
+	TTL              string  `toml:"ttl"`
+	EmbedThreshold   float64 `toml:"embed_threshold"`
+	EmbedWindow      string  `toml:"embed_window"`
+	EmbedListCount   int     `toml:"embed_list_count"`
 }
 
 type ScoreFilterSettings struct {
