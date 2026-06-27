@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"cartero/internal/config"
+	"cartero/internal/processors/names"
 	"cartero/internal/types"
 )
 
@@ -45,7 +46,7 @@ func (d *EmbedDedupeProcessor) Initialize(_ context.Context, _ types.StateAccess
 }
 
 func (d *EmbedDedupeProcessor) DependsOn() []string {
-	return []string{"embed_text"}
+	return []string{names.EmbedText}
 }
 
 func (d *EmbedDedupeProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {

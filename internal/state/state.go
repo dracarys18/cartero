@@ -12,6 +12,7 @@ import (
 	"cartero/internal/core"
 	"cartero/internal/middleware"
 	"cartero/internal/processors"
+	"cartero/internal/processors/names"
 	"cartero/internal/queue"
 	"cartero/internal/sources"
 	"cartero/internal/storage"
@@ -304,10 +305,10 @@ func (s *State) createProcessor(name string, cfg config.ProcessorConfig) types.P
 	case "filter_published":
 		return processors.NewPublishedAtFilterProcessor(name)
 
-	case "dedupe":
+	case names.Dedupe:
 		return processors.NewDedupeProcessor(name)
 
-	case "embed_dedupe":
+	case names.EmbedDedupe:
 		return processors.NewEmbedDedupeProcessor(name, cfg.Settings.DedupeSettings)
 
 	case "rate_limit":
