@@ -47,9 +47,11 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 
 	chunks := []string{}
 
-	if item.GetTitle() != "" {
-		chunks = append(chunks, item.GetTitle())
+	title := item.GetTitle()
+	if title == "" {
+		title = "Untitled"
 	}
+	chunks = append(chunks, title)
 
 	if description != "" {
 		chunks = append(chunks, description)
