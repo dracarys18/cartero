@@ -112,9 +112,8 @@ func (k *KeywordFilterProcessor) checkPreference(ctx context.Context, st types.S
 
 	embeddings := item.GetEmbedding()
 	if len(embeddings) == 0 {
-		logger.Debug("keyword_filter: no embedding for preference check", "item_id", item.ID)
-		return types.NewFilteredError(k.name, item.ID, "no embedding available for preference matching").
-			WithDetail("title", item.GetTitle())
+		logger.Debug("keyword_filter: no embedding for preference check — passing through", "item_id", item.ID)
+		return nil
 	}
 
 	titleVec := l2Normalize(embeddings[0])
