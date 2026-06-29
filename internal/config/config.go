@@ -54,6 +54,7 @@ type PlatformSettings struct {
 	OllamaPlatformSettings
 	BlueskyPlatformSettings
 	TelegramPlatformSettings
+	OpenAIPlatformSettings
 }
 
 type DiscordPlatformSettings struct {
@@ -71,6 +72,12 @@ type BlueskyPlatformSettings struct {
 
 type TelegramPlatformSettings struct {
 	BotToken string `toml:"tg_bot_token"`
+}
+
+type OpenAIPlatformSettings struct {
+	EmbeddingModel string `toml:"embedding_model"`
+	BaseURL        string `toml:"base_url"`
+	APIKey         string `toml:"api_key"`
 }
 
 type SourceConfig struct {

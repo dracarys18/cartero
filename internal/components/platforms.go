@@ -13,7 +13,7 @@ type PlatformComponent struct {
 	blueskyPlatform   *platforms.BlueskyPlatform
 	telegramPlatform  *platforms.TelegramPlatform
 	ollamaPlatforms   map[string]*platforms.OllamaPlatform
-	embeddingPlatform *platforms.OllamaPlatform
+	embeddingPlatform platforms.Embedder
 }
 
 func NewPlatformComponent(config map[string]config.PlatformConfig) *PlatformComponent {
@@ -79,8 +79,24 @@ func (c *PlatformComponent) Initialize(ctx context.Context) error {
 	}
 
 	for _, cfg := range c.config {
-		if cfg.Type == "ollama" && cfg.Settings.EmbeddingModel != "" {
-			c.embeddingPlatform = platforms.NewOllamaPlatform(cfg.Settings.EmbeddingModel)
+		model := cfg.Settings.OllamaPlatformSettings.EmbeddingModel
+		if model == "" {
+			model = cfg.Settings.OpenAIPlatformSettings.EmbeddingModel
+		}
+		if model == "" {
+			continue
+		}
+		switch cfg.Type {
+		case "ollama":
+			c.embeddingPlatform = platforms.NewOllamaPlatform(model)
+		case "openai":
+			c.embeddingPlatform = platforms.NewOpenAIPlatform(
+				cfg.Settings.OpenAIPlatformSettings.BaseURL,
+				cfg.Settings.OpenAIPlatformSettings.APIKey,
+				model,
+			)
+		}
+		if c.embeddingPlatform != nil {
 			break
 		}
 	}
@@ -113,7 +129,7 @@ func (c *PlatformComponent) Telegram() *platforms.TelegramPlatform {
 	return c.telegramPlatform
 }
 
-func (c *PlatformComponent) Embedder() *platforms.OllamaPlatform {
+func (c *PlatformComponent) Embedder() platforms.Embedder {
 	return c.embeddingPlatform
 }
 

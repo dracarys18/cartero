@@ -9,15 +9,13 @@ import (
 	"cartero/internal/queue"
 	"cartero/internal/types"
 	"cartero/internal/utils/keywords"
-
-	"github.com/ollama/ollama/api"
 )
 
-func buildKeywordEmbeddings(ctx context.Context, client *platforms.OllamaPlatform, embedCache *queue.EmbedCache, kws []keywords.KeywordWithContext) error {
+func buildKeywordEmbeddings(ctx context.Context, client platforms.Embedder, embedCache *queue.EmbedCache, kws []keywords.KeywordWithContext) error {
 	return SeedKeywordEmbeddings(ctx, client, embedCache, kws, nil)
 }
 
-func SeedKeywordEmbeddings(ctx context.Context, client *platforms.OllamaPlatform, embedCache *queue.EmbedCache, kws []keywords.KeywordWithContext, logger *slog.Logger) error {
+func SeedKeywordEmbeddings(ctx context.Context, client platforms.Embedder, embedCache *queue.EmbedCache, kws []keywords.KeywordWithContext, logger *slog.Logger) error {
 	var misses []keywords.KeywordWithContext
 	for _, kw := range kws {
 		_, ok, err := embedCache.Get(ctx, kw.Keyword)
@@ -53,30 +51,30 @@ func SeedKeywordEmbeddings(ctx context.Context, client *platforms.OllamaPlatform
 		logger.Info("calling ollama for missing embeddings", "count", len(misses))
 	}
 
-	resp, err := client.Embed(ctx, &api.EmbedRequest{Input: prefixed})
+	resp, err := client.Embed(ctx, prefixed)
 	if err != nil {
-		return fmt.Errorf("ollama embed: %w", err)
+		return fmt.Errorf("embed: %w", err)
 	}
 
 	for i, kw := range misses {
-		if i >= len(resp.Embeddings) {
+		if i >= len(resp) {
 			break
 		}
-		if err := embedCache.Set(ctx, kw.Keyword, resp.Embeddings[i]); err != nil {
+		if err := embedCache.Set(ctx, kw.Keyword, resp[i]); err != nil {
 			return fmt.Errorf("embed cache set %q: %w", kw.Keyword, err)
 		}
 	}
 
 	if logger != nil {
-		logger.Info("stored embeddings in redis", "count", len(resp.Embeddings))
+		logger.Info("stored embeddings in redis", "count", len(resp))
 	}
 
 	dims, err := embedCache.GetDims(ctx)
 	if err != nil {
 		return fmt.Errorf("embed cache get dims: %w", err)
 	}
-	if dims == 0 && len(resp.Embeddings) > 0 {
-		dims = len(resp.Embeddings[0])
+	if dims == 0 && len(resp) > 0 {
+		dims = len(resp[0])
 		if err := embedCache.SetDims(ctx, dims); err != nil {
 			return fmt.Errorf("embed cache set dims: %w", err)
 		}

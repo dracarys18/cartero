@@ -17,6 +17,15 @@ type = "ollama"
 [platforms.ollama.settings]
 embedding_model = "embeddinggemma:300m"
 
+# OpenAI-compatible embedding API (Cloudflare Workers AI, OpenAI, Together, etc.)
+[platforms.cloudflare]
+type = "openai"
+enabled = false
+[platforms.cloudflare.settings]
+embedding_model = "@cf/baai/bge-m3"
+base_url = "https://api.cloudflare.com/client/v4/accounts/YOUR_ACCOUNT/ai/v1"
+api_key = "YOUR_CF_API_TOKEN"
+
 [platforms.discord]
 type = "discord"
 sleep = "1s"

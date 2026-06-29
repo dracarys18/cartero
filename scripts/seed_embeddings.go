@@ -13,7 +13,6 @@ import (
 	"cartero/internal/queue"
 	"cartero/internal/utils/file"
 
-	ollamaapi "github.com/ollama/ollama/api"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -60,7 +59,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	embedder := platforms.NewOllamaPlatform(ollamaCfg.Settings.EmbeddingModel)
+	embedder := platforms.NewOllamaPlatform(ollamaCfg.Settings.OllamaPlatformSettings.EmbeddingModel)
 
 	var missing []entry
 	for _, e := range entries {
@@ -86,21 +85,21 @@ func main() {
 		contexts[i] = e.Context
 	}
 
-	resp, err := embedder.Embed(ctx, &ollamaapi.EmbedRequest{Input: contexts})
+	resp, err := embedder.Embed(ctx, contexts)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "embed: %v\n", err)
 		os.Exit(1)
 	}
 
-	if len(resp.Embeddings) != len(missing) {
-		fmt.Fprintf(os.Stderr, "embedding count mismatch: got %d want %d\n", len(resp.Embeddings), len(missing))
+	if len(resp) != len(missing) {
+		fmt.Fprintf(os.Stderr, "embedding count mismatch: got %d want %d\n", len(resp), len(missing))
 		os.Exit(1)
 	}
 
-	dims := len(resp.Embeddings[0])
+	dims := len(resp[0])
 
 	for i, e := range missing {
-		vec := resp.Embeddings[i]
+		vec := resp[i]
 		if err := embedCache.Set(ctx, e.Keyword, vec); err != nil {
 			fmt.Fprintf(os.Stderr, "cache set %q: %v\n", e.Keyword, err)
 			os.Exit(1)

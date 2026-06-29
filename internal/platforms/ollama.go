@@ -29,12 +29,15 @@ func NewOllamaPlatform(model string) *OllamaPlatform {
 
 func (o *OllamaPlatform) Client() *api.Client { return o.client }
 
+func (o *OllamaPlatform) Embed(ctx context.Context, inputs []string) ([][]float32, error) {
+	resp, err := o.Client().Embed(ctx, &api.EmbedRequest{Input: inputs, Model: o.model})
+	if err != nil {
+		return nil, err
+	}
+	return resp.Embeddings, nil
+}
+
 func (o *OllamaPlatform) Generate(ctx context.Context, request *api.GenerateRequest, respFunc api.GenerateResponseFunc) error {
 	request.Model = o.model
 	return o.Client().Generate(ctx, request, respFunc)
-}
-
-func (o *OllamaPlatform) Embed(ctx context.Context, req *api.EmbedRequest) (*api.EmbedResponse, error) {
-	req.Model = o.model
-	return o.Client().Embed(ctx, req)
 }

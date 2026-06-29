@@ -11,7 +11,6 @@ import (
 	"cartero/internal/platforms"
 	"cartero/internal/queue"
 
-	ollamaapi "github.com/ollama/ollama/api"
 	"github.com/redis/go-redis/v9"
 	"github.com/tmc/langchaingo/textsplitter"
 	"github.com/viterin/vek/vek32"
@@ -38,7 +37,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	embedder := platforms.NewOllamaPlatform(ollamaCfg.Settings.EmbeddingModel)
+	embedder := platforms.NewOllamaPlatform(ollamaCfg.Settings.OllamaPlatformSettings.EmbeddingModel)
 
 	splitter := textsplitter.NewRecursiveCharacter(
 		textsplitter.WithChunkSize(1800),
@@ -51,17 +50,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	resp, err := embedder.Embed(ctx, &ollamaapi.EmbedRequest{Input: chunks})
+	resp, err := embedder.Embed(ctx, chunks)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "embed: %v\n", err)
 		os.Exit(1)
 	}
 
-	avg := make([]float32, len(resp.Embeddings[0]))
-	for _, v := range resp.Embeddings {
+	avg := make([]float32, len(resp[0]))
+	for _, v := range resp {
 		vek32.Add_Inplace(avg, v)
 	}
-	vek32.DivNumber_Inplace(avg, float32(len(resp.Embeddings)))
+	vek32.DivNumber_Inplace(avg, float32(len(resp)))
 
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:          cfg.Redis.Addr,
