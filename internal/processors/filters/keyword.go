@@ -117,17 +117,24 @@ func (k *KeywordFilterProcessor) checkPreference(ctx context.Context, st types.S
 			WithDetail("title", item.GetTitle())
 	}
 
-	titleVec := l2Normalize(embeddings[0])
-	score := dotProduct(k.prefVec, titleVec)
+	var bestScore float64
+	for i, vec := range embeddings {
+		normalized := l2Normalize(vec)
+		score := dotProduct(k.prefVec, normalized)
+		if score > bestScore {
+			bestScore = score
+		}
+		_ = i
+	}
 
-	if score < k.prefThreshold {
-		logger.Info("keyword_filter: rejected — preference mismatch", "processor", k.name, "item_id", item.ID, "title", item.GetTitle(), "score", score, "threshold", k.prefThreshold)
+	if bestScore < k.prefThreshold {
+		logger.Info("keyword_filter: rejected — preference mismatch", "processor", k.name, "item_id", item.ID, "title", item.GetTitle(), "score", bestScore, "threshold", k.prefThreshold)
 		return types.NewFilteredError(k.name, item.ID, "preference mismatch").
-			WithDetail("score", score).
+			WithDetail("score", bestScore).
 			WithDetail("threshold", k.prefThreshold)
 	}
 
-	logger.Debug("keyword_filter: preference match", "item_id", item.ID, "score", score)
+	logger.Debug("keyword_filter: preference match", "item_id", item.ID, "score", bestScore)
 	return nil
 }
 
