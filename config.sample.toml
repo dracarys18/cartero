@@ -129,8 +129,9 @@ chunk_size = 7000
 type = "filter_keyword"
 enabled = false
 [processors.keyword_filter.settings]
+preference = "I am interested in systems programming, databases, and networking"
 keywords_file = "assets/keywords/my_keywords.json"
-embed_threshold = 0.6
+embed_threshold = 0.55
 
 [processors.rate_limiter]
 type = "rate_limit"

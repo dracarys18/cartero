@@ -104,14 +104,11 @@ func ensureIndexFromCache(ctx context.Context, embedCache *queue.EmbedCache) err
 	return embedCache.EnsureIndex(ctx, dims)
 }
 
-func (k *KeywordFilterProcessor) processEmbedding(ctx context.Context, st types.StateAccessor, item *types.Item) error {
-	cfg := st.GetConfig().Processors[k.name].Settings.KeywordFilterSettings
+func (k *KeywordFilterProcessor) labelItem(ctx context.Context, st types.StateAccessor, item *types.Item) {
 	logger := st.GetLogger()
 
 	if item.GetEmbedding() == nil {
-		logger.Info("keyword_filter: rejected item — no embedding available", "processor", k.name, "item_id", item.ID, "title", item.GetTitle())
-		return types.NewFilteredError(k.name, item.ID, "no embedding available for semantic matching").
-			WithDetail("title", item.GetTitle())
+		return
 	}
 
 	var bestScore float64
@@ -125,25 +122,16 @@ func (k *KeywordFilterProcessor) processEmbedding(ctx context.Context, st types.
 			continue
 		}
 
-		if len(results) > 0 {
-			if results[0].Score > bestScore || len(bestResults) == 0 {
-				bestScore = results[0].Score
-				bestKeyword = results[0].Keyword
-				bestResults = results
-			}
+		if len(results) > 0 && results[0].Score > bestScore {
+			bestScore = results[0].Score
+			bestKeyword = results[0].Keyword
+			bestResults = results
 		}
 	}
 
-	logger.Debug("keyword_filter: top embedding matches", "item_id", item.ID, "title", item.GetTitle(), "top5", bestResults)
-
-	if len(bestResults) == 0 || bestScore < cfg.EmbedThreshold {
-		logger.Info("keyword_filter: rejected item via embedding similarity", "processor", k.name, "item_id", item.ID, "title", item.GetTitle(), "best_score", bestScore, "threshold", cfg.EmbedThreshold)
-		return types.NewFilteredError(k.name, item.ID, "no keyword matched via embedding similarity").
-			WithDetail("best_score", bestScore).
-			WithDetail("threshold", cfg.EmbedThreshold)
+	if len(bestResults) > 0 && bestKeyword != "" {
+		logger.Debug("keyword_filter: top embedding matches", "item_id", item.ID, "title", item.GetTitle(), "top5", bestResults)
+		logger.Info("keyword_filter: labelled", "processor", k.name, "item_id", item.ID, "keyword", bestKeyword, "score", bestScore)
+		item.SetMatchedKeywords(bestKeyword)
 	}
-
-	logger.Info("keyword_filter: matched via embedding similarity", "processor", k.name, "item_id", item.ID, "title", item.GetTitle(), "keyword", bestKeyword, "score", bestScore)
-	item.SetMatchedKeywords(bestKeyword)
-	return nil
 }
