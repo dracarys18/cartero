@@ -19,6 +19,7 @@ type KeywordFilterProcessor struct {
 	embedReady    bool
 	prefThreshold float64
 	prefReady     bool
+	kwVectors     map[string][]float32
 }
 
 func NewKeywordFilterProcessor(name string) *KeywordFilterProcessor {
