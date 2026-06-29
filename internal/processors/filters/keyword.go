@@ -64,7 +64,7 @@ func (k *KeywordFilterProcessor) DependsOn() []string {
 func (k *KeywordFilterProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
 	cfg := st.GetConfig().Processors[k.name].Settings.KeywordFilterSettings
 
-	if len(cfg.Keywords) == 0 && len(cfg.ExactKeyword) == 0 {
+	if len(cfg.Keywords) == 0 {
 		return nil
 	}
 
@@ -72,8 +72,5 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, st types.StateAcce
 		return k.processEmbedding(ctx, st, item)
 	}
 
-	logger := st.GetLogger()
-	logger.Info("keyword_filter: rejected item — embed infrastructure not ready", "processor", k.name, "item_id", item.ID, "title", item.GetTitle())
-	return types.NewFilteredError(k.name, item.ID, "embed infrastructure not ready").
-		WithDetail("title", item.GetTitle())
+	return nil
 }

@@ -156,13 +156,9 @@ type ScoreFilterSettings struct {
 }
 
 type KeywordFilterSettings struct {
-	Keywords         []keywords.KeywordWithContext `toml:"keywords"`
-	ExactKeyword     []string                      `toml:"exact_keywords"`
-	KeywordsFile     string                        `toml:"keywords_file"`
-	Mode             string                        `toml:"mode"`
-	DensityThreshold float64                       `toml:"density_threshold"`
-	TitleBypass      bool                          `toml:"title_bypass"`
-	EmbedThreshold   float64                       `toml:"embed_threshold"`
+	Keywords       []keywords.KeywordWithContext `toml:"keywords"`
+	KeywordsFile   string                        `toml:"keywords_file"`
+	EmbedThreshold float64                       `toml:"embed_threshold"`
 }
 
 type EmbedTextSettings struct {

@@ -128,14 +128,9 @@ chunk_size = 7000
 [processors.keyword_filter]
 type = "filter_keyword"
 enabled = false
-order = 3
 [processors.keyword_filter.settings]
-keywords = ["AI", "Go", "Rust", "Encryption", "Database"]
-exact_keywords = ["Show HN"]
-keywords_file = ""
-density_threshold = 0.15
-title_bypass = false
-embed_threshold = 0.42
+keywords_file = "assets/keywords/my_keywords.json"
+embed_threshold = 0.6
 
 [processors.rate_limiter]
 type = "rate_limit"
