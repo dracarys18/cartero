@@ -69,8 +69,9 @@ func (k *KeywordFilterProcessor) Initialize(ctx context.Context, st types.StateA
 			prefResp = resp
 		}
 
-		if kwCfg.EmbedThreshold > 0 {
-			k.prefThreshold = kwCfg.EmbedThreshold
+		dedupeCfg := st.GetConfig().Processors[k.name].Settings.DedupeSettings
+		if dedupeCfg.EmbedThreshold > 0 {
+			k.prefThreshold = dedupeCfg.EmbedThreshold
 		} else {
 			k.prefThreshold = 0.55
 		}

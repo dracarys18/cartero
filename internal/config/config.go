@@ -148,10 +148,9 @@ type ScoreFilterSettings struct {
 }
 
 type KeywordFilterSettings struct {
-	Keywords       []keywords.KeywordWithContext `toml:"keywords"`
-	KeywordsFile   string                        `toml:"keywords_file"`
-	EmbedThreshold float64                       `toml:"embed_threshold"`
-	Preference     string                        `toml:"preference"`
+	Keywords     []keywords.KeywordWithContext `toml:"keywords"`
+	KeywordsFile string                        `toml:"keywords_file"`
+	Preference   string                        `toml:"preference"`
 }
 
 type EmbedTextSettings struct {
