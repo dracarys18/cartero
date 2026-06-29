@@ -81,9 +81,6 @@ func (c *PlatformComponent) Initialize(ctx context.Context) error {
 	for _, cfg := range c.config {
 		model := cfg.Settings.OllamaPlatformSettings.EmbeddingModel
 		if model == "" {
-			model = cfg.Settings.OpenAIPlatformSettings.EmbeddingModel
-		}
-		if model == "" {
 			continue
 		}
 		switch cfg.Type {

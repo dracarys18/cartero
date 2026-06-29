@@ -75,9 +75,8 @@ type TelegramPlatformSettings struct {
 }
 
 type OpenAIPlatformSettings struct {
-	EmbeddingModel string `toml:"embedding_model"`
-	BaseURL        string `toml:"base_url"`
-	APIKey         string `toml:"api_key"`
+	BaseURL string `toml:"base_url"`
+	APIKey  string `toml:"api_key"`
 }
 
 type SourceConfig struct {

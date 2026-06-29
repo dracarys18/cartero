@@ -48,33 +48,48 @@ func SeedKeywordEmbeddings(ctx context.Context, client platforms.Embedder, embed
 	}
 
 	if logger != nil {
-		logger.Info("calling ollama for missing embeddings", "count", len(misses))
+		logger.Info("calling embedder for missing keyword embeddings", "count", len(misses))
 	}
 
-	resp, err := client.Embed(ctx, prefixed)
-	if err != nil {
-		return fmt.Errorf("embed: %w", err)
-	}
-
-	for i, kw := range misses {
-		if i >= len(resp) {
-			break
+	batchSize := 10
+	totalEmbedded := 0
+	var lastDim int
+	for start := 0; start < len(prefixed); start += batchSize {
+		end := start + batchSize
+		if end > len(prefixed) {
+			end = len(prefixed)
 		}
-		if err := embedCache.Set(ctx, kw.Keyword, resp[i]); err != nil {
-			return fmt.Errorf("embed cache set %q: %w", kw.Keyword, err)
+		batch := prefixed[start:end]
+
+		resp, err := client.Embed(ctx, batch)
+		if err != nil {
+			return fmt.Errorf("embed batch [%d:%d]: %w", start, end, err)
+		}
+
+		for i, kw := range misses[start:end] {
+			if i >= len(resp) {
+				break
+			}
+			if err := embedCache.Set(ctx, kw.Keyword, resp[i]); err != nil {
+				return fmt.Errorf("embed cache set %q: %w", kw.Keyword, err)
+			}
+		}
+		totalEmbedded += len(resp)
+		if len(resp) > 0 {
+			lastDim = len(resp[0])
 		}
 	}
 
 	if logger != nil {
-		logger.Info("stored embeddings in redis", "count", len(resp))
+		logger.Info("stored embeddings in redis", "count", totalEmbedded)
 	}
 
 	dims, err := embedCache.GetDims(ctx)
 	if err != nil {
 		return fmt.Errorf("embed cache get dims: %w", err)
 	}
-	if dims == 0 && len(resp) > 0 {
-		dims = len(resp[0])
+	if dims == 0 && totalEmbedded > 0 {
+		dims = lastDim
 		if err := embedCache.SetDims(ctx, dims); err != nil {
 			return fmt.Errorf("embed cache set dims: %w", err)
 		}
