@@ -2,7 +2,6 @@ package filters
 
 import (
 	"context"
-	"math"
 
 	"cartero/internal/components"
 	"cartero/internal/processors/names"
@@ -12,12 +11,14 @@ import (
 	"github.com/ollama/ollama/api"
 )
 
+const prefKey = "__pref__"
+
 type KeywordFilterProcessor struct {
 	name          string
 	embedCache    *queue.EmbedCache
 	embedReady    bool
-	prefVec       []float32
 	prefThreshold float64
+	prefReady     bool
 }
 
 func NewKeywordFilterProcessor(name string) *KeywordFilterProcessor {
@@ -46,29 +47,26 @@ func (k *KeywordFilterProcessor) Initialize(ctx context.Context, st types.StateA
 		return nil
 	}
 
+	k.embedCache = queue.NewEmbedCache(st.GetRedisClient())
+
 	if hasKeywords {
-		k.embedCache = queue.NewEmbedCache(st.GetRedisClient())
 		if err := buildKeywordEmbeddings(ctx, embedder, k.embedCache, kwCfg.Keywords); err != nil {
 			return err
 		}
-		if err := ensureIndexFromCache(ctx, k.embedCache); err != nil {
-			return err
-		}
-		dims, err := k.embedCache.GetDims(ctx)
-		if err != nil {
-			return err
-		}
-		k.embedReady = dims > 0
-		logger.Info("keyword_filter: keyword embeddings initialized", "processor", k.name, "count", len(kwCfg.Keywords), "embed_ready", k.embedReady)
 	}
 
+	var prefResp *api.EmbedResponse
 	if hasPreference {
 		resp, err := embedder.Embed(ctx, &api.EmbedRequest{Input: []string{kwCfg.Preference}})
 		if err != nil {
 			return err
 		}
 		if len(resp.Embeddings) > 0 {
-			k.prefVec = l2Normalize(resp.Embeddings[0])
+			if err := k.embedCache.Set(ctx, prefKey, resp.Embeddings[0]); err != nil {
+				return err
+			}
+			k.prefReady = true
+			prefResp = resp
 		}
 
 		if kwCfg.EmbedThreshold > 0 {
@@ -77,9 +75,26 @@ func (k *KeywordFilterProcessor) Initialize(ctx context.Context, st types.StateA
 			k.prefThreshold = 0.55
 		}
 
-		logger.Info("keyword_filter: preference vector ready", "processor", k.name, "threshold", k.prefThreshold)
+		logger.Info("keyword_filter: preference stored in Redis", "processor", k.name, "threshold", k.prefThreshold)
 	}
 
+	dims, err := k.embedCache.GetDims(ctx)
+	if err != nil {
+		return err
+	}
+	if dims == 0 && hasPreference && prefResp != nil && len(prefResp.Embeddings) > 0 {
+		dims = len(prefResp.Embeddings[0])
+		if err := k.embedCache.SetDims(ctx, dims); err != nil {
+			return err
+		}
+	}
+
+	if err := ensureIndexFromCache(ctx, k.embedCache); err != nil {
+		return err
+	}
+
+	k.embedReady = dims > 0
+	logger.Info("keyword_filter: initialized", "processor", k.name, "keywords", len(kwCfg.Keywords), "pref_ready", k.prefReady, "embed_ready", k.embedReady)
 	return nil
 }
 
@@ -94,70 +109,9 @@ func (k *KeywordFilterProcessor) Process(ctx context.Context, st types.StateAcce
 		return nil
 	}
 
-	if len(k.prefVec) > 0 {
-		if err := k.checkPreference(ctx, st, item); err != nil {
-			return err
-		}
-	}
-
-	if k.embedReady {
-		k.labelItem(ctx, st, item)
+	if err := k.processWithRedis(ctx, st, item); err != nil {
+		return err
 	}
 
 	return nil
-}
-
-func (k *KeywordFilterProcessor) checkPreference(ctx context.Context, st types.StateAccessor, item *types.Item) error {
-	logger := st.GetLogger()
-
-	embeddings := item.GetEmbedding()
-	if len(embeddings) == 0 {
-		logger.Debug("keyword_filter: no embedding for preference check", "item_id", item.ID)
-		return types.NewFilteredError(k.name, item.ID, "no embedding available for preference matching").
-			WithDetail("title", item.GetTitle())
-	}
-
-	var bestScore float64
-	for i, vec := range embeddings {
-		normalized := l2Normalize(vec)
-		score := dotProduct(k.prefVec, normalized)
-		if score > bestScore {
-			bestScore = score
-		}
-		_ = i
-	}
-
-	if bestScore < k.prefThreshold {
-		logger.Info("keyword_filter: rejected — preference mismatch", "processor", k.name, "item_id", item.ID, "title", item.GetTitle(), "score", bestScore, "threshold", k.prefThreshold)
-		return types.NewFilteredError(k.name, item.ID, "preference mismatch").
-			WithDetail("score", bestScore).
-			WithDetail("threshold", k.prefThreshold)
-	}
-
-	logger.Debug("keyword_filter: preference match", "item_id", item.ID, "score", bestScore)
-	return nil
-}
-
-func l2Normalize(vec []float32) []float32 {
-	var norm float64
-	for _, v := range vec {
-		norm += float64(v) * float64(v)
-	}
-	norm = math.Sqrt(norm)
-	if norm == 0 {
-		return vec
-	}
-	result := make([]float32, len(vec))
-	for i, v := range vec {
-		result[i] = float32(float64(v) / norm)
-	}
-	return result
-}
-
-func dotProduct(a, b []float32) float64 {
-	var sum float64
-	for i := range a {
-		sum += float64(a[i]) * float64(b[i])
-	}
-	return sum
 }
