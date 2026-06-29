@@ -53,6 +53,7 @@ func run(ctx context.Context) error {
 	registry := appState.GetRegistry()
 	pipeline := appState.GetPipeline().(*core.Pipeline)
 	st := appState.GetStorage()
+	q := appState.GetQueue()
 
 	interval, err := time.ParseDuration(cfg.Bot.Interval)
 	if err != nil {
@@ -63,6 +64,9 @@ func run(ctx context.Context) error {
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer shutdownCancel()
 		if err := registry.CloseAll(shutdownCtx); err != nil {
+			return err
+		}
+		if err := q.Close(); err != nil {
 			return err
 		}
 		return st.Close(shutdownCtx)

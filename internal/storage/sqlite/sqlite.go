@@ -65,10 +65,6 @@ func runMigrations(conn *sql.DB) error {
 	return nil
 }
 
-func (s *SQLiteStorage) GetConnection() *sql.DB {
-	return s.conn
-}
-
 func (s *SQLiteStorage) Entries() storage.EntryStore {
 	return s.entries
 }

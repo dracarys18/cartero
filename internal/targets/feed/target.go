@@ -2,7 +2,6 @@ package feed
 
 import (
 	"context"
-	"time"
 
 	"cartero/internal/components"
 	"cartero/internal/storage"
@@ -43,10 +42,7 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 	}
 
 	return &types.PublishResult{
-		Success:   true,
-		Target:    t.name,
-		ItemID:    item.ID,
-		Timestamp: time.Now(),
+		Success: true,
 		Metadata: map[string]any{
 			"feed_type": "rss/atom/json",
 		},

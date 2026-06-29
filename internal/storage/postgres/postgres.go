@@ -67,10 +67,6 @@ func runMigrations(conn *sql.DB) error {
 	return nil
 }
 
-func (s *PostgresStorage) GetConnection() *sql.DB {
-	return s.conn
-}
-
 func (s *PostgresStorage) Entries() storage.EntryStore {
 	return s.entries
 }

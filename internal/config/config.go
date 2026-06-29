@@ -58,11 +58,9 @@ type PlatformSettings struct {
 
 type DiscordPlatformSettings struct {
 	BotToken string `toml:"bot_token"`
-	Timeout  string `toml:"timeout"`
 }
 
 type OllamaPlatformSettings struct {
-	Model          string `toml:"model"`
 	EmbeddingModel string `toml:"embedding_model"`
 }
 
@@ -88,7 +86,6 @@ type SourceSettings struct {
 	HackerNewsSettings
 	RSSSettings
 	LobstersSettings
-	LessWrongSettings
 	ScraperSettings
 }
 
@@ -111,9 +108,6 @@ type LobstersSettings struct {
 	SortBy            string   `toml:"sort_by"`
 	IncludeCategories []string `toml:"include_categories"`
 	ExcludeCategories []string `toml:"exclude_categories"`
-}
-
-type LessWrongSettings struct {
 }
 
 type ScraperSettings struct {
@@ -145,10 +139,8 @@ type ProcessorSettings struct {
 }
 
 type DedupeSettings struct {
-	TTL              string  `toml:"ttl"`
-	EmbedThreshold   float64 `toml:"embed_threshold"`
-	EmbedWindow      string  `toml:"embed_window"`
-	EmbedListCount   int     `toml:"embed_list_count"`
+	EmbedThreshold float64 `toml:"embed_threshold"`
+	EmbedWindow    string  `toml:"embed_window"`
 }
 
 type ScoreFilterSettings struct {
@@ -200,7 +192,6 @@ type TemplateSettings struct {
 type TargetConfig struct {
 	Type     string         `toml:"type"`
 	Enabled  bool           `toml:"enabled"`
-	Platform string         `toml:"platform"`
 	Settings TargetSettings `toml:"settings"`
 }
 

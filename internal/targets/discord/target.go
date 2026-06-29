@@ -66,18 +66,12 @@ func (d *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 	if err != nil {
 		return &types.PublishResult{
 			Success:   false,
-			Target:    d.name,
-			ItemID:    item.ID,
-			Timestamp: time.Now(),
 			Error:     err,
 		}, err
 	}
 
 	return &types.PublishResult{
 		Success:   true,
-		Target:    d.name,
-		ItemID:    item.ID,
-		Timestamp: time.Now(),
 		Metadata: map[string]any{
 			"message_id": messageID,
 			"channel_id": d.channelID,

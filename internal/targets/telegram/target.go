@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"strings"
 	"text/template"
-	"time"
 )
 
 type Target struct {
@@ -49,9 +48,6 @@ func (t *Target) Publish(_ context.Context, item *types.Item) (*types.PublishRes
 	if err := t.template.Execute(&buf, item); err != nil {
 		return &types.PublishResult{
 			Success:   false,
-			Target:    t.name,
-			ItemID:    item.ID,
-			Timestamp: time.Now(),
 			Error:     err,
 		}, fmt.Errorf("telegram: template execution error: %w", err)
 	}
@@ -63,18 +59,12 @@ func (t *Target) Publish(_ context.Context, item *types.Item) (*types.PublishRes
 	if err != nil {
 		return &types.PublishResult{
 			Success:   false,
-			Target:    t.name,
-			ItemID:    item.ID,
-			Timestamp: time.Now(),
 			Error:     err,
 		}, fmt.Errorf("telegram: failed to send message: %w", err)
 	}
 
 	return &types.PublishResult{
 		Success:   true,
-		Target:    t.name,
-		ItemID:    item.ID,
-		Timestamp: time.Now(),
 		Metadata: map[string]any{
 			"message_id": sent.MessageID,
 			"chat_id":    t.chatID,

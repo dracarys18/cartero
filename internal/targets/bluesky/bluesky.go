@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"text/template"
-	"time"
 
 	"github.com/bluesky-social/indigo/api/atproto"
 	"github.com/bluesky-social/indigo/api/bsky"
@@ -93,18 +92,12 @@ func (t *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 	if err != nil {
 		return &types.PublishResult{
 			Success:   false,
-			Target:    t.name,
-			ItemID:    item.ID,
-			Timestamp: time.Now(),
 			Error:     err,
 		}, err
 	}
 
 	return &types.PublishResult{
 		Success:   true,
-		Target:    t.name,
-		ItemID:    item.ID,
-		Timestamp: time.Now(),
 		Metadata: map[string]any{
 			"uri": resp.Uri,
 			"cid": resp.Cid,

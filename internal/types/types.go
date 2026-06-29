@@ -72,33 +72,11 @@ func (i *Item) GetArticle() *Article {
 	return i.TextContent
 }
 
-func (i *Item) GetThumbnail() string {
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-
-	if i.TextContent != nil {
-		if i.TextContent.Image != "" {
-			return i.TextContent.Image
-		}
-	}
-	return ""
-}
-
 func (i *Item) ModifyContent(content any) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
 	i.Content = content
-}
-
-func (i *Item) GetMetadata(key string) (interface{}, bool) {
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-	if i.Metadata == nil {
-		return nil, false
-	}
-	val, ok := i.Metadata[key]
-	return val, ok
 }
 
 func (i *Item) AddMetadata(key string, value any) {
@@ -168,12 +146,9 @@ func (i *Item) SetEmbedding(v [][]float32) {
 }
 
 type PublishResult struct {
-	Success   bool
-	Target    string
-	ItemID    string
-	Timestamp time.Time
-	Error     error
-	Metadata  map[string]interface{}
+	Success  bool
+	Error    error
+	Metadata map[string]interface{}
 }
 
 type Source interface {
@@ -190,26 +165,11 @@ type Processor interface {
 	DependsOn() []string
 }
 
-type ProcessorConfig struct {
-	Name    string
-	Type    string
-	Enabled bool
-}
-
 type Target interface {
 	Name() string
 	Initialize(ctx context.Context) error
 	Publish(ctx context.Context, item *Item) (*PublishResult, error)
 	Shutdown(ctx context.Context) error
-}
-
-type Storage interface {
-	Store(ctx context.Context, item *Item) error
-	Get(ctx context.Context, id string) (*Item, error)
-	Exists(ctx context.Context, id string) (bool, error)
-	MarkPublished(ctx context.Context, itemID, target string) error
-	IsPublished(ctx context.Context, itemID, target string) (bool, error)
-	Close() error
 }
 
 type Envelope struct {
@@ -249,6 +209,7 @@ type Queue interface {
 	Publish(ctx context.Context, stream string, env Envelope) error
 	Consume(ctx context.Context, stream string) ([]Envelope, []string, error)
 	Ack(ctx context.Context, stream string, ids ...string) error
+	Close() error
 }
 
 type StateAccessor interface {

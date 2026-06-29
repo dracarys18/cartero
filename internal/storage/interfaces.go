@@ -2,12 +2,10 @@ package storage
 
 import (
 	"context"
-	"database/sql"
 	"time"
 )
 
 type StorageInterface interface {
-	GetConnection() *sql.DB
 	Entries() EntryStore
 	Close(ctx context.Context) error
 }
@@ -56,7 +54,6 @@ type EntryStore interface {
 	InsertEntry(ctx context.Context, id, title, link, description, content, author, source, imageURL, matchedKeywords string, publishedAt time.Time) error
 	ListRecentEntries(ctx context.Context, limit int) ([]FeedEntry, error)
 	ListEntriesPaginated(ctx context.Context, page, perPage int, startDate, endDate time.Time) (*PaginationResult, error)
-	DeleteOlderThan(ctx context.Context, age time.Duration) error
 	SetEmbedding(ctx context.Context, id string, embedding []float32) error
 	FindNearestEmbedding(ctx context.Context, embedding []float32, threshold float64, since time.Time) (bool, error)
 }

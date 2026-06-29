@@ -68,9 +68,6 @@ func (t *Template) Load(path string, kind TemplateType, customFuncs any) error {
 	return nil
 }
 
-func (t *Template) TextTemplate() *texttemplate.Template {
-	return t.textTmpl
-}
 
 func (t *Template) HTMLTemplate() *htmltemplate.Template {
 	return t.htmlTmpl

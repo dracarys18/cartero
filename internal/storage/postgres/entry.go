@@ -312,22 +312,6 @@ func (s *entryStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEn
 	return entries, nil
 }
 
-func (s *entryStore) DeleteOlderThan(ctx context.Context, age time.Duration) error {
-	cutoff := time.Now().Add(-age)
-	query := `DELETE FROM feed_entries WHERE created_at < $1`
-
-	result, err := s.db.ExecContext(ctx, query, cutoff)
-	if err != nil {
-		return fmt.Errorf("failed to delete old entries: %w", err)
-	}
-
-	if rows, err := result.RowsAffected(); err == nil {
-		_ = rows
-	}
-
-	return nil
-}
-
 func (s *entryStore) SetEmbedding(ctx context.Context, id string, embedding []float32) error {
 	query := `
 		INSERT INTO item_embeddings (id, embedding)

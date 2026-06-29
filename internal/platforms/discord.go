@@ -67,9 +67,6 @@ func (p *DiscordPlatform) Session() *discordgo.Session {
 	return p.session
 }
 
-func (p *DiscordPlatform) BotToken() string {
-	return p.botToken
-}
 
 func (p *DiscordPlatform) SleepDuration() time.Duration {
 	return p.sleep
