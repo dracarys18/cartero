@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 
 	"cartero/internal/platforms"
 	"cartero/internal/queue"
@@ -114,32 +115,37 @@ func (k *KeywordFilterProcessor) processWithRedis(ctx context.Context, st types.
 	}
 
 	var bestPrefScore float64
+	if k.prefReady {
+		prefVec, exists, err := k.embedCache.Get(ctx, prefKey)
+		if err == nil && exists {
+			for _, chunkVec := range item.GetEmbedding() {
+				score := cosineSimilarity(prefVec, chunkVec)
+				if score > bestPrefScore {
+					bestPrefScore = score
+				}
+			}
+		}
+		if bestPrefScore < k.prefThreshold {
+			logger.Info("keyword_filter: rejected — preference mismatch", "processor", k.name, "item_id", item.ID, "title", item.GetTitle(), "score", bestPrefScore, "threshold", k.prefThreshold)
+			return types.NewFilteredError(k.name, item.ID, "preference mismatch").
+				WithDetail("score", bestPrefScore).
+				WithDetail("threshold", k.prefThreshold)
+		}
+	}
+
 	var bestKwScore float64
 	var bestKeyword string
-
 	for _, chunkVec := range item.GetEmbedding() {
-		results, err := k.embedCache.KNNSearch(ctx, 20, chunkVec)
+		results, err := k.embedCache.KNNSearch(ctx, 3, chunkVec)
 		if err != nil {
-			logger.Warn("keyword_filter: KNN search failed", "item_id", item.ID, "error", err)
 			continue
 		}
-
 		for _, r := range results {
-			if r.Keyword == prefKey && r.Score > bestPrefScore {
-				bestPrefScore = r.Score
-			}
 			if r.Keyword != prefKey && r.Score > bestKwScore {
 				bestKwScore = r.Score
 				bestKeyword = r.Keyword
 			}
 		}
-	}
-
-	if k.prefReady && bestPrefScore < k.prefThreshold {
-		logger.Info("keyword_filter: rejected — preference mismatch", "processor", k.name, "item_id", item.ID, "title", item.GetTitle(), "score", bestPrefScore, "threshold", k.prefThreshold)
-		return types.NewFilteredError(k.name, item.ID, "preference mismatch").
-			WithDetail("score", bestPrefScore).
-			WithDetail("threshold", k.prefThreshold)
 	}
 
 	if bestKeyword != "" {
@@ -148,4 +154,17 @@ func (k *KeywordFilterProcessor) processWithRedis(ctx context.Context, st types.
 	}
 
 	return nil
+}
+
+func cosineSimilarity(a, b []float32) float64 {
+	var dot, normA, normB float64
+	for i := range a {
+		dot += float64(a[i]) * float64(b[i])
+		normA += float64(a[i]) * float64(a[i])
+		normB += float64(b[i]) * float64(b[i])
+	}
+	if normA == 0 || normB == 0 {
+		return 0
+	}
+	return dot / (math.Sqrt(normA) * math.Sqrt(normB))
 }
