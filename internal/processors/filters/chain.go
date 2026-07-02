@@ -7,8 +7,6 @@ import (
 	"cartero/internal/types"
 )
 
-// Filter operates on the whole list of items for a cycle and returns the
-// transformed list (culled, reordered, annotated, or truncated).
 type Filter interface {
 	Name() string
 	DependsOn() []string
@@ -56,9 +54,6 @@ type filterNode struct{ f Filter }
 func (n filterNode) GetName() string           { return n.f.Name() }
 func (n filterNode) GetDependencies() []string { return n.f.DependsOn() }
 
-// fromProcessor adapts an existing per-item Processor into a Filter by looping
-// over the batch, dropping items rejected by a FilteredError. name is the
-// processor type, so DependsOn wiring (extract_text, embed_text, ...) matches.
 type fromProcessor struct {
 	name string
 	p    types.Processor
@@ -66,7 +61,7 @@ type fromProcessor struct {
 
 func FromProcessor(name string, p types.Processor) Filter { return fromProcessor{name: name, p: p} }
 
-func (a fromProcessor) Name() string       { return a.name }
+func (a fromProcessor) Name() string        { return a.name }
 func (a fromProcessor) DependsOn() []string { return a.p.DependsOn() }
 
 func (a fromProcessor) Filter(ctx context.Context, state types.StateAccessor, items []*types.Item) ([]*types.Item, error) {

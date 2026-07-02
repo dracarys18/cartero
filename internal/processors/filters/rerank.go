@@ -13,9 +13,6 @@ const (
 	docMaxLen  = 500
 )
 
-// RerankFilter is the precision stage: it re-scores the recall shortlist with a
-// cross-encoder that reads (interest, article) jointly, drops items below the
-// relevance threshold, and re-sorts by the calibrated score.
 type RerankFilter struct {
 	reranker platforms.Reranker
 }
@@ -24,7 +21,7 @@ func NewRerankFilter(reranker platforms.Reranker) *RerankFilter {
 	return &RerankFilter{reranker: reranker}
 }
 
-func (f *RerankFilter) Name() string       { return "rerank" }
+func (f *RerankFilter) Name() string        { return "rerank" }
 func (f *RerankFilter) DependsOn() []string { return []string{"rank"} }
 
 func (f *RerankFilter) Filter(ctx context.Context, state types.StateAccessor, items []*types.Item) ([]*types.Item, error) {

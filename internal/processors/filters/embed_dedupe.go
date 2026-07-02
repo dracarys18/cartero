@@ -10,9 +10,9 @@ import (
 )
 
 type EmbedDedupeProcessor struct {
-	name       string
-	threshold  float64
-	window     time.Duration
+	name      string
+	threshold float64
+	window    time.Duration
 }
 
 func NewEmbedDedupeProcessor(name string, settings config.DedupeSettings) *EmbedDedupeProcessor {
