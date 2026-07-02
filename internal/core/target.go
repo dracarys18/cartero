@@ -12,8 +12,6 @@ import (
 
 type Targets []types.Target
 
-// Publish delivers each item to every target it has not yet been published to,
-// marking it published so it is never re-sent.
 func (t Targets) Publish(ctx context.Context, state types.StateAccessor, items []*types.Item, logger *slog.Logger) error {
 	store := state.GetStorage()
 	for _, item := range items {

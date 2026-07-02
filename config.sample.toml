@@ -145,8 +145,9 @@ enabled = true
 [processors.embed.settings]
 chunk_size = 7000
 
+# keywords_file is a local path OR a URL (e.g. a gist raw link) — URLs are fetched automatically.
 [interests]
-keywords_file = "assets/keywords/my_keywords.json"
+keywords_file = "https://gist.githubusercontent.com/you/id/raw/keywords.json"
 
 [processors.rate_limiter]
 type = "rate_limit"

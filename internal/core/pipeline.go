@@ -91,8 +91,6 @@ func (p *Pipeline) InitializeQueues(ctx context.Context, q types.Queue) error {
 	return nil
 }
 
-// Gather triggers every source and drains the source stream into a single list
-// of items for this cycle.
 func (p *Pipeline) Gather(ctx context.Context, state types.StateAccessor) ([]*types.Item, error) {
 	if err := p.Run(ctx, state); err != nil {
 		return nil, err
