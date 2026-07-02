@@ -60,6 +60,11 @@ type PlatformSettings struct {
 	BlueskyPlatformSettings
 	TelegramPlatformSettings
 	OpenAIPlatformSettings
+	RerankerPlatformSettings
+}
+
+type RerankerPlatformSettings struct {
+	RerankURL string `toml:"rerank_url"`
 }
 
 type DiscordPlatformSettings struct {

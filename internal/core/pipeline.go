@@ -91,102 +91,55 @@ func (p *Pipeline) InitializeQueues(ctx context.Context, q types.Queue) error {
 	return nil
 }
 
-func (p *Pipeline) StartConsumers(ctx context.Context, state types.StateAccessor) {
-	go p.runSourceConsumer(ctx, state)
-	go p.runDeliveryConsumer(ctx, state)
-}
+// Gather triggers every source and drains the source stream into a single list
+// of items for this cycle.
+func (p *Pipeline) Gather(ctx context.Context, state types.StateAccessor) ([]*types.Item, error) {
+	if err := p.Run(ctx, state); err != nil {
+		return nil, err
+	}
 
-func (p *Pipeline) runSourceConsumer(ctx context.Context, state types.StateAccessor) {
-	logger := state.GetLogger()
 	q := state.GetQueue()
 	stream := q.SourceStream()
 
+	var items []*types.Item
 	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-
 		envelopes, ids, err := q.Consume(ctx, stream)
 		if err != nil {
 			if errors.Is(err, redis.Nil) {
-				continue
+				break
 			}
 			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-				return
+				return items, nil
 			}
-			logger.Error("Source consumer error", "error", err)
-			continue
+			return nil, err
 		}
-
+		if len(envelopes) == 0 {
+			break
+		}
 		for i, env := range envelopes {
-			route := p.routeForItem(env.Item)
-			if route == nil {
-				logger.Error("No route found for item", "item_id", env.Item.ID, "source", env.Item.Source)
-				continue
-			}
-			if err := route.processItem(ctx, state, env.Item); err != nil {
-				logger.Error("Failed to process item", "item_id", env.Item.ID, "error", err)
-				continue
-			}
-			if err := q.Ack(ctx, stream, ids[i]); err != nil {
-				logger.Error("Failed to ack source message", "id", ids[i], "error", err)
-			}
+			items = append(items, env.Item)
+			_ = q.Ack(ctx, stream, ids[i])
 		}
 	}
+	return items, nil
 }
 
-func (p *Pipeline) runDeliveryConsumer(ctx context.Context, state types.StateAccessor) {
-	logger := state.GetLogger()
-	q := state.GetQueue()
-	stream := q.ProcessedStream()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-
-		envelopes, ids, err := q.Consume(ctx, stream)
-		if err != nil {
-			if errors.Is(err, redis.Nil) {
-				continue
-			}
-			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-				return
-			}
-			logger.Error("Delivery consumer error", "error", err)
-			continue
-		}
-
-		for i, env := range envelopes {
-			route := p.routeForItem(env.Item)
-			if route == nil {
-				logger.Error("No route found for item", "item_id", env.Item.ID, "source", env.Item.Source)
-				continue
-			}
-			targets := route.resolveTargets(env.Targets)
-			if err := targets.Process(ctx, state, env.Item, logger); err != nil {
-				logger.Error("Failed to deliver item", "item_id", env.Item.ID, "error", err)
-				continue
-			}
-			if err := q.Ack(ctx, stream, ids[i]); err != nil {
-				logger.Error("Failed to ack processed message", "id", ids[i], "error", err)
-			}
-		}
-	}
-}
-
-func (p *Pipeline) routeForItem(item *types.Item) *SourceRoute {
+func (p *Pipeline) AllTargets() Targets {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
-	idx, ok := p.routeIndex[item.Route]
-	if !ok {
-		return nil
+
+	seen := make(map[string]bool)
+	var out Targets
+	for _, route := range p.routes {
+		for _, target := range route.Targets {
+			if seen[target.Name()] {
+				continue
+			}
+			seen[target.Name()] = true
+			out = append(out, target)
+		}
 	}
-	return &p.routes[idx]
+	return out
 }
 
 func (p *Pipeline) Run(ctx context.Context, state types.StateAccessor) error {

@@ -12,6 +12,28 @@ import (
 
 type Targets []types.Target
 
+// Publish delivers each item to every target it has not yet been published to,
+// marking it published so it is never re-sent.
+func (t Targets) Publish(ctx context.Context, state types.StateAccessor, items []*types.Item, logger *slog.Logger) error {
+	store := state.GetStorage()
+	for _, item := range items {
+		var pending Targets
+		for _, target := range t {
+			published, _ := store.Entries().IsPublished(ctx, item.ID, target.Name())
+			if !published {
+				pending = append(pending, target)
+			}
+		}
+		if len(pending) == 0 {
+			continue
+		}
+		if err := pending.Process(ctx, state, item, logger); err != nil {
+			logger.Error("publish: delivery failed", "item_id", item.ID, "error", err)
+		}
+	}
+	return nil
+}
+
 func (t Targets) Process(ctx context.Context, state types.StateAccessor, item *types.Item, logger *slog.Logger) error {
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(t))

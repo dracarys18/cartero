@@ -14,8 +14,18 @@ dsn  = "postgres://cartero:cartero@localhost:5432/cartero?sslmode=disable"
 
 [platforms.ollama]
 type = "ollama"
+enabled = true
 [platforms.ollama.settings]
-embedding_model = "embeddinggemma:300m"
+embedding_model = "bge-m3"
+
+# Cross-encoder reranker: the precision stage of the feed chain. Point it at a
+# local Text-Embeddings-Inference (TEI) server exposing /rerank (see docker-compose.yml).
+# Optional — if absent, the rerank filter is a pass-through (recall-only ranking).
+[platforms.reranker]
+type = "rerank"
+enabled = true
+[platforms.reranker.settings]
+rerank_url = "http://localhost:8081"
 
 # OpenAI-compatible embedding API (Cloudflare Workers AI, OpenAI, Together, etc.)
 # The embedding dimension must match the item_embeddings/item_chunks columns (halfvec(1024)).

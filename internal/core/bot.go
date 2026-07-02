@@ -6,12 +6,15 @@ import (
 	"sync"
 	"time"
 
+	"cartero/internal/processors/filters"
 	"cartero/internal/types"
 )
 
 type Bot struct {
 	name       string
 	pipeline   *Pipeline
+	filters    *filters.Chain
+	targets    Targets
 	interval   time.Duration
 	runOnce    bool
 	state      types.StateAccessor
@@ -25,6 +28,8 @@ type Bot struct {
 type BotConfig struct {
 	Name       string
 	Pipeline   *Pipeline
+	Filters    *filters.Chain
+	Targets    Targets
 	Interval   time.Duration
 	RunOnce    bool
 	State      types.StateAccessor
@@ -39,6 +44,8 @@ func NewBot(config BotConfig) *Bot {
 	return &Bot{
 		name:       config.Name,
 		pipeline:   config.Pipeline,
+		filters:    config.Filters,
+		targets:    config.Targets,
 		interval:   config.Interval,
 		runOnce:    config.RunOnce,
 		state:      config.State,
@@ -58,8 +65,6 @@ func (b *Bot) Start(ctx context.Context) error {
 	b.running = true
 	b.mu.Unlock()
 
-	b.pipeline.StartConsumers(ctx, b.state)
-
 	if b.runOnce {
 		return b.runOnceMode(ctx)
 	}
@@ -67,14 +72,26 @@ func (b *Bot) Start(ctx context.Context) error {
 	return b.runContinuousMode(ctx)
 }
 
-func (b *Bot) runOnceMode(ctx context.Context) error {
-	defer b.markStopped()
+func (b *Bot) runCycle(ctx context.Context) error {
+	logger := b.state.GetLogger()
 
-	if err := ProcessCore(ctx, b.state); err != nil && err != context.Canceled {
-		return fmt.Errorf("process core failed: %w", err)
+	items, err := b.pipeline.Gather(ctx, b.state)
+	if err != nil {
+		return fmt.Errorf("gather: %w", err)
+	}
+	logger.Info("gathered items", "count", len(items))
+
+	items, err = b.filters.Filter(ctx, b.state, items)
+	if err != nil {
+		return fmt.Errorf("filter: %w", err)
 	}
 
-	return nil
+	return b.targets.Publish(ctx, b.state, items, logger)
+}
+
+func (b *Bot) runOnceMode(ctx context.Context) error {
+	defer b.markStopped()
+	return b.runCycle(ctx)
 }
 
 func (b *Bot) runContinuousMode(ctx context.Context) error {
@@ -108,11 +125,7 @@ func (b *Bot) executeRun(ctx context.Context) error {
 	runCtx, cancel := context.WithTimeout(ctx, b.interval-10*time.Second)
 	defer cancel()
 
-	if err := ProcessCore(runCtx, b.state); err != nil && err != context.Canceled {
-		return fmt.Errorf("process core failed: %w", err)
-	}
-
-	return nil
+	return b.runCycle(runCtx)
 }
 
 func (b *Bot) Stop(ctx context.Context) error {

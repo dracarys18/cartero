@@ -6,7 +6,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/pgvector/pgvector-go"
@@ -167,6 +166,24 @@ func (s *entryStore) ListRecentEntries(ctx context.Context, limit int) ([]storag
 	rows, err := s.db.QueryContext(ctx, query, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query entries: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	return s.scanEntries(rows, limit)
+}
+
+func (s *entryStore) ListPublishedEntries(ctx context.Context, target string, limit int) ([]storage.FeedEntry, error) {
+	query := `
+		SELECT fe.id, fe.title, fe.link, fe.description, fe.content, fe.author, fe.source, fe.image_url, fe.matched_keywords, fe.hash, fe.entry_timestamp, fe.published_at, fe.created_at
+		FROM feed_entries fe
+		JOIN published p ON p.item_id = fe.id AND p.target = $1
+		ORDER BY p.published_at DESC
+		LIMIT $2
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, target, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query published entries: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
 
@@ -396,162 +413,3 @@ func (s *entryStore) FindNearestEmbedding(ctx context.Context, embedding []float
 	return similarity >= threshold, nil
 }
 
-const rankKNNPerInterest = 300
-
-func (s *entryStore) RankCandidates(ctx context.Context, interests []storage.RankInterest, since time.Time, pool int) ([]storage.RankedCandidate, error) {
-	if len(interests) == 0 {
-		return nil, nil
-	}
-	hasSince := !since.IsZero()
-
-	sem := make(map[string]float64)
-	for _, in := range interests {
-		if len(in.Vector) == 0 {
-			continue
-		}
-		vec := pgvector.NewHalfVector(in.Vector)
-
-		var rows *sql.Rows
-		var err error
-		if hasSince {
-			rows, err = s.db.QueryContext(ctx, `
-				SELECT ic.item_id, 1 - (ic.embedding <=> $1) AS sim
-				FROM item_chunks ic
-				WHERE ic.created_at >= $2
-				ORDER BY ic.embedding <=> $1
-				LIMIT $3`, vec, since, rankKNNPerInterest)
-		} else {
-			rows, err = s.db.QueryContext(ctx, `
-				SELECT ic.item_id, 1 - (ic.embedding <=> $1) AS sim
-				FROM item_chunks ic
-				ORDER BY ic.embedding <=> $1
-				LIMIT $2`, vec, rankKNNPerInterest)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("rank knn: %w", err)
-		}
-		for rows.Next() {
-			var id string
-			var sim float64
-			if err := rows.Scan(&id, &sim); err != nil {
-				_ = rows.Close()
-				return nil, fmt.Errorf("rank knn scan: %w", err)
-			}
-			if cur, ok := sem[id]; !ok || sim > cur {
-				sem[id] = sim
-			}
-		}
-		if err := rows.Err(); err != nil {
-			_ = rows.Close()
-			return nil, err
-		}
-		_ = rows.Close()
-	}
-	if len(sem) == 0 {
-		return nil, nil
-	}
-
-	ids := make([]string, 0, len(sem))
-	for id := range sem {
-		ids = append(ids, id)
-	}
-	sort.Slice(ids, func(i, j int) bool { return sem[ids[i]] > sem[ids[j]] })
-	if pool > 0 && len(ids) > pool {
-		ids = ids[:pool]
-	}
-
-	entries, vecs, err := s.fetchCandidates(ctx, ids)
-	if err != nil {
-		return nil, err
-	}
-
-	lex := make(map[string]float64)
-	for _, in := range interests {
-		if in.Text == "" {
-			continue
-		}
-		rows, err := s.db.QueryContext(ctx, `
-			SELECT id, ts_rank_cd(fts, websearch_to_tsquery('english', $1), 32) AS rank
-			FROM feed_entries
-			WHERE id = ANY($2)`, in.Text, ids)
-		if err != nil {
-			return nil, fmt.Errorf("rank lexical: %w", err)
-		}
-		for rows.Next() {
-			var id string
-			var rank float64
-			if err := rows.Scan(&id, &rank); err != nil {
-				_ = rows.Close()
-				return nil, fmt.Errorf("rank lexical scan: %w", err)
-			}
-			if rank > lex[id] {
-				lex[id] = rank
-			}
-		}
-		if err := rows.Err(); err != nil {
-			_ = rows.Close()
-			return nil, err
-		}
-		_ = rows.Close()
-	}
-
-	out := make([]storage.RankedCandidate, 0, len(entries))
-	for i, entry := range entries {
-		out = append(out, storage.RankedCandidate{
-			Entry:     entry,
-			Semantic:  sem[entry.ID],
-			Lexical:   lex[entry.ID],
-			Embedding: vecs[i],
-		})
-	}
-	return out, nil
-}
-
-func (s *entryStore) fetchCandidates(ctx context.Context, ids []string) ([]storage.FeedEntry, [][]float32, error) {
-	rows, err := s.db.QueryContext(ctx, `
-		SELECT fe.id, fe.title, fe.link, fe.description, fe.content, fe.author, fe.source, fe.image_url, fe.matched_keywords, fe.hash, fe.entry_timestamp, fe.published_at, fe.created_at, ie.embedding
-		FROM feed_entries fe
-		JOIN item_embeddings ie ON ie.id = fe.id
-		WHERE fe.id = ANY($1)`, ids)
-	if err != nil {
-		return nil, nil, fmt.Errorf("fetch candidates: %w", err)
-	}
-	defer func() { _ = rows.Close() }()
-
-	var entries []storage.FeedEntry
-	var vecs [][]float32
-	for rows.Next() {
-		var entry storage.FeedEntry
-		var link, description, content, author, imageURL, matchedKeywords, hash sql.NullString
-		var entryTimestamp, publishedAt sql.NullTime
-		var emb pgvector.HalfVector
-
-		if err := rows.Scan(
-			&entry.ID, &entry.Title, &link, &description, &content, &author, &entry.Source,
-			&imageURL, &matchedKeywords, &hash, &entryTimestamp, &publishedAt, &entry.CreatedAt, &emb,
-		); err != nil {
-			return nil, nil, fmt.Errorf("scan candidate: %w", err)
-		}
-
-		entry.Link = link.String
-		entry.Description = description.String
-		entry.Content = content.String
-		entry.Author = author.String
-		entry.ImageURL = imageURL.String
-		entry.MatchedKeywords = matchedKeywords.String
-		entry.Hash = hash.String
-		if entryTimestamp.Valid {
-			entry.EntryTimestamp = entryTimestamp.Time
-		}
-		if publishedAt.Valid {
-			entry.PublishedAt = publishedAt.Time
-		}
-
-		entries = append(entries, entry)
-		vecs = append(vecs, emb.Slice())
-	}
-	if err := rows.Err(); err != nil {
-		return nil, nil, err
-	}
-	return entries, vecs, nil
-}

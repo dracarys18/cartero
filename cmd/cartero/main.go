@@ -75,6 +75,8 @@ func run(ctx context.Context) error {
 	bot := core.NewBot(core.BotConfig{
 		Name:       cfg.Bot.Name,
 		Pipeline:   pipeline,
+		Filters:    appState.GetFilterChain(),
+		Targets:    pipeline.AllTargets(),
 		Interval:   interval,
 		RunOnce:    cfg.Bot.RunOnce,
 		ShutdownFn: shutdownFn,

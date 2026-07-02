@@ -14,6 +14,7 @@ type PlatformComponent struct {
 	telegramPlatform  *platforms.TelegramPlatform
 	ollamaPlatforms   map[string]*platforms.OllamaPlatform
 	embeddingPlatform platforms.Embedder
+	rerankerPlatform  platforms.Reranker
 }
 
 func NewPlatformComponent(config map[string]config.PlatformConfig) *PlatformComponent {
@@ -101,6 +102,16 @@ func (c *PlatformComponent) Initialize(ctx context.Context) error {
 		}
 	}
 
+	for _, cfg := range c.config {
+		if !cfg.Enabled || cfg.Type != "rerank" {
+			continue
+		}
+		if url := cfg.Settings.RerankerPlatformSettings.RerankURL; url != "" {
+			c.rerankerPlatform = platforms.NewTEIReranker(url)
+			break
+		}
+	}
+
 	return nil
 }
 
@@ -131,6 +142,10 @@ func (c *PlatformComponent) Telegram() *platforms.TelegramPlatform {
 
 func (c *PlatformComponent) Embedder() platforms.Embedder {
 	return c.embeddingPlatform
+}
+
+func (c *PlatformComponent) Reranker() platforms.Reranker {
+	return c.rerankerPlatform
 }
 
 func (c *PlatformComponent) OllamaPlatform(model string) *platforms.OllamaPlatform {

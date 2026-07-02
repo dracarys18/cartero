@@ -10,8 +10,8 @@ import (
 	"cartero/internal/components"
 	"cartero/internal/config"
 	"cartero/internal/core"
-	"cartero/internal/middleware"
 	"cartero/internal/processors"
+	"cartero/internal/processors/filters"
 	"cartero/internal/processors/names"
 	"cartero/internal/queue"
 	"cartero/internal/sources"
@@ -29,6 +29,7 @@ type State struct {
 	Pipeline        *core.Pipeline
 	Storage         storage.StorageInterface
 	Chain           types.ProcessorChain
+	Filters         *filters.Chain
 	Queue           *queue.Queue
 	RedisConn       *queue.RedisConnection
 	Logger          *slog.Logger
@@ -112,8 +113,7 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 		return fmt.Errorf("failed to initialize pipeline queues: %w", err)
 	}
 
-	chain := s.buildProcessorChain(ctx)
-	s.Chain = chain
+	s.Filters = s.buildFilterChain(ctx)
 
 	return nil
 }
@@ -136,6 +136,10 @@ func (s *State) GetPipeline() interface{} {
 
 func (s *State) GetChain() types.ProcessorChain {
 	return s.Chain
+}
+
+func (s *State) GetFilterChain() *filters.Chain {
+	return s.Filters
 }
 
 func (s *State) GetLogger() *slog.Logger {
@@ -199,8 +203,8 @@ func (s *State) buildPipeline(ctx context.Context) (*core.Pipeline, error) {
 	return pipeline, nil
 }
 
-func (s *State) buildProcessorChain(ctx context.Context) types.ProcessorChain {
-	chain := middleware.New(s)
+func (s *State) buildFilterChain(ctx context.Context) *filters.Chain {
+	var fs []filters.Filter
 
 	for name, procCfg := range s.Config.Processors {
 		if !procCfg.Enabled {
@@ -217,12 +221,26 @@ func (s *State) buildProcessorChain(ctx context.Context) types.ProcessorChain {
 			continue
 		}
 
-		chain = chain.With(procCfg.Type, processor)
+		fs = append(fs, filters.FromProcessor(procCfg.Type, processor))
 	}
 
-	chain.Build()
+	var targetNames []string
+	for name, tc := range s.Config.Targets {
+		if tc.Enabled {
+			targetNames = append(targetNames, name)
+		}
+	}
+	fs = append(fs, filters.NewPublishedDedupeFilter(targetNames))
 
-	return chain
+	pc := s.Registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
+	fs = append(fs,
+		filters.NewRankFilter(pc.Embedder(), s.Config.Interests.Keywords),
+		filters.NewRerankFilter(pc.Reranker()),
+		filters.NewDiversifyFilter(),
+		filters.NewLimitFilter(),
+	)
+
+	return filters.NewChain(fs...)
 }
 
 func (s *State) createSource(name string, cfg config.SourceConfig) types.Source {
