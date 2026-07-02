@@ -27,36 +27,17 @@ type FeedEntry struct {
 
 
 func (f *FeedItem) From(item *types.Item) {
-	title := item.GetTitle()
-
-	if title != "" {
+	if title := item.GetTitle(); title != "" {
 		f.Title = title
 	} else {
 		f.Title = "Untitled"
 	}
 
-	if item.URL != "" {
-		f.Link = item.URL
-	} else if link, ok := item.Metadata["link"].(string); ok {
-		f.Link = link
-	}
-
-	if description, ok := item.Metadata["description"].(string); ok {
-		f.Description = description
-	}
-
-	if author, ok := item.Metadata["author"].(string); ok {
-		f.Author = author
-	}
-
-	if summary, ok := item.Metadata["summary"].(string); ok {
-		f.Content = summary
-	}
-
-	if item.TextContent != nil && item.TextContent.Image != "" {
-		f.ImageURL = item.TextContent.Image
-	}
-
+	f.Link = item.GetLink()
+	f.Description = item.GetDescription()
+	f.Content = item.GetFeedContent()
+	f.Author = item.GetAuthor()
+	f.ImageURL = item.GetImageURL()
 	f.Published = item.Timestamp.Format(time.RFC3339)
 }
 

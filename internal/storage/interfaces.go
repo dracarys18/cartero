@@ -17,6 +17,12 @@ type Item interface {
 	GetSource() string
 	GetTimestamp() time.Time
 	GetEmbedding() [][]float32
+	GetLink() string
+	GetDescription() string
+	GetFeedContent() string
+	GetAuthor() string
+	GetImageURL() string
+	GetMatchedKeywords() string
 }
 
 type FeedEntry struct {
@@ -45,6 +51,18 @@ type PaginationResult struct {
 	HasPrevious bool
 }
 
+type RankInterest struct {
+	Text   string
+	Vector []float32
+}
+
+type RankedCandidate struct {
+	Entry     FeedEntry
+	Semantic  float64
+	Lexical   float64
+	Embedding []float32
+}
+
 type EntryStore interface {
 	Store(ctx context.Context, item Item) error
 	Exists(ctx context.Context, id string) (bool, error)
@@ -56,4 +74,5 @@ type EntryStore interface {
 	ListEntriesPaginated(ctx context.Context, page, perPage int, startDate, endDate time.Time) (*PaginationResult, error)
 	SetEmbedding(ctx context.Context, id string, embedding []float32) error
 	FindNearestEmbedding(ctx context.Context, embedding []float32, threshold float64, since time.Time) (bool, error)
+	RankCandidates(ctx context.Context, interests []RankInterest, since time.Time, pool int) ([]RankedCandidate, error)
 }

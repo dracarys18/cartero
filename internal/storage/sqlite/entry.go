@@ -249,3 +249,7 @@ func (s *entryStore) SetEmbedding(ctx context.Context, id string, embedding []fl
 func (s *entryStore) FindNearestEmbedding(ctx context.Context, embedding []float32, threshold float64, since time.Time) (bool, error) {
 	return false, nil
 }
+
+func (s *entryStore) RankCandidates(ctx context.Context, interests []storage.RankInterest, since time.Time, pool int) ([]storage.RankedCandidate, error) {
+	return nil, fmt.Errorf("personalized ranking requires the postgres storage backend")
+}

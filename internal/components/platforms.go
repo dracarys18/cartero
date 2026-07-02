@@ -79,6 +79,9 @@ func (c *PlatformComponent) Initialize(ctx context.Context) error {
 	}
 
 	for _, cfg := range c.config {
+		if !cfg.Enabled {
+			continue
+		}
 		model := cfg.Settings.OllamaPlatformSettings.EmbeddingModel
 		if model == "" {
 			continue

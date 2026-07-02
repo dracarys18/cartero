@@ -21,8 +21,6 @@ import (
 	"cartero/internal/targets"
 	"cartero/internal/types"
 	"log/slog"
-
-	"github.com/redis/go-redis/v9"
 )
 
 type State struct {
@@ -146,10 +144,6 @@ func (s *State) GetLogger() *slog.Logger {
 
 func (s *State) GetQueue() types.Queue {
 	return s.Queue
-}
-
-func (s *State) GetRedisClient() *redis.Client {
-	return s.RedisConn.Client()
 }
 
 func (s *State) buildPlatformComponent() *components.PlatformComponent {
@@ -298,9 +292,6 @@ func (s *State) createProcessor(name string, cfg config.ProcessorConfig) types.P
 
 	case "filter_score":
 		return processors.NewScoreFilterProcessor(name)
-
-	case "filter_keyword":
-		return processors.NewKeywordFilterProcessor(name)
 
 	case "filter_published":
 		return processors.NewPublishedAtFilterProcessor(name)

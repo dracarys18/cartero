@@ -4,13 +4,13 @@ interval = "10m"
 run_once = false
 
 [storage]
-# SQLite (default)
-type = "sqlite"
-path = "./cartero.db"
+# Postgres + pgvector is required for personalized feeds (vector + FTS ranking).
+type = "postgres"
+dsn  = "postgres://cartero:cartero@localhost:5432/cartero?sslmode=disable"
 
-# Postgres
-# type = "postgres"
-# dsn  = "postgres://cartero:cartero@localhost:5432/cartero?sslmode=disable"
+# SQLite is deprecated and unmaintained (no vector/personalization support).
+# type = "sqlite"
+# path = "./cartero.db"
 
 [platforms.ollama]
 type = "ollama"
@@ -18,9 +18,10 @@ type = "ollama"
 embedding_model = "embeddinggemma:300m"
 
 # OpenAI-compatible embedding API (Cloudflare Workers AI, OpenAI, Together, etc.)
+# The embedding dimension must match the item_embeddings/item_chunks columns (halfvec(1024)).
 [platforms.cloudflare]
 type = "openai"
-enabled = false
+enabled = true
 [platforms.cloudflare.settings]
 embedding_model = "@cf/baai/bge-m3"
 base_url = "https://api.cloudflare.com/client/v4/accounts/YOUR_ACCOUNT/ai/v1"
@@ -124,22 +125,18 @@ min_score = 100
 
 [processors.extract_text]
 type = "extract_text"
-enabled = false
+enabled = true
 [processors.extract_text.settings]
 min_content_length = 100
 
 [processors.embed]
 type = "embed_text"
-enabled = false
+enabled = true
 [processors.embed.settings]
 chunk_size = 7000
 
-[processors.keyword_filter]
-type = "filter_keyword"
-enabled = false
-[processors.keyword_filter.settings]
+[interests]
 keywords_file = "assets/keywords/my_keywords.json"
-embed_threshold = 0.6
 
 [processors.rate_limiter]
 type = "rate_limit"
