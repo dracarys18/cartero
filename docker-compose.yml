@@ -40,9 +40,6 @@ services:
     volumes:
       - tei-data:/data
     pull_policy: always
-    # GPU needs a Turing+ NVIDIA card (compute capability >= 7.5). On CPU-only or
-    # older GPUs (e.g. MX150, Pascal 6.1), use a cpu-* image tag and delete the
-    # deploy block below. From cartero, reach it at http://reranker:80.
     deploy:
       resources:
         reservations:

@@ -18,9 +18,6 @@ enabled = true
 [platforms.ollama.settings]
 embedding_model = "bge-m3"
 
-# Cross-encoder reranker: the precision stage of the feed chain. Point it at a
-# local Text-Embeddings-Inference (TEI) server exposing /rerank (see docker-compose.yml).
-# Optional — if absent, the rerank filter is a pass-through (recall-only ranking).
 [platforms.reranker]
 type = "rerank"
 enabled = true
@@ -28,7 +25,6 @@ enabled = true
 rerank_url = "http://localhost:8081"
 
 # OpenAI-compatible embedding API (Cloudflare Workers AI, OpenAI, Together, etc.)
-# The embedding dimension must match the item_embeddings/item_chunks columns (halfvec(1024)).
 [platforms.cloudflare]
 type = "openai"
 enabled = true
@@ -145,7 +141,6 @@ enabled = true
 [processors.embed.settings]
 chunk_size = 7000
 
-# keywords_file is a local path OR a URL (e.g. a gist raw link) — URLs are fetched automatically.
 [interests]
 keywords_file = "https://gist.githubusercontent.com/you/id/raw/keywords.json"
 
