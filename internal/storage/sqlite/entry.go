@@ -78,8 +78,8 @@ func (s *entryStore) IsPublished(ctx context.Context, itemID, target string) (bo
 
 func (s *entryStore) InsertEntry(ctx context.Context, id, title, link, description, content, author, source, imageURL, matchedKeywords string, publishedAt time.Time) error {
 	query := `
-		INSERT INTO feed_entries (id, title, link, description, content, author, source, image_url, matched_keywords, published_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO feed_entries (id, title, link, description, content, author, source, image_url, matched_keywords, hash, published_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET
 			title = excluded.title,
 			link = excluded.link,
@@ -88,12 +88,13 @@ func (s *entryStore) InsertEntry(ctx context.Context, id, title, link, descripti
 			author = excluded.author,
 			image_url = excluded.image_url,
 			matched_keywords = excluded.matched_keywords,
+			hash = excluded.hash,
 			published_at = excluded.published_at
 	`
 
 	publishedAtNull := sql.NullTime{Valid: !publishedAt.IsZero(), Time: publishedAt}
 
-	_, err := s.db.ExecContext(ctx, query, id, title, link, description, content, author, source, imageURL, matchedKeywords, publishedAtNull)
+	_, err := s.db.ExecContext(ctx, query, id, title, link, description, content, author, source, imageURL, matchedKeywords, hash.HashURL(link), publishedAtNull)
 	if err != nil {
 		return fmt.Errorf("failed to insert feed entry: %w", err)
 	}

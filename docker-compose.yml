@@ -46,8 +46,12 @@ services:
     container_name: cartero
     restart: unless-stopped
     depends_on:
-      - redis
-      - reranker
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      reranker:
+        condition: service_started
     volumes:
       - ./config.toml:/app/config.toml:ro
       - cartero-data:/app/data
