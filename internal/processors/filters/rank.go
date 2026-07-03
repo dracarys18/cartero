@@ -8,6 +8,8 @@ import (
 	"cartero/internal/processors/names"
 	"cartero/internal/types"
 	"cartero/internal/utils/keywords"
+
+	"github.com/viterin/vek/vek32"
 )
 
 const (
@@ -71,7 +73,7 @@ func NewRankFilter(embedder platforms.Embedder, source []keywords.KeywordWithCon
 	return &RankFilter{embedder: embedder, source: source}
 }
 
-func (f *RankFilter) Name() string        { return "rank" }
+func (f *RankFilter) Name() string        { return filterRank }
 func (f *RankFilter) DependsOn() []string { return []string{names.EmbedText} }
 
 func (f *RankFilter) Filter(ctx context.Context, state types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
@@ -135,18 +137,14 @@ func batchMean(items []*types.Item) []float32 {
 			if len(ch) != len(sum) {
 				continue
 			}
-			for i, v := range ch {
-				sum[i] += v
-			}
+			vek32.Add_Inplace(sum, ch)
 			n++
 		}
 	}
 	if n == 0 {
 		return nil
 	}
-	for i := range sum {
-		sum[i] /= float32(n)
-	}
+	vek32.DivNumber_Inplace(sum, float32(n))
 	return sum
 }
 
@@ -154,11 +152,7 @@ func centered(v, mean []float32) []float32 {
 	if len(mean) != len(v) {
 		return v
 	}
-	out := make([]float32, len(v))
-	for i := range v {
-		out[i] = v[i] - mean[i]
-	}
-	return out
+	return vek32.Sub(v, mean)
 }
 
 func setScore(item *types.Item, s float64) { item.AddMetadata(scoreKey, s) }

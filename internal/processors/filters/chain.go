@@ -7,6 +7,14 @@ import (
 	"cartero/internal/types"
 )
 
+const (
+	filterPublishedDedupe = "published_dedupe"
+	filterRank            = "rank"
+	filterRerank          = "rerank"
+	filterDiversify       = "diversify"
+	filterLimit           = "limit"
+)
+
 type Filter interface {
 	Name() string
 	DependsOn() []string

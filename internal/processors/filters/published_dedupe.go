@@ -14,7 +14,7 @@ func NewPublishedDedupeFilter(targets []string) *PublishedDedupeFilter {
 	return &PublishedDedupeFilter{targets: targets}
 }
 
-func (f *PublishedDedupeFilter) Name() string        { return "published_dedupe" }
+func (f *PublishedDedupeFilter) Name() string        { return filterPublishedDedupe }
 func (f *PublishedDedupeFilter) DependsOn() []string { return nil }
 
 func (f *PublishedDedupeFilter) Filter(ctx context.Context, state types.StateAccessor, items []*types.Item) ([]*types.Item, error) {

@@ -12,26 +12,19 @@ dsn  = "postgres://cartero:cartero@localhost:5432/cartero?sslmode=disable"
 # type = "sqlite"
 # path = "./cartero.db"
 
-[platforms.ollama]
-type = "ollama"
+[platforms.embedder]
+type = "openai"
 enabled = true
-[platforms.ollama.settings]
-embedding_model = "bge-m3"
+[platforms.embedder.settings]
+embedding_model = "mxbai-embed-large-v1"
+base_url = "http://your-embedder-host/v1"
+api_key = ""
 
 [platforms.reranker]
 type = "rerank"
 enabled = true
 [platforms.reranker.settings]
 rerank_url = "http://reranker:80"
-
-# OpenAI-compatible embedding API (Cloudflare Workers AI, OpenAI, Together, etc.)
-[platforms.cloudflare]
-type = "openai"
-enabled = true
-[platforms.cloudflare.settings]
-embedding_model = "@cf/baai/bge-m3"
-base_url = "https://api.cloudflare.com/client/v4/accounts/YOUR_ACCOUNT/ai/v1"
-api_key = "YOUR_CF_API_TOKEN"
 
 [platforms.discord]
 type = "discord"
