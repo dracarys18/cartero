@@ -2,11 +2,11 @@ package processors
 
 import (
 	"cartero/internal/components"
+	"cartero/internal/config"
 	procnames "cartero/internal/processors/names"
 	"cartero/internal/types"
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/ollama/ollama/api"
 )
@@ -14,14 +14,14 @@ import (
 const Prompt = "You are a professional content summarizer. Please read the following article text carefully and summarize it into concise bullet points. Focus on high-impact information and key takeaways rather than jargon. Keep the summary brief and actionable.\n\nArticle text:\n"
 
 type SummaryProcessor struct {
-	name string
-	mu   sync.RWMutex
+	name     string
+	settings config.SummarySettings
 }
 
-func NewSummaryProcessor(name string) *SummaryProcessor {
+func NewSummaryProcessor(name string, settings config.SummarySettings) *SummaryProcessor {
 	return &SummaryProcessor{
-		name: name,
-		mu:   sync.RWMutex{},
+		name:     name,
+		settings: settings,
 	}
 }
 
@@ -29,53 +29,44 @@ func (d *SummaryProcessor) Name() string {
 	return d.name
 }
 
-func (d *SummaryProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
-	return nil
-}
-
 func (d *SummaryProcessor) DependsOn() []string {
 	return []string{procnames.ScoreFilter, procnames.ExtractText}
 }
 
-func (d *SummaryProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
-	cfg := st.GetConfig().Processors[d.name].Settings.SummarySettings
-	model := cfg.Model
-
-	registry := st.GetRegistry()
-	pc := registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
-	ollamaClient := pc.OllamaPlatform(model)
-
-	var content string
-	if article := item.GetArticle(); article != nil {
-		content = article.Text
-	}
-	prompt := fmt.Sprintf("%s%s", Prompt, content)
-
-	req := &api.GenerateRequest{
-		Prompt: prompt,
-		Stream: new(bool),
-	}
-
-	var summary string
-	respFunc := func(resp api.GenerateResponse) error {
-		summary += resp.Response
-		return nil
-	}
-
+func (d *SummaryProcessor) Process(ctx context.Context, st types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
 	logger := st.GetLogger()
-	err := ollamaClient.Generate(ctx, req, respFunc)
-	if err != nil {
-		logger.Warn("Couldn't generate summary, publishing without summary", "processor", d.name, "error", err)
-		return nil
+	pc := st.GetRegistry().Get(components.PlatformComponentName).(*components.PlatformComponent)
+	ollamaClient := pc.OllamaPlatform(d.settings.Model)
+
+	for _, item := range items {
+		var content string
+		if article := item.GetArticle(); article != nil {
+			content = article.Text
+		}
+
+		req := &api.GenerateRequest{
+			Prompt: fmt.Sprintf("%s%s", Prompt, content),
+			Stream: new(bool),
+		}
+
+		var summary string
+		respFunc := func(resp api.GenerateResponse) error {
+			summary += resp.Response
+			return nil
+		}
+
+		if err := ollamaClient.Generate(ctx, req, respFunc); err != nil {
+			logger.Warn("summary: generation failed, publishing without summary", "processor", d.name, "item_id", item.ID, "error", err)
+			continue
+		}
+		if len(summary) == 0 {
+			logger.Warn("summary: empty summary, publishing without summary", "processor", d.name, "item_id", item.ID)
+			continue
+		}
+
+		item.AddMetadata("summary", summary)
+		logger.Debug("summary: generated", "processor", d.name, "item_id", item.ID)
 	}
 
-	if len(summary) == 0 {
-		logger.Warn("Generated empty summary for item, publishing without summary", "processor", d.name, "item_id", item.ID)
-		return nil
-	}
-
-	item.AddMetadata("summary", summary)
-	logger.Debug("Generated summary for item", "processor", d.name, "item_id", item.ID, "summary", summary)
-
-	return nil
+	return items, nil
 }

@@ -210,13 +210,6 @@ type Source interface {
 	Shutdown(ctx context.Context) error
 }
 
-type Processor interface {
-	Name() string
-	Initialize(ctx context.Context, st StateAccessor) error
-	Process(ctx context.Context, s StateAccessor, item *Item) error
-	DependsOn() []string
-}
-
 type Target interface {
 	Name() string
 	Initialize(ctx context.Context) error
@@ -268,20 +261,18 @@ type Blocklist interface {
 	Blocked(ctx context.Context, link string) bool
 }
 
+type SeenStore interface {
+	Seen(ctx context.Context, hash string) (bool, error)
+	Mark(ctx context.Context, hash string) error
+}
+
 type StateAccessor interface {
 	GetConfig() *config.Config
 	GetStorage() storage.StorageInterface
 	GetRegistry() *components.Registry
 	GetLogger() *slog.Logger
 	GetPipeline() interface{}
-	GetChain() ProcessorChain
 	GetQueue() Queue
 	GetBlocklist() Blocklist
-}
-
-type ProcessorChain interface {
-	Execute(ctx context.Context, state StateAccessor, item *Item) error
-	With(name string, processor Processor) ProcessorChain
-	WithMultiple(procs map[string]Processor) ProcessorChain
-	Build()
+	GetSeenStore() SeenStore
 }

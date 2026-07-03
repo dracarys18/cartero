@@ -41,35 +41,36 @@ func (d *EmbedDedupeProcessor) Name() string {
 	return d.name
 }
 
-func (d *EmbedDedupeProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
-	return nil
-}
-
 func (d *EmbedDedupeProcessor) DependsOn() []string {
 	return []string{names.EmbedText}
 }
 
-func (d *EmbedDedupeProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
+func (d *EmbedDedupeProcessor) Process(ctx context.Context, st types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
 	store := st.GetStorage().Entries()
 	logger := st.GetLogger()
-
-	embeddings := item.GetEmbedding()
-	if len(embeddings) == 0 {
-		return nil
-	}
-
 	since := time.Now().Add(-d.window)
-	similar, err := store.FindNearestEmbedding(ctx, embeddings[0], d.threshold, since)
-	if err != nil {
-		logger.Warn("EmbedDedupeProcessor check failed", "processor", d.name, "item_id", item.ID, "error", err)
-		return nil
-	}
 
-	if similar {
-		logger.Info("EmbedDedupeProcessor rejected item", "processor", d.name, "item_id", item.ID, "reason", "semantic duplicate")
-		return types.NewFilteredError(d.name, item.ID, "semantic duplicate").
-			WithDetail("threshold", d.threshold)
-	}
+	out := make([]*types.Item, 0, len(items))
+	for _, item := range items {
+		embeddings := item.GetEmbedding()
+		if len(embeddings) == 0 {
+			out = append(out, item)
+			continue
+		}
 
-	return nil
+		similar, err := store.FindNearestEmbedding(ctx, embeddings[0], d.threshold, since)
+		if err != nil {
+			logger.Warn("embed_dedupe: check failed", "processor", d.name, "item_id", item.ID, "error", err)
+			out = append(out, item)
+			continue
+		}
+
+		if similar {
+			logger.Debug("embed_dedupe: dropped item", "processor", d.name, "item_id", item.ID, "reason", "semantic duplicate")
+			continue
+		}
+
+		out = append(out, item)
+	}
+	return out, nil
 }

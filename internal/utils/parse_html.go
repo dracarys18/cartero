@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -12,7 +14,7 @@ import (
 	"github.com/enetx/surf"
 )
 
-func GetArticle(u string, limit int, mod ...readability.RequestWith) (*types.Article, error) {
+func GetArticle(ctx context.Context, u string, limit int, timeout time.Duration, mod ...readability.RequestWith) (*types.Article, error) {
 	if limit <= 0 {
 		limit = 20000
 	}
@@ -29,13 +31,17 @@ func GetArticle(u string, limit int, mod ...readability.RequestWith) (*types.Art
 	surfClient := surf.NewClient().
 		Builder().
 		Impersonate().Firefox().
-		Timeout(30 * time.Second).
+		Timeout(timeout).
 		Session().
 		Build().
 		Unwrap()
 
 	client := surfClient.Std()
-	resp, err := client.Get(u)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch URL: %w", err)
 	}

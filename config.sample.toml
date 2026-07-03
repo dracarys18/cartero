@@ -127,6 +127,8 @@ type = "extract_text"
 enabled = true
 [processors.extract_text.settings]
 min_content_length = 100
+concurrency = 12
+timeout_seconds = 8
 
 [processors.embed]
 type = "embed_text"
@@ -138,7 +140,7 @@ chunk_size = 7000
 keywords_file = "https://gist.githubusercontent.com/you/id/raw/keywords.json"
 
 [blocklist]
-domains_file = "https://raw.githubusercontent.com/danny0838/content-farm-terminator/master/blacklist/blacklist.txt"
+domains_file = "https://gist.githubusercontent.com/you/id/raw/blocklist.txt"
 
 [processors.rate_limiter]
 type = "rate_limit"

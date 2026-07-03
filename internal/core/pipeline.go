@@ -14,7 +14,6 @@ import (
 type Pipeline struct {
 	routes             []SourceRoute
 	routeIndex         map[string]int
-	processors         []types.Processor
 	initializedTargets map[string]bool
 	mu                 sync.RWMutex
 	running            bool
@@ -30,7 +29,6 @@ func NewPipeline() *Pipeline {
 	return &Pipeline{
 		routes:             make([]SourceRoute, 0),
 		routeIndex:         make(map[string]int),
-		processors:         make([]types.Processor, 0),
 		initializedTargets: make(map[string]bool),
 		running:            false,
 	}
@@ -41,13 +39,6 @@ func (p *Pipeline) AddRoute(route SourceRoute) *Pipeline {
 	defer p.mu.Unlock()
 	p.routes = append(p.routes, route)
 	p.routeIndex[route.Source.Name()] = len(p.routes) - 1
-	return p
-}
-
-func (p *Pipeline) AddProcessor(processor types.Processor) *Pipeline {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.processors = append(p.processors, processor)
 	return p
 }
 

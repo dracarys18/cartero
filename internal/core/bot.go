@@ -81,7 +81,7 @@ func (b *Bot) runCycle(ctx context.Context) error {
 	}
 	logger.Info("gathered items", "count", len(items))
 
-	items, err = b.filters.Filter(ctx, b.state, items)
+	items, err = b.filters.Process(ctx, b.state, items)
 	if err != nil {
 		return fmt.Errorf("filter: %w", err)
 	}

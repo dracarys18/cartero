@@ -7,103 +7,91 @@ import (
 	"github.com/tmc/langchaingo/textsplitter"
 
 	"cartero/internal/components"
+	"cartero/internal/config"
 	procnames "cartero/internal/processors/names"
 	"cartero/internal/types"
 )
 
 type EmbedTextProcessor struct {
-	name string
+	name     string
+	settings config.EmbedTextSettings
 }
 
-func NewEmbedTextProcessor(name string) *EmbedTextProcessor {
-	return &EmbedTextProcessor{name: name}
+func NewEmbedTextProcessor(name string, settings config.EmbedTextSettings) *EmbedTextProcessor {
+	return &EmbedTextProcessor{name: name, settings: settings}
 }
 
 func (e *EmbedTextProcessor) Name() string {
 	return e.name
 }
 
-func (e *EmbedTextProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
-	return nil
-}
-
 func (e *EmbedTextProcessor) DependsOn() []string {
 	return []string{procnames.ExtractText}
 }
 
-func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
-	cfg := st.GetConfig().Processors[e.name].Settings.EmbedTextSettings
+func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
 	logger := st.GetLogger()
 
-	var body string
-	var description string
-
-	if article := item.GetArticle(); article != nil {
-		body = article.Text
-		description = article.Description
+	pc := st.GetRegistry().Get(components.PlatformComponentName).(*components.PlatformComponent)
+	embedder := pc.Embedder()
+	if embedder == nil {
+		return items, nil
 	}
 
-	chunks := []string{}
-
-	if item.GetTitle() != "" {
-		chunks = append(chunks, item.GetTitle())
-	}
-
-	if description != "" {
-		chunks = append(chunks, description)
-	}
-
-	chunkSize := cfg.ChunkSize
+	chunkSize := e.settings.ChunkSize
 	if chunkSize == 0 {
 		chunkSize = 400
 	}
 
-	if body != "" {
-		splitter := textsplitter.NewRecursiveCharacter(
-			textsplitter.WithChunkSize(chunkSize),
-			textsplitter.WithChunkOverlap(chunkSize/8),
-		)
-
-		bodyChunk, err := splitter.SplitText(body)
-
-		if err != nil {
-			logger.Warn("embed_text: failed to split text", "processor", e.name, "item_id", item.ID, "error", err)
-		} else if len(bodyChunk) > 0 {
-			chunks = append(chunks, bodyChunk...)
+	for _, item := range items {
+		var body, description string
+		if article := item.GetArticle(); article != nil {
+			body = article.Text
+			description = article.Description
 		}
+
+		chunks := []string{}
+		if item.GetTitle() != "" {
+			chunks = append(chunks, item.GetTitle())
+		}
+		if description != "" {
+			chunks = append(chunks, description)
+		}
+
+		if body != "" {
+			splitter := textsplitter.NewRecursiveCharacter(
+				textsplitter.WithChunkSize(chunkSize),
+				textsplitter.WithChunkOverlap(chunkSize/8),
+			)
+			bodyChunk, err := splitter.SplitText(body)
+			if err != nil {
+				logger.Warn("embed_text: failed to split text", "processor", e.name, "item_id", item.ID, "error", err)
+			} else if len(bodyChunk) > 0 {
+				chunks = append(chunks, bodyChunk...)
+			}
+		}
+
+		cleanChunks := make([]string, 0, len(chunks))
+		for _, chunk := range chunks {
+			cleanChunks = append(cleanChunks, strings.TrimSpace(chunk))
+		}
+		if len(cleanChunks) == 0 {
+			continue
+		}
+
+		embeddings, err := embedder.Embed(ctx, cleanChunks)
+		if err != nil {
+			logger.Warn("embed_text: failed to embed item", "processor", e.name, "item_id", item.ID, "error", err)
+			continue
+		}
+		if len(embeddings) == 0 {
+			logger.Warn("embed_text: empty embeddings returned", "processor", e.name, "item_id", item.ID)
+			continue
+		}
+
+		item.SetEmbedding(embeddings)
+		logger.Debug("embed_text: stored embedding", "processor", e.name, "item_id", item.ID, "chunks", len(cleanChunks), "dim", len(embeddings[0]))
 	}
 
-	var cleanChunks []string
-	for _, chunk := range chunks {
-		trimmed := strings.TrimSpace(chunk)
-		cleanChunks = append(cleanChunks, trimmed)
-	}
-
-	if len(cleanChunks) == 0 {
-		return nil
-	}
-
-	registry := st.GetRegistry()
-	pc := registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
-	embedder := pc.Embedder()
-
-	if embedder == nil {
-		return nil
-	}
-
-	embeddings, err := embedder.Embed(ctx, cleanChunks)
-
-	if err != nil {
-		logger.Warn("embed_text: failed to embed item", "processor", e.name, "item_id", item.ID, "error", err)
-		return nil
-	}
-
-	if len(embeddings) == 0 {
-		logger.Warn("embed_text: empty embeddings returned", "processor", e.name, "item_id", item.ID)
-		return nil
-	}
-
-	item.SetEmbedding(embeddings)
-	logger.Debug("embed_text: stored embedding", "processor", e.name, "item_id", item.ID, "chunks", len(cleanChunks), "dim", len(embeddings[0]))
-	return nil
+	return items, nil
 }

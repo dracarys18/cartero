@@ -24,7 +24,7 @@ func NewRerankFilter(reranker platforms.Reranker) *RerankFilter {
 func (f *RerankFilter) Name() string        { return filterRerank }
 func (f *RerankFilter) DependsOn() []string { return []string{filterRank} }
 
-func (f *RerankFilter) Filter(ctx context.Context, state types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
+func (f *RerankFilter) Process(ctx context.Context, state types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
 	if f.reranker == nil {
 		return items, nil
 	}

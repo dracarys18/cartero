@@ -3,6 +3,7 @@ package filters
 import (
 	"context"
 
+	"cartero/internal/processors/names"
 	"cartero/internal/types"
 )
 
@@ -12,10 +13,10 @@ func NewBlocklistFilter() *BlocklistFilter {
 	return &BlocklistFilter{}
 }
 
-func (f *BlocklistFilter) Name() string        { return filterBlocklist }
+func (f *BlocklistFilter) Name() string        { return names.Blocklist }
 func (f *BlocklistFilter) DependsOn() []string { return nil }
 
-func (f *BlocklistFilter) Filter(ctx context.Context, state types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
+func (f *BlocklistFilter) Process(ctx context.Context, state types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
 	bl := state.GetBlocklist()
 	if bl == nil {
 		return items, nil

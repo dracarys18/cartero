@@ -3,6 +3,7 @@ package filters
 import (
 	"context"
 
+	"cartero/internal/processors/names"
 	"cartero/internal/types"
 )
 
@@ -15,9 +16,9 @@ func NewPublishedDedupeFilter(targets []string) *PublishedDedupeFilter {
 }
 
 func (f *PublishedDedupeFilter) Name() string        { return filterPublishedDedupe }
-func (f *PublishedDedupeFilter) DependsOn() []string { return []string{filterBlocklist} }
+func (f *PublishedDedupeFilter) DependsOn() []string { return []string{names.Blocklist} }
 
-func (f *PublishedDedupeFilter) Filter(ctx context.Context, state types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
+func (f *PublishedDedupeFilter) Process(ctx context.Context, state types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
 	if len(f.targets) == 0 {
 		return items, nil
 	}

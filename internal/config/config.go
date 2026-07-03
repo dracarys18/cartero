@@ -151,8 +151,6 @@ type ProcessorSettings struct {
 	DedupeSettings
 	ScoreFilterSettings
 	PublishedAtFilterSettings
-	RateLimitSettings
-	TokenBucketSettings
 	SummarySettings
 	ExtractFieldsSettings
 	TemplateSettings
@@ -163,6 +161,7 @@ type ProcessorSettings struct {
 type DedupeSettings struct {
 	EmbedThreshold float64 `toml:"embed_threshold"`
 	EmbedWindow    string  `toml:"embed_window"`
+	TTL            string  `toml:"ttl"`
 }
 
 type ScoreFilterSettings struct {
@@ -178,16 +177,6 @@ type PublishedAtFilterSettings struct {
 	Before string `toml:"before"`
 }
 
-type RateLimitSettings struct {
-	Limit  int    `toml:"limit"`
-	Window string `toml:"window"`
-}
-
-type TokenBucketSettings struct {
-	Capacity   int    `toml:"capacity"`
-	RefillRate string `toml:"refill_rate"`
-}
-
 type SummarySettings struct {
 	Model string `toml:"model"`
 }
@@ -199,6 +188,8 @@ type ExtractFieldsSettings struct {
 type ExtractTextSettings struct {
 	Limit            int `toml:"limit"`
 	MinContentLength int `toml:"min_content_length"`
+	Concurrency      int `toml:"concurrency"`
+	TimeoutSeconds   int `toml:"timeout_seconds"`
 }
 
 type TemplateSettings struct {
@@ -298,11 +289,10 @@ func loadBlocklist(config *Config) error {
 
 	for _, line := range strings.Split(string(data), "\n") {
 		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "!") {
+		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		fields := strings.Fields(line)
-		config.Blocklist.Domains = append(config.Blocklist.Domains, fields[len(fields)-1])
+		config.Blocklist.Domains = append(config.Blocklist.Domains, line)
 	}
 
 	return nil

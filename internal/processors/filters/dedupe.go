@@ -3,6 +3,7 @@ package filters
 import (
 	"context"
 
+	"cartero/internal/processors/names"
 	"cartero/internal/types"
 	"cartero/internal/utils/hash"
 )
@@ -19,29 +20,42 @@ func (d *DedupeProcessor) Name() string {
 	return d.name
 }
 
-func (d *DedupeProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
-	return nil
-}
-
 func (d *DedupeProcessor) DependsOn() []string {
-	return []string{}
+	return []string{names.Blocklist}
 }
 
-func (d *DedupeProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
-	h := hash.HashURL(item.GetLink())
+func (d *DedupeProcessor) Process(ctx context.Context, st types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
 	store := st.GetStorage().Entries()
+	seen := st.GetSeenStore()
 	logger := st.GetLogger()
 
-	exists, err := store.ExistsByHash(ctx, h)
-	if err != nil {
-		return err
-	}
+	out := make([]*types.Item, 0, len(items))
+	for _, item := range items {
+		h := hash.HashURL(item.GetLink())
 
-	if exists {
-		logger.Info("DedupeProcessor rejected item", "processor", d.name, "item_id", item.ID, "reason", "duplicate url")
-		return types.NewFilteredError(d.name, item.ID, "duplicate url").
-			WithDetail("hash", h)
-	}
+		exists, err := store.ExistsByHash(ctx, h)
+		if err != nil {
+			logger.Error("dedupe: hash check failed, dropping item", "processor", d.name, "item_id", item.ID, "error", err)
+			continue
+		}
+		if exists {
+			logger.Debug("dedupe: dropped item", "processor", d.name, "item_id", item.ID, "reason", "duplicate url")
+			continue
+		}
 
-	return nil
+		if seen != nil {
+			already, err := seen.Seen(ctx, h)
+			if err != nil {
+				logger.Error("dedupe: seen check failed, dropping item", "processor", d.name, "item_id", item.ID, "error", err)
+				continue
+			}
+			if already {
+				logger.Debug("dedupe: dropped item", "processor", d.name, "item_id", item.ID, "reason", "seen recently")
+				continue
+			}
+		}
+
+		out = append(out, item)
+	}
+	return out, nil
 }

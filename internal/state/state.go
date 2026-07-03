@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"cartero/internal/components"
 	"cartero/internal/config"
@@ -28,11 +29,11 @@ type State struct {
 	Registry        *components.Registry
 	Pipeline        *core.Pipeline
 	Storage         storage.StorageInterface
-	Chain           types.ProcessorChain
 	Filters         *filters.Chain
 	Queue           *queue.Queue
 	RedisConn       *queue.RedisConnection
 	Blocklist       types.Blocklist
+	SeenStore       types.SeenStore
 	Logger          *slog.Logger
 	EmbeddedScripts embed.FS
 }
@@ -70,6 +71,15 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 			return fmt.Errorf("failed to load blocklist: %w", err)
 		}
 		s.Blocklist = bl
+	}
+
+	for _, pc := range s.Config.Processors {
+		if pc.Type != names.Dedupe || !pc.Enabled {
+			continue
+		}
+		if ttl, err := time.ParseDuration(pc.Settings.TTL); err == nil && ttl > 0 {
+			s.SeenStore = queue.NewSeenStore(conn.Client(), s.Queue.Prefix(), ttl)
+		}
 	}
 
 	s.Registry = components.NewRegistry()
@@ -143,10 +153,6 @@ func (s *State) GetPipeline() interface{} {
 	return s.Pipeline
 }
 
-func (s *State) GetChain() types.ProcessorChain {
-	return s.Chain
-}
-
 func (s *State) GetFilterChain() *filters.Chain {
 	return s.Filters
 }
@@ -161,6 +167,10 @@ func (s *State) GetQueue() types.Queue {
 
 func (s *State) GetBlocklist() types.Blocklist {
 	return s.Blocklist
+}
+
+func (s *State) GetSeenStore() types.SeenStore {
+	return s.SeenStore
 }
 
 func (s *State) buildPlatformComponent() *components.PlatformComponent {
@@ -217,24 +227,19 @@ func (s *State) buildPipeline(ctx context.Context) (*core.Pipeline, error) {
 }
 
 func (s *State) buildFilterChain(ctx context.Context) *filters.Chain {
-	var fs []filters.Filter
+	var fs []filters.Processor
 
-	for name, procCfg := range s.Config.Processors {
+	for _, procCfg := range s.Config.Processors {
 		if !procCfg.Enabled {
 			continue
 		}
 
-		processor := s.createProcessor(name, procCfg)
+		processor := s.createProcessor(procCfg)
 		if processor == nil {
 			continue
 		}
 
-		if err := processor.Initialize(ctx, s); err != nil {
-			s.Logger.Error("Failed to initialize processor", "processor", name, "error", err)
-			continue
-		}
-
-		fs = append(fs, filters.FromProcessor(procCfg.Type, processor))
+		fs = append(fs, processor)
 	}
 
 	var targetNames []string
@@ -245,6 +250,7 @@ func (s *State) buildFilterChain(ctx context.Context) *filters.Chain {
 	}
 	fs = append(fs, filters.NewPublishedDedupeFilter(targetNames))
 	fs = append(fs, filters.NewBlocklistFilter())
+	fs = append(fs, processors.NewExtractProcessor(s.Config.Processors[names.ExtractText].Settings.ExtractTextSettings))
 
 	pc := s.Registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
 	fs = append(fs,
@@ -306,45 +312,34 @@ func (s *State) createSource(name string, cfg config.SourceConfig) types.Source 
 	}
 }
 
-func (s *State) createProcessor(name string, cfg config.ProcessorConfig) types.Processor {
+func (s *State) createProcessor(cfg config.ProcessorConfig) filters.Processor {
 	switch cfg.Type {
-	case "summary":
-		return processors.NewSummaryProcessor(name)
+	case names.Summary:
+		return processors.NewSummaryProcessor(cfg.Type, cfg.Settings.SummarySettings)
 
-	case "extract_fields":
-		fieldsCfg := cfg.Settings.ExtractFieldsSettings
-		return processors.FieldExtractor(name, fieldsCfg.Fields)
+	case names.FieldExtractor:
+		return processors.FieldExtractor(cfg.Type, cfg.Settings.Fields)
 
-	case "template":
-		templateCfg := cfg.Settings.TemplateSettings
-		if templateCfg.Template == "" {
+	case names.TemplateTransformer:
+		if cfg.Settings.Template == "" {
 			return nil
 		}
-		return processors.TemplateTransformer(name, templateCfg.Template)
+		return processors.TemplateTransformer(cfg.Type, cfg.Settings.Template)
 
-	case "filter_score":
-		return processors.NewScoreFilterProcessor(name)
+	case names.ScoreFilter:
+		return processors.NewScoreFilterProcessor(cfg.Type, cfg.Settings.ScoreFilterSettings)
 
 	case "filter_published":
-		return processors.NewPublishedAtFilterProcessor(name)
+		return processors.NewPublishedAtFilterProcessor(cfg.Type, cfg.Settings.PublishedAtFilterSettings)
 
 	case names.Dedupe:
-		return processors.NewDedupeProcessor(name)
+		return processors.NewDedupeProcessor(cfg.Type)
 
 	case names.EmbedDedupe:
-		return processors.NewEmbedDedupeProcessor(name, cfg.Settings.DedupeSettings)
+		return processors.NewEmbedDedupeProcessor(cfg.Type, cfg.Settings.DedupeSettings)
 
-	case "rate_limit":
-		return processors.NewRateLimitProcessor(name)
-
-	case "token_bucket":
-		return processors.NewTokenBucketProcessor(name)
-
-	case "extract_text":
-		return processors.NewExtractProcessor(name)
-
-	case "embed_text":
-		return processors.NewEmbedTextProcessor(name)
+	case names.EmbedText:
+		return processors.NewEmbedTextProcessor(cfg.Type, cfg.Settings.EmbedTextSettings)
 
 	default:
 		return nil

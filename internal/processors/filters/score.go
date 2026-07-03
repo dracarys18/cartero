@@ -3,26 +3,25 @@ package filters
 import (
 	"context"
 
+	"cartero/internal/config"
 	"cartero/internal/processors/names"
 	"cartero/internal/types"
 )
 
 type ScoreFilterProcessor struct {
-	name string
+	name     string
+	settings config.ScoreFilterSettings
 }
 
-func NewScoreFilterProcessor(name string) *ScoreFilterProcessor {
+func NewScoreFilterProcessor(name string, settings config.ScoreFilterSettings) *ScoreFilterProcessor {
 	return &ScoreFilterProcessor{
-		name: name,
+		name:     name,
+		settings: settings,
 	}
 }
 
 func (s *ScoreFilterProcessor) Name() string {
 	return s.name
-}
-
-func (s *ScoreFilterProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
-	return nil
 }
 
 func (s *ScoreFilterProcessor) DependsOn() []string {
@@ -31,22 +30,17 @@ func (s *ScoreFilterProcessor) DependsOn() []string {
 	}
 }
 
-func (s *ScoreFilterProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
-	cfg := st.GetConfig().Processors[s.name].Settings.ScoreFilterSettings
+func (s *ScoreFilterProcessor) Process(_ context.Context, st types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
 	logger := st.GetLogger()
-	minScore := cfg.MinScore
+	minScore := s.settings.MinScore
 
-	if score, ok := item.Metadata["score"].(int); ok {
-		if score < minScore {
-			logger.Info("ScoreFilterProcessor rejected item", "processor", s.name, "item_id", item.ID, "score", score, "min_score", minScore)
-			return types.NewFilteredError(s.name, item.ID, "score below minimum").
-				WithDetail("score", score).
-				WithDetail("min_score", minScore)
+	out := make([]*types.Item, 0, len(items))
+	for _, item := range items {
+		if score, ok := item.Metadata["score"].(int); ok && score < minScore {
+			logger.Debug("score_filter: dropped item", "processor", s.name, "item_id", item.ID, "score", score, "min_score", minScore)
+			continue
 		}
+		out = append(out, item)
 	}
-	return nil
-}
-
-func MinScoreFilter(name string) *ScoreFilterProcessor {
-	return NewScoreFilterProcessor(name)
+	return out, nil
 }

@@ -4,49 +4,25 @@ import (
 	"context"
 	"time"
 
+	"cartero/internal/config"
 	"cartero/internal/processors/names"
 	"cartero/internal/types"
 )
 
-type TimeFilter struct {
-	cutoff time.Time
-	name   string
-}
-
-func (t *TimeFilter) FilterAfter(itemTime time.Time, itemID string) error {
-	if itemTime.Before(t.cutoff) {
-		return types.NewFilteredError(t.name, itemID, "published before cutoff time").
-			WithDetail("published_at", itemTime).
-			WithDetail("after", t.cutoff)
-	}
-	return nil
-}
-
-func (t *TimeFilter) FilterBefore(itemTime time.Time, itemID string) error {
-	if itemTime.After(t.cutoff) {
-		return types.NewFilteredError(t.name, itemID, "published after cutoff time").
-			WithDetail("published_at", itemTime).
-			WithDetail("before", t.cutoff)
-	}
-	return nil
-}
-
 type PublishedAtFilterProcessor struct {
-	name string
+	name     string
+	settings config.PublishedAtFilterSettings
 }
 
-func NewPublishedAtFilterProcessor(name string) *PublishedAtFilterProcessor {
+func NewPublishedAtFilterProcessor(name string, settings config.PublishedAtFilterSettings) *PublishedAtFilterProcessor {
 	return &PublishedAtFilterProcessor{
-		name: name,
+		name:     name,
+		settings: settings,
 	}
 }
 
 func (p *PublishedAtFilterProcessor) Name() string {
 	return p.name
-}
-
-func (p *PublishedAtFilterProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
-	return nil
 }
 
 func (p *PublishedAtFilterProcessor) DependsOn() []string {
@@ -55,47 +31,43 @@ func (p *PublishedAtFilterProcessor) DependsOn() []string {
 	}
 }
 
-func (p *PublishedAtFilterProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
-	cfg := st.GetConfig().Processors[p.name].Settings.PublishedAtFilterSettings
+func (p *PublishedAtFilterProcessor) Process(_ context.Context, st types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
 	logger := st.GetLogger()
 
-	if cfg.After == "" && cfg.Before == "" {
-		return nil
+	if p.settings.After == "" && p.settings.Before == "" {
+		return items, nil
 	}
 
-	itemTimestamp := item.GetTimestamp()
-
-	if cfg.After != "" {
-		afterTime, err := time.Parse(time.RFC3339, cfg.After)
+	var after, before time.Time
+	if p.settings.After != "" {
+		t, err := time.Parse(time.RFC3339, p.settings.After)
 		if err != nil {
-			logger.Error("PublishedAtFilterProcessor: invalid 'after' time format", "processor", p.name, "after", cfg.After, "error", err)
-			return nil
+			logger.Error("published_at: invalid 'after' time format", "processor", p.name, "after", p.settings.After, "error", err)
+			return items, nil
 		}
-
-		filter := TimeFilter{cutoff: afterTime, name: p.name}
-		if err := filter.FilterAfter(itemTimestamp, item.ID); err != nil {
-			logger.Info("PublishedAtFilterProcessor rejected item", "processor", p.name, "item_id", item.ID, "published_at", itemTimestamp, "after", afterTime)
-			return err
-		}
+		after = t
 	}
-
-	if cfg.Before != "" {
-		beforeTime, err := time.Parse(time.RFC3339, cfg.Before)
+	if p.settings.Before != "" {
+		t, err := time.Parse(time.RFC3339, p.settings.Before)
 		if err != nil {
-			logger.Error("PublishedAtFilterProcessor: invalid 'before' time format", "processor", p.name, "before", cfg.Before, "error", err)
-			return nil
+			logger.Error("published_at: invalid 'before' time format", "processor", p.name, "before", p.settings.Before, "error", err)
+			return items, nil
 		}
-
-		filter := TimeFilter{cutoff: beforeTime, name: p.name}
-		if err := filter.FilterBefore(itemTimestamp, item.ID); err != nil {
-			logger.Info("PublishedAtFilterProcessor rejected item", "processor", p.name, "item_id", item.ID, "published_at", itemTimestamp, "before", beforeTime)
-			return err
-		}
+		before = t
 	}
 
-	return nil
-}
-
-func PublishedAtFilter(name string) *PublishedAtFilterProcessor {
-	return NewPublishedAtFilterProcessor(name)
+	out := make([]*types.Item, 0, len(items))
+	for _, item := range items {
+		ts := item.GetTimestamp()
+		if !after.IsZero() && ts.Before(after) {
+			logger.Debug("published_at: dropped item", "processor", p.name, "item_id", item.ID, "published_at", ts, "after", after)
+			continue
+		}
+		if !before.IsZero() && ts.After(before) {
+			logger.Debug("published_at: dropped item", "processor", p.name, "item_id", item.ID, "published_at", ts, "before", before)
+			continue
+		}
+		out = append(out, item)
+	}
+	return out, nil
 }

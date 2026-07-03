@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	procnames "cartero/internal/processors/names"
 	"cartero/internal/types"
 )
 
@@ -26,28 +27,29 @@ func (t *TransformProcessor) Name() string {
 	return t.name
 }
 
-func (t *TransformProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
-	return nil
-}
-
 func (t *TransformProcessor) DependsOn() []string {
-	return nil
+	return []string{procnames.Blocklist}
 }
 
-func (t *TransformProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
+func (t *TransformProcessor) Process(_ context.Context, st types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
 	logger := st.GetLogger()
-	if t.transformFn != nil {
+	if t.transformFn == nil {
+		return items, nil
+	}
+
+	out := make([]*types.Item, 0, len(items))
+	for _, item := range items {
 		transformed, err := t.transformFn(item)
 		if err != nil {
-			logger.Info("TransformProcessor rejected item", "processor", t.name, "item_id", item.ID, "reason", "transform failed", "error", err)
-			return fmt.Errorf("transform failed: %w", err)
+			logger.Debug("transform: dropped item", "processor", t.name, "item_id", item.ID, "reason", "transform failed", "error", err)
+			continue
 		}
 		item.ModifyContent(transformed)
 		item.AddMetadata("transformed", true)
 		item.AddMetadata("transformer", t.name)
+		out = append(out, item)
 	}
-
-	return nil
+	return out, nil
 }
 
 func FieldExtractor(name string, fields []string) *TransformProcessor {

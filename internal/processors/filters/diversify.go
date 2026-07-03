@@ -15,7 +15,7 @@ func NewDiversifyFilter() *DiversifyFilter { return &DiversifyFilter{} }
 func (f *DiversifyFilter) Name() string        { return filterDiversify }
 func (f *DiversifyFilter) DependsOn() []string { return []string{filterRank, filterRerank} }
 
-func (f *DiversifyFilter) Filter(ctx context.Context, state types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
+func (f *DiversifyFilter) Process(ctx context.Context, state types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
 	if len(items) < 2 {
 		return items, nil
 	}

@@ -76,7 +76,7 @@ func NewRankFilter(embedder platforms.Embedder, source []keywords.KeywordWithCon
 func (f *RankFilter) Name() string        { return filterRank }
 func (f *RankFilter) DependsOn() []string { return []string{names.EmbedText} }
 
-func (f *RankFilter) Filter(ctx context.Context, state types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
+func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
 	if !f.ready {
 		interests, err := BuildInterests(ctx, f.embedder, f.source)
 		if err != nil {
