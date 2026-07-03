@@ -49,6 +49,9 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 			body = article.Text
 			description = article.Description
 		}
+		if rss := item.GetDescription(); len(rss) > len(body) {
+			body = rss
+		}
 
 		chunks := []string{}
 		if item.GetTitle() != "" {

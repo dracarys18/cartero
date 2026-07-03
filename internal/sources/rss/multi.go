@@ -116,7 +116,7 @@ func (m *MultiRSSSource) convertToItem(feedItem *gofeed.Item, feedName string) *
 	}
 
 	description := feedItem.Description
-	if description == "" && feedItem.Content != "" {
+	if len(feedItem.Content) > len(description) {
 		description = feedItem.Content
 	}
 

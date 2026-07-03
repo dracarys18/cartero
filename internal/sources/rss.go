@@ -98,7 +98,7 @@ func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *types.Item {
 	}
 
 	description := feedItem.Description
-	if description == "" && feedItem.Content != "" {
+	if len(feedItem.Content) > len(description) {
 		description = feedItem.Content
 	}
 

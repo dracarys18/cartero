@@ -80,14 +80,18 @@ func (f *RerankFilter) Process(ctx context.Context, state types.StateAccessor, i
 
 func docText(item *types.Item) string {
 	text := item.GetTitle()
-	if a := item.GetArticle(); a != nil && a.Text != "" {
-		body := a.Text
+	body := ""
+	if a := item.GetArticle(); a != nil {
+		body = a.Text
+	}
+	if d := item.GetDescription(); len(d) > len(body) {
+		body = d
+	}
+	if body != "" {
 		if len(body) > docMaxLen {
 			body = body[:docMaxLen]
 		}
 		text += ". " + body
-	} else if d := item.GetDescription(); d != "" {
-		text += ". " + d
 	}
 	return text
 }
