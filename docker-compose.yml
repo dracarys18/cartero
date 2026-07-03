@@ -61,6 +61,13 @@ services:
       - CARTERO_QUEUE_PREFIX=cartero
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    dns_opt:
+      - use-vc
+      - timeout:2
+      - attempts:3
     ports:
       - "8034:8080"
     command: ["-config", "/app/config.toml"]
