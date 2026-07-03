@@ -8,6 +8,7 @@ import (
 )
 
 const (
+	filterBlocklist       = "blocklist"
 	filterPublishedDedupe = "published_dedupe"
 	filterRank            = "rank"
 	filterRerank          = "rerank"
@@ -69,8 +70,10 @@ type fromProcessor struct {
 
 func FromProcessor(name string, p types.Processor) Filter { return fromProcessor{name: name, p: p} }
 
-func (a fromProcessor) Name() string        { return a.name }
-func (a fromProcessor) DependsOn() []string { return a.p.DependsOn() }
+func (a fromProcessor) Name() string { return a.name }
+func (a fromProcessor) DependsOn() []string {
+	return append([]string{filterBlocklist}, a.p.DependsOn()...)
+}
 
 func (a fromProcessor) Filter(ctx context.Context, state types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
 	logger := state.GetLogger()

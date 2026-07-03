@@ -27,6 +27,10 @@ func NewRedisConnection(addr, password string, db int) (*RedisConnection, error)
 	return &RedisConnection{client: client}, nil
 }
 
+func (r *RedisConnection) Client() *redis.Client {
+	return r.client
+}
+
 func (r *RedisConnection) CreateGroup(ctx context.Context, stream, group string) error {
 	err := r.client.XGroupCreateMkStream(ctx, stream, group, "$").Err()
 	if err != nil && !strings.Contains(err.Error(), "BUSYGROUP") {

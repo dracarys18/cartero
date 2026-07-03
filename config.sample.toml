@@ -137,6 +137,9 @@ chunk_size = 7000
 [interests]
 keywords_file = "https://gist.githubusercontent.com/you/id/raw/keywords.json"
 
+[blocklist]
+domains_file = "https://raw.githubusercontent.com/danny0838/content-farm-terminator/master/blacklist/blacklist.txt"
+
 [processors.rate_limiter]
 type = "rate_limit"
 enabled = false

@@ -119,6 +119,7 @@ func (f *RankFilter) Filter(ctx context.Context, state types.StateAccessor, item
 		}
 		setScore(item, best)
 		item.AddMetadata(interestKey, f.interests[bestIdx].Lexical)
+		item.SetMatchedKeywords(f.interests[bestIdx].Lexical)
 		out = append(out, item)
 	}
 

@@ -37,6 +37,10 @@ func New(conn QueueConnection, maxLen int64, consumer string) *Queue {
 	}
 }
 
+func (q *Queue) Prefix() string {
+	return q.prefix
+}
+
 func (q *Queue) SourceStream() string {
 	return fmt.Sprintf("%s:source", q.prefix)
 }

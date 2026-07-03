@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -20,11 +21,17 @@ type Config struct {
 	Processors map[string]ProcessorConfig `toml:"processors"`
 	Targets    map[string]TargetConfig    `toml:"targets"`
 	Interests  InterestConfig             `toml:"interests"`
+	Blocklist  BlocklistConfig            `toml:"blocklist"`
 }
 
 type InterestConfig struct {
 	Keywords     []keywords.KeywordWithContext `toml:"keywords"`
 	KeywordsFile string                        `toml:"keywords_file"`
+}
+
+type BlocklistConfig struct {
+	Domains     []string `toml:"domains"`
+	DomainsFile string   `toml:"domains_file"`
 }
 
 type RedisConfig struct {
@@ -247,6 +254,10 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("failed to load interests file: %w", err)
 	}
 
+	if err := loadBlocklist(&config); err != nil {
+		return nil, fmt.Errorf("failed to load blocklist file: %w", err)
+	}
+
 	if err := validateConfig(&config); err != nil {
 		return nil, fmt.Errorf("invalid config: %w", err)
 	}
@@ -271,6 +282,29 @@ func loadInterests(config *Config) error {
 	}
 
 	config.Interests.Keywords = append(config.Interests.Keywords, loaded...)
+	return nil
+}
+
+func loadBlocklist(config *Config) error {
+	if config.Blocklist.DomainsFile == "" {
+		return nil
+	}
+
+	f := file.NewFile(config.Blocklist.DomainsFile)
+	data, err := f.Get()
+	if err != nil {
+		return err
+	}
+
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, "!") {
+			continue
+		}
+		fields := strings.Fields(line)
+		config.Blocklist.Domains = append(config.Blocklist.Domains, fields[len(fields)-1])
+	}
+
 	return nil
 }
 

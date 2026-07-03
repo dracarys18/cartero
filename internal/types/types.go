@@ -264,6 +264,10 @@ type Queue interface {
 	Close() error
 }
 
+type Blocklist interface {
+	Blocked(ctx context.Context, link string) bool
+}
+
 type StateAccessor interface {
 	GetConfig() *config.Config
 	GetStorage() storage.StorageInterface
@@ -272,6 +276,7 @@ type StateAccessor interface {
 	GetPipeline() interface{}
 	GetChain() ProcessorChain
 	GetQueue() Queue
+	GetBlocklist() Blocklist
 }
 
 type ProcessorChain interface {

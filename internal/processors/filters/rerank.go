@@ -73,7 +73,7 @@ func (f *RerankFilter) Filter(ctx context.Context, state types.StateAccessor, it
 		if i >= 12 {
 			break
 		}
-		logger.Info("rerank: ranked", "pos", i+1, "score", getScore(item), "title", item.GetTitle())
+		logger.Info("rerank: ranked", "pos", i+1, "score", getScore(item), "interest", item.GetMatchedKeywords(), "title", item.GetTitle())
 	}
 	return scored, nil
 }

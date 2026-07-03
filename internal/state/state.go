@@ -32,6 +32,7 @@ type State struct {
 	Filters         *filters.Chain
 	Queue           *queue.Queue
 	RedisConn       *queue.RedisConnection
+	Blocklist       types.Blocklist
 	Logger          *slog.Logger
 	EmbeddedScripts embed.FS
 }
@@ -62,6 +63,14 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 	}
 	s.RedisConn = conn
 	s.Queue = queue.New(conn, s.Config.Redis.StreamMaxLen, consumerName())
+
+	if len(s.Config.Blocklist.Domains) > 0 {
+		bl := queue.NewBlocklist(conn.Client(), s.Queue.Prefix()+":blocklist")
+		if err := bl.Load(ctx, s.Config.Blocklist.Domains); err != nil {
+			return fmt.Errorf("failed to load blocklist: %w", err)
+		}
+		s.Blocklist = bl
+	}
 
 	s.Registry = components.NewRegistry()
 
@@ -150,6 +159,10 @@ func (s *State) GetQueue() types.Queue {
 	return s.Queue
 }
 
+func (s *State) GetBlocklist() types.Blocklist {
+	return s.Blocklist
+}
+
 func (s *State) buildPlatformComponent() *components.PlatformComponent {
 	return components.NewPlatformComponent(s.Config.Platforms)
 }
@@ -231,6 +244,7 @@ func (s *State) buildFilterChain(ctx context.Context) *filters.Chain {
 		}
 	}
 	fs = append(fs, filters.NewPublishedDedupeFilter(targetNames))
+	fs = append(fs, filters.NewBlocklistFilter())
 
 	pc := s.Registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
 	fs = append(fs,
