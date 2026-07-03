@@ -84,6 +84,19 @@ func (p *Post) From(item *types.Item) {
 	}
 }
 
+const maxPostRunes = 300
+
+func truncateRunes(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	if n <= 1 {
+		return string(r[:n])
+	}
+	return string(r[:n-1]) + "…"
+}
+
 func (p *Post) Into() RichText {
 	var text string
 	var facets []*bsky.RichtextFacet
@@ -93,11 +106,21 @@ func (p *Post) Into() RichText {
 			continue
 		}
 
+		remaining := maxPostRunes - len([]rune(text))
+		if remaining <= 0 {
+			break
+		}
+
+		segText := seg.Text
+		if len([]rune(segText)) > remaining {
+			segText = truncateRunes(segText, remaining)
+		}
+
 		start := int64(len(text))
-		text += seg.Text
+		text += segText
 		end := int64(len(text))
 
-		if seg.URI != "" {
+		if seg.URI != "" && segText == seg.Text {
 			facets = append(facets, &bsky.RichtextFacet{
 				Index: &bsky.RichtextFacet_ByteSlice{
 					ByteStart: start,
