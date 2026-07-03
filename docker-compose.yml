@@ -34,7 +34,7 @@ services:
     image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.7
     container_name: cartero-reranker
     restart: unless-stopped
-    command: ["--model-id", "BAAI/bge-reranker-v2-m3", "--max-batch-tokens", "16384"]
+    command: ["--model-id", "BAAI/bge-reranker-base"]
     volumes:
       - tei-data:/data
     pull_policy: always
