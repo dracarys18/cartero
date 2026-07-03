@@ -79,6 +79,7 @@ func New(name string, config Config, entryStore storage.EntryStore) *Server {
 			return strings.Split(s, sep)
 		},
 		"formatSource": utils.Readable,
+		"hueClass":     hueClass,
 	}
 
 	tmpl := &template.Template{}
@@ -249,12 +250,12 @@ func (s *Server) buildFeed(entries []storage.FeedEntry) *feeds.Feed {
 
 func (s *Server) handleHomepage(w http.ResponseWriter, r *http.Request) {
 	page := s.parsePageParam(r)
-	dateRange := s.parseDateParam(r)
-	perPage := 20
+	perPage := 80
 
-	startDate, endDate := s.calculateDateRange(dateRange)
+	start := time.Unix(0, 0)
+	end := time.Now().Add(24 * time.Hour)
 
-	result, err := s.entryStore.ListEntriesPaginated(r.Context(), page, perPage, startDate, endDate)
+	result, err := s.entryStore.ListEntriesPaginated(r.Context(), page, perPage, start, end)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = fmt.Fprintf(w, "Error: %v", err)
@@ -265,14 +266,13 @@ func (s *Server) handleHomepage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=300")
 
 	data := map[string]interface{}{
-		"Title":      fmt.Sprintf("Cartero - %s", s.name),
+		"Title":      fmt.Sprintf("cartero — %s", s.name),
 		"Entries":    result.Entries,
 		"Now":        time.Now(),
 		"Page":       result.Page,
 		"TotalPages": result.TotalPages,
 		"HasNext":    result.HasNext,
 		"HasPrev":    result.HasPrevious,
-		"DateRange":  dateRange,
 		"Total":      result.Total,
 	}
 
@@ -294,36 +294,13 @@ func (s *Server) parsePageParam(r *http.Request) int {
 	return page
 }
 
-func (s *Server) parseDateParam(r *http.Request) string {
-	dateRange := r.URL.Query().Get("date")
-	if dateRange == "" {
-		return "today"
+func hueClass(s string) string {
+	h := 0
+	for _, c := range s {
+		h = h*31 + int(c)
 	}
-	if dateRange != "today" && dateRange != "yesterday" {
-		return "today"
+	if h < 0 {
+		h = -h
 	}
-	return dateRange
-}
-
-func (s *Server) calculateDateRange(dateRange string) (time.Time, time.Time) {
-	now := time.Now()
-
-	switch dateRange {
-	case "yesterday":
-		return s.yesterdayRange(now)
-	default:
-		return s.todayRange(now)
-	}
-}
-
-func (s *Server) todayRange(now time.Time) (time.Time, time.Time) {
-	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	endOfToday := startOfToday.Add(24 * time.Hour)
-	return startOfToday, endOfToday
-}
-
-func (s *Server) yesterdayRange(now time.Time) (time.Time, time.Time) {
-	startOfYesterday := time.Date(now.Year(), now.Month(), now.Day()-1, 0, 0, 0, 0, now.Location())
-	endOfYesterday := startOfYesterday.Add(24 * time.Hour)
-	return startOfYesterday, endOfYesterday
+	return fmt.Sprintf("ph%d", h%10)
 }

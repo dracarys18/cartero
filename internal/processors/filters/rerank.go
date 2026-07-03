@@ -10,7 +10,7 @@ import (
 
 const (
 	shortlistK = 50
-	docMaxLen  = 500
+	docMaxLen  = 8000
 )
 
 type RerankFilter struct {

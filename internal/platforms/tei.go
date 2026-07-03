@@ -23,8 +23,9 @@ func NewTEIReranker(baseURL string) *TEIReranker {
 }
 
 type teiRerankRequest struct {
-	Query string   `json:"query"`
-	Texts []string `json:"texts"`
+	Query    string   `json:"query"`
+	Texts    []string `json:"texts"`
+	Truncate bool     `json:"truncate"`
 }
 
 type teiRerankResult struct {
@@ -37,7 +38,7 @@ func (r *TEIReranker) Rerank(ctx context.Context, query string, docs []string) (
 		return nil, nil
 	}
 
-	body, err := json.Marshal(teiRerankRequest{Query: query, Texts: docs})
+	body, err := json.Marshal(teiRerankRequest{Query: query, Texts: docs, Truncate: true})
 	if err != nil {
 		return nil, fmt.Errorf("rerank: marshal request: %w", err)
 	}

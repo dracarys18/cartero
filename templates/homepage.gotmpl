@@ -3,543 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cartero</title>
+    <title>{{.Title}}</title>
     <link rel="icon" type="image/jpeg" href="/assets/favicon.jpg">
     <link rel="manifest" href="/assets/manifest.webmanifest">
-    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#161616" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#ecebe6">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-body:             #fafafa;
-            --bg-surface:          #fff;
-            --bg-placeholder:      #f0f0f0;
-            --bg-disabled:         #f5f5f5;
-            --text-primary:        #1a1a1a;
-            --text-secondary:      #666;
-            --text-tertiary:       #444;
-            --text-disabled:       #999;
-            --text-disabled-border: #ccc;
-            --border:              #000;
-            --text-on-border:      #fff;
-            --keyword-bg:          #000;
-            --keyword-text:        #fff;
-            --keyword-border:      #000;
+            --paper:     #ecebe6;
+            --ink:       #222221;
+            --ink-soft:  #4b4b47;
+            --ink-faint: #85847e;
+            --rule:      #d8d6ce;
+            --accent:    #8f2d1f;
         }
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            background-color: var(--bg-body);
-            color: var(--text-primary);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            line-height: 1.5;
-            max-width: 1000px;
+            background: var(--paper);
+            color: var(--ink);
+            font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            max-width: 1080px;
             margin: 0 auto;
-            padding: 40px 20px;
-            font-size: 16px;
+            padding: 26px 30px 80px;
+            -webkit-font-smoothing: antialiased;
         }
-        a {
-            color: var(--text-primary);
-            text-decoration: none;
-            transition: all 0.2s;
+        a { text-decoration: none; color: inherit; }
+
+        .topbar {
+            display: flex; justify-content: flex-end; align-items: center;
+            padding-bottom: 7px; border-bottom: 1px solid var(--ink);
         }
-        a:hover {
-            color: var(--border);
+        .sections {
+            display: flex; gap: 18px;
+            text-transform: uppercase; letter-spacing: .13em; font-size: .68rem; font-weight: 600;
         }
-        .header {
-            border: 3px solid var(--border);
-            padding: 20px 25px;
-            margin-bottom: 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--bg-surface);
-            box-shadow: 6px 6px 0 var(--border);
+        .sections a { color: var(--ink-soft); }
+        .sections a:hover { color: var(--accent); }
+        .masthead {
+            display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+            padding: 13px 0 11px; border-bottom: 3px double var(--ink);
         }
-        .logo {
-            font-size: 28px;
-            font-weight: 900;
-            color: var(--border);
-            letter-spacing: -1px;
-            text-transform: uppercase;
+        .nameplate {
+            font-family: "Manrope", sans-serif; font-weight: 800;
+            font-size: 2rem; line-height: 1; letter-spacing: -.03em; color: var(--ink);
         }
-        .logo:hover {
-            color: var(--border);
+        .dateline {
+            text-transform: uppercase; letter-spacing: .1em; font-size: .64rem; font-weight: 600;
+            color: var(--ink-soft);
         }
-        .header-center {
-            display: flex;
-            gap: 20px;
+
+        .kicker {
+            display: block; text-transform: uppercase; letter-spacing: .12em;
+            font-size: .66rem; font-weight: 600; color: var(--accent); margin-bottom: 6px;
         }
-        .date-filter {
-            display: flex;
-            gap: 20px;
+        .byline { font-style: normal; color: var(--ink-faint); }
+        .title-link:hover { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+
+        .stories {
+            columns: 3 240px; column-gap: 34px; column-rule: 1px solid var(--rule);
+            margin-top: 30px;
         }
-        .filter-link {
-            color: var(--text-secondary);
-            font-size: 14px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 6px 12px;
-            border: 2px solid transparent;
-        }
-        .filter-link.active {
-            color: var(--border);
-            border: 2px solid var(--border);
-            background: var(--bg-surface);
-        }
-        .filter-link:hover {
-            color: var(--border);
-            border-color: var(--border);
-        }
-        .social-icon {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            color: var(--text-secondary);
-            font-size: 13px;
-            font-weight: 600;
-            padding: 6px 12px;
-            border: 2px solid var(--border);
-            background: var(--bg-surface);
-        }
-        .social-icon svg {
-            width: 16px;
-            height: 16px;
-            fill: var(--border);
-        }
-        .social-icon:hover {
-            background: var(--border);
-            color: var(--text-on-border);
-        }
-        .social-icon:hover svg {
-            fill: var(--text-on-border);
-        }
-        .content {
-            margin: 40px 0;
-        }
-        .title {
-            font-size: 18px;
-            font-weight: 900;
-            margin-bottom: 30px;
-            color: var(--border);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .story {
-            padding: 0;
-            margin-bottom: 25px;
-            border: 3px solid var(--border);
-            background: var(--bg-surface);
-            display: flex;
-            overflow: hidden;
-            transition: all 0.2s;
-        }
-        .story:hover {
-            box-shadow: 8px 8px 0 var(--border);
-            transform: translate(-2px, -2px);
-        }
-        .story-image-container {
-            flex-shrink: 0;
-            width: 180px;
-            height: 180px;
-            border-right: 3px solid var(--border);
-            overflow: hidden;
-            background: var(--bg-placeholder);
-        }
-        .story-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-        .story-content {
-            padding: 20px;
-            flex: 1;
+        .story { break-inside: avoid; padding: 16px 0 18px; border-top: 1px solid var(--rule); }
+        .story-thumb { display: block; margin-bottom: 12px; }
+        .story-thumb img {
+            width: 100%; aspect-ratio: 3 / 2; object-fit: cover;
+            filter: saturate(.94) contrast(1.02); background: var(--rule);
         }
         .story-title {
-            font-size: 18px;
-            line-height: 1.3;
-            margin-bottom: 12px;
-            font-weight: 800;
+            font-family: "Manrope", sans-serif; font-weight: 700;
+            font-size: 1.32rem; line-height: 1.15; letter-spacing: -.006em; margin-bottom: 6px;
         }
-        .story-title a {
-            color: var(--border);
-        }
-        .story-title a:hover {
-            text-decoration: underline;
-            text-decoration-thickness: 3px;
-        }
-        .story-meta {
-            font-size: 12px;
-            color: var(--text-secondary);
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 12px;
-            align-items: center;
-        }
-        .story-meta span {
-            display: inline-block;
-        }
-        .source-tag {
-            color: var(--border);
-            background-color: var(--bg-surface);
-            padding: 4px 10px;
-            border: 2px solid var(--border);
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .keyword-tag {
-            color: var(--keyword-text);
-            background-color: var(--keyword-bg);
-            padding: 4px 10px;
-            border: 2px solid var(--keyword-border);
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .story-description {
-            font-size: 14px;
-            color: var(--text-tertiary);
-            line-height: 1.6;
-        }
-        .empty {
-            text-align: center;
-            padding: 80px 20px;
-            color: var(--text-secondary);
-            font-weight: 600;
-            border: 3px solid var(--border);
-            background: var(--bg-surface);
-        }
-        .footer {
-            border: 3px solid var(--border);
-            padding: 20px 25px;
-            margin-top: 50px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 13px;
-            background: var(--bg-surface);
-            font-weight: 600;
-        }
-        .footer-links {
-            display: flex;
-            gap: 15px;
-        }
-        .footer-link {
-            color: var(--text-secondary);
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            padding: 4px 8px;
-            border: 2px solid transparent;
-        }
-        .footer-link:hover {
-            color: var(--border);
-            border-color: var(--border);
-        }
+        .story .byline { font-size: .8rem; margin-bottom: 8px; }
+        .story-excerpt { font-size: .9rem; line-height: 1.52; color: var(--ink-soft); }
+
         .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
-            margin: 40px 0;
+            display: flex; justify-content: center; align-items: center; gap: 24px;
+            margin-top: 44px; padding-top: 20px; border-top: 3px double var(--ink);
+            text-transform: uppercase; letter-spacing: .1em; font-size: .72rem; font-weight: 600;
         }
-        .pagination a {
-            color: var(--border);
-            padding: 12px 24px;
-            border: 3px solid var(--border);
-            font-weight: 700;
-            text-transform: uppercase;
-            font-size: 13px;
-            letter-spacing: 0.5px;
-            background: var(--bg-surface);
-            transition: all 0.2s;
-        }
-        .pagination a:hover {
-            background: var(--border);
-            color: var(--text-on-border);
-            box-shadow: 4px 4px 0 rgba(0,0,0,0.3);
-        }
-        .pagination a.disabled {
-            color: var(--text-disabled);
-            border-color: var(--text-disabled-border);
-            pointer-events: none;
-            background: var(--bg-disabled);
-        }
-        .pagination .page-info {
-            color: var(--text-secondary);
-            font-size: 14px;
-            font-weight: 600;
-        }
+        .pagination a { color: var(--ink-soft); }
+        .pagination a:hover { color: var(--accent); }
+        .pagination .disabled { color: var(--ink-faint); opacity: .5; }
+        .page-info { font-style: normal; text-transform: none; letter-spacing: 0; color: var(--ink-faint); font-weight: 400; }
 
-        @media (max-width: 768px) {
-            body {
-                padding: 20px 15px;
-            }
-            .header {
-                flex-direction: column;
-                gap: 15px;
-                padding: 15px;
-                box-shadow: 4px 4px 0 var(--border);
-            }
-            .logo {
-                font-size: 24px;
-            }
-            .header-center {
-                width: 100%;
-                justify-content: center;
-            }
-            .date-filter {
-                gap: 10px;
-            }
-            .filter-link {
-                font-size: 12px;
-                padding: 5px 10px;
-            }
-            .social-icon {
-                font-size: 12px;
-                padding: 5px 10px;
-            }
-            .social-icon svg {
-                width: 14px;
-                height: 14px;
-            }
-            .story {
-                flex-direction: column;
-            }
-            .story-image-container {
-                width: 100%;
-                height: 200px;
-                border-right: none;
-                border-bottom: 3px solid var(--border);
-            }
-            .story-content {
-                padding: 15px;
-            }
-            .story-title {
-                font-size: 16px;
-            }
-            .story-description {
-                font-size: 13px;
-            }
-            .story:hover {
-                box-shadow: 4px 4px 0 var(--border);
-            }
-            .footer {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-                padding: 15px;
-            }
-            .footer-links {
-                justify-content: center;
-            }
-            .pagination {
-                flex-wrap: wrap;
-                gap: 10px;
-            }
-            .pagination a {
-                padding: 10px 16px;
-                font-size: 12px;
-            }
-            .pagination .page-info {
-                width: 100%;
-                text-align: center;
-                font-size: 13px;
-            }
-        }
+        .empty { padding: 100px 0; text-align: center; font-style: normal; color: var(--ink-soft); }
 
-        .share-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 0;
-            display: inline-flex;
-            align-items: center;
-            color: var(--text-disabled);
-            transition: color 0.2s;
-            font-size: 11px;
-            font-weight: 700;
-            gap: 4px;
-            font-family: inherit;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+        .colophon {
+            margin-top: 34px; padding-top: 16px; border-top: 1px solid var(--rule);
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: .74rem; color: var(--ink-faint);
         }
-        .share-btn:hover { color: var(--border); }
-        .share-btn svg { width: 13px; height: 13px; fill: currentColor; }
-        .share-btn.copied { color: var(--border); }
+        .colophon a { color: var(--ink-soft); margin-right: 15px; }
+        .colophon a:hover { color: var(--accent); }
 
-        @media (max-width: 480px) {
-            body {
-                padding: 15px 10px;
-            }
-            .header {
-                padding: 12px;
-            }
-            .logo {
-                font-size: 20px;
-            }
-            .story-content {
-                padding: 12px;
-            }
-            .story-title {
-                font-size: 15px;
-            }
-            .story-meta {
-                font-size: 11px;
-                gap: 6px;
-            }
-            .source-tag,
-            .keyword-tag {
-                font-size: 10px;
-                padding: 3px 8px;
-            }
-            .story-description {
-                font-size: 12px;
-            }
-            .pagination a {
-                padding: 8px 12px;
-                font-size: 11px;
-            }
-        }
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg-body:              #161616;
-                --bg-surface:           #1c1c1c;
-                --bg-placeholder:       #252525;
-                --bg-disabled:          #202020;
-                --text-primary:         #ededed;
-                --text-secondary:       #a8a8a8;
-                --text-tertiary:        #c8c8c8;
-                --text-disabled:        #555555;
-                --text-disabled-border: #393939;
-                --border:               #d6d6d6;
-                --text-on-border:       #161616;
-                --keyword-bg:           #ededed;
-                --keyword-text:         #161616;
-                --keyword-border:       #ededed;
-            }
+        @media (max-width: 680px) {
+            body { padding: 18px 16px 56px; }
+            .sections { flex-wrap: wrap; justify-content: flex-end; gap: 12px 14px; }
+            .masthead { flex-wrap: wrap; gap: 4px 12px; }
+            .nameplate { font-size: 1.9rem; }
+            .stories { columns: 1; }
+            .pagination { flex-wrap: wrap; gap: 12px 18px; }
+            .colophon { flex-direction: column; gap: 8px; align-items: flex-start; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <a href="/" class="logo">cartero</a>
-        <div class="header-center">
-            <div class="date-filter">
-                <a href="/?date=today" class="filter-link{{if eq .DateRange "today"}} active{{end}}">today</a>
-                <a href="/?date=yesterday" class="filter-link{{if eq .DateRange "yesterday"}} active{{end}}">yesterday</a>
-            </div>
-        </div>
-        <a href="https://bsky.app/profile/news.karthihegde.dev" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="Follow on Bluesky">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 1024 1024">
-                <path d="M351.121 315.106C416.241 363.994 486.281 463.123 512 516.315C537.719 463.123 607.759 363.994 672.879 315.106C719.866 279.83 796 252.536 796 339.388C796 356.734 786.055 485.101 780.222 505.943C759.947 578.396 686.067 596.876 620.347 585.691C735.222 605.242 764.444 670.002 701.333 734.762C581.473 857.754 529.061 703.903 515.631 664.481C513.169 657.254 512.017 653.873 512 656.748C511.983 653.873 510.831 657.254 508.369 664.481C494.939 703.903 442.527 857.754 322.667 734.762C259.556 670.002 288.778 605.242 403.653 585.691C337.933 596.876 264.053 578.396 243.778 505.943C237.945 485.101 228 356.734 228 339.388C228 252.536 304.134 279.83 351.121 315.106Z"></path>
-            </svg>
-            <span>bluesky</span>
-        </a>
+    <div class="topbar">
+        <nav class="sections">
+            <a href="/feed.rss">RSS</a>
+            <a href="/feed.atom">Atom</a>
+            <a href="/feed.json">JSON</a>
+            <a href="https://bsky.app/profile/news.karthihegde.dev" target="_blank" rel="noopener">Bluesky</a>
+        </nav>
     </div>
+    <header class="masthead">
+        <a href="/" class="nameplate">cartero</a>
+        <span class="dateline">{{.Now.Format "Monday, January 2, 2006"}} · No. {{.Total}}</span>
+    </header>
 
-    <div class="content">
-        {{if .DateRange}}
-        <div class="title">
-            {{if eq .DateRange "yesterday"}}Yesterday's Stories{{else}}Latest Stories{{end}}
-        </div>
-        {{end}}
-
+    <main>
         {{if .Entries}}
-            {{range .Entries}}
-            <div class="story">
-                {{if .ImageURL}}
-                <div class="story-image-container">
-                    <img src="{{.ImageURL}}" alt="{{.Title}}" class="story-image" loading="lazy" onerror="this.classList.add('broken');">
-                </div>
-                {{end}}
-                <div class="story-content">
-                    <div class="story-title">
-                        <a href="{{.Link}}" target="_blank" rel="noopener">{{.Title}}</a>
-                    </div>
-                    <div class="story-meta">
-                        <span class="source-tag">{{formatSource .Source}}</span>
-                        {{if .MatchedKeywords}}{{range split .MatchedKeywords ","}}<span class="keyword-tag">{{.}}</span>{{end}}{{end}}
-                        {{if .Author}}<span>by {{.Author}}</span>{{end}}
-                        <span>{{timeAgo .CreatedAt}}</span>
-                        <button class="share-btn" onclick="shareStory(this, '{{.Title}}', '{{.Link}}')" aria-label="Share">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
-                            <span>share</span>
-                        </button>
-                    </div>
-                    {{if .Description}}
-                    <div class="story-description">{{.Description}}</div>
-                    {{end}}
-                </div>
-            </div>
+        <div class="stories">
+            {{range $e := .Entries}}
+            <article class="story">
+                {{if $e.ImageURL}}<a class="story-thumb" href="{{$e.Link}}" target="_blank" rel="noopener"><img src="{{$e.ImageURL}}" alt="" loading="lazy" onerror="this.closest('.story-thumb').remove()"></a>{{end}}
+                {{if $e.MatchedKeywords}}<span class="kicker">{{$e.MatchedKeywords}}</span>{{end}}
+                <h3 class="story-title"><a class="title-link" href="{{$e.Link}}" target="_blank" rel="noopener">{{$e.Title}}</a></h3>
+                <div class="byline">{{formatSource $e.Source}} &nbsp;·&nbsp; {{timeAgo $e.CreatedAt}}</div>
+                {{if $e.Description}}<p class="story-excerpt">{{$e.Description}}</p>{{end}}
+            </article>
             {{end}}
-
-            {{if gt .TotalPages 1}}
-            <div class="pagination">
-                {{if .HasPrev}}
-                <a href="/?date={{.DateRange}}&page={{sub .Page 1}}">← Previous</a>
-                {{else}}
-                <a class="disabled">← Previous</a>
-                {{end}}
-                
-                <span class="page-info">Page {{.Page}} of {{.TotalPages}} ({{.Total}} stories)</span>
-                
-                {{if .HasNext}}
-                <a href="/?date={{.DateRange}}&page={{add .Page 1}}">Next →</a>
-                {{else}}
-                <a class="disabled">Next →</a>
-                {{end}}
-            </div>
-            {{end}}
-        {{else}}
-            <div class="empty">
-                <p>No stories yet. Check back soon!</p>
-            </div>
-        {{end}}
-    </div>
-
-    <div class="footer">
-        <div class="footer-links">
-            <a href="/feed.rss" class="footer-link">rss</a>
-            <a href="/feed.atom" class="footer-link">atom</a>
-            <a href="/feed.json" class="footer-link">json</a>
         </div>
-        <div>last updated: {{.Now.Format "Jan 2, 2006 15:04 MST"}}</div>
-    </div>
+
+        <div class="pagination">
+            {{if .HasPrev}}<a href="/?page={{sub .Page 1}}">← Newer</a>{{else}}<span class="disabled">← Newer</span>{{end}}
+            <span class="page-info">page {{.Page}} of {{.TotalPages}} · {{.Total}} stories</span>
+            {{if .HasNext}}<a href="/?page={{add .Page 1}}">Older →</a>{{else}}<span class="disabled">Older →</span>{{end}}
+        </div>
+        {{else}}
+        <div class="empty">no stories yet</div>
+        {{end}}
+    </main>
+
+    <footer class="colophon">
+        <div>
+            <a href="/feed.rss">RSS</a>
+            <a href="/feed.atom">Atom</a>
+            <a href="/feed.json">JSON</a>
+        </div>
+        <div>set by machine · {{.Now.Format "Jan 2, 2006 · 15:04 MST"}}</div>
+    </footer>
+
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('/sw.js');
-            });
-        }
-
-        function shareStory(btn, title, url) {
-            const promo = 'Shared from ' + window.location.origin;
-            if (navigator.share) {
-                const shareText = url + '\n\n' + promo
-                navigator.share({text: shareText}).catch(() => {});
-                return;
-            }
-            const text = title + '\n' + url + '\n\n' + promo;
-            navigator.clipboard.writeText(text).then(() => {
-                const span = btn.querySelector('span');
-                span.textContent = 'copied!';
-                btn.classList.add('copied');
-                setTimeout(() => {
-                    span.textContent = 'share';
-                    btn.classList.remove('copied');
-                }, 2000);
-            });
+            window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js'); });
         }
     </script>
 </body>
