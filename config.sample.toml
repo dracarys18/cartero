@@ -22,7 +22,7 @@ embedding_model = "bge-m3"
 type = "rerank"
 enabled = true
 [platforms.reranker.settings]
-rerank_url = "http://localhost:8081"
+rerank_url = "http://reranker:80"
 
 # OpenAI-compatible embedding API (Cloudflare Workers AI, OpenAI, Together, etc.)
 [platforms.cloudflare]

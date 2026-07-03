@@ -31,22 +31,13 @@ services:
       - cartero-network
 
   reranker:
-    image: ghcr.io/huggingface/text-embeddings-inference:cuda-1.9
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.7
     container_name: cartero-reranker
     restart: unless-stopped
     command: ["--model-id", "BAAI/bge-reranker-base"]
-    ports:
-      - "8081:80"
     volumes:
       - tei-data:/data
     pull_policy: always
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
     networks:
       - cartero-network
 
