@@ -83,7 +83,7 @@ func (c *PlatformComponent) Initialize(ctx context.Context) error {
 		if !cfg.Enabled {
 			continue
 		}
-		model := cfg.Settings.OllamaPlatformSettings.EmbeddingModel
+		model := cfg.Settings.EmbeddingModel
 		if model == "" {
 			continue
 		}
@@ -92,8 +92,8 @@ func (c *PlatformComponent) Initialize(ctx context.Context) error {
 			c.embeddingPlatform = platforms.NewOllamaPlatform(model)
 		case "openai":
 			c.embeddingPlatform = platforms.NewOpenAIPlatform(
-				cfg.Settings.OpenAIPlatformSettings.BaseURL,
-				cfg.Settings.OpenAIPlatformSettings.APIKey,
+				cfg.Settings.BaseURL,
+				cfg.Settings.APIKey,
 				model,
 			)
 		}
@@ -106,7 +106,7 @@ func (c *PlatformComponent) Initialize(ctx context.Context) error {
 		if !cfg.Enabled || cfg.Type != "rerank" {
 			continue
 		}
-		if url := cfg.Settings.RerankerPlatformSettings.RerankURL; url != "" {
+		if url := cfg.Settings.RerankURL; url != "" {
 			c.rerankerPlatform = platforms.NewTEIReranker(url)
 			break
 		}
