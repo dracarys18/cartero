@@ -13,7 +13,8 @@ type PlatformComponent struct {
 	blueskyPlatform   *platforms.BlueskyPlatform
 	telegramPlatform  *platforms.TelegramPlatform
 	ollamaPlatforms   map[string]*platforms.OllamaPlatform
-	embeddingPlatform *platforms.OllamaPlatform
+	embeddingPlatform platforms.Embedder
+	rerankerPlatform  platforms.Reranker
 }
 
 func NewPlatformComponent(config map[string]config.PlatformConfig) *PlatformComponent {
@@ -79,8 +80,34 @@ func (c *PlatformComponent) Initialize(ctx context.Context) error {
 	}
 
 	for _, cfg := range c.config {
-		if cfg.Type == "ollama" && cfg.Settings.EmbeddingModel != "" {
-			c.embeddingPlatform = platforms.NewOllamaPlatform(cfg.Settings.EmbeddingModel)
+		if !cfg.Enabled {
+			continue
+		}
+		model := cfg.Settings.EmbeddingModel
+		if model == "" {
+			continue
+		}
+		switch cfg.Type {
+		case "ollama":
+			c.embeddingPlatform = platforms.NewOllamaPlatform(model)
+		case "openai":
+			c.embeddingPlatform = platforms.NewOpenAIPlatform(
+				cfg.Settings.BaseURL,
+				cfg.Settings.APIKey,
+				model,
+			)
+		}
+		if c.embeddingPlatform != nil {
+			break
+		}
+	}
+
+	for _, cfg := range c.config {
+		if !cfg.Enabled || cfg.Type != "rerank" {
+			continue
+		}
+		if url := cfg.Settings.RerankURL; url != "" {
+			c.rerankerPlatform = platforms.NewTEIReranker(url)
 			break
 		}
 	}
@@ -113,8 +140,12 @@ func (c *PlatformComponent) Telegram() *platforms.TelegramPlatform {
 	return c.telegramPlatform
 }
 
-func (c *PlatformComponent) Embedder() *platforms.OllamaPlatform {
+func (c *PlatformComponent) Embedder() platforms.Embedder {
 	return c.embeddingPlatform
+}
+
+func (c *PlatformComponent) Reranker() platforms.Reranker {
+	return c.rerankerPlatform
 }
 
 func (c *PlatformComponent) OllamaPlatform(model string) *platforms.OllamaPlatform {

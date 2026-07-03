@@ -78,9 +78,6 @@ func (r *RedisConnection) Ack(ctx context.Context, stream, group string, ids ...
 	return r.client.XAck(ctx, stream, group, ids...).Err()
 }
 
-func (r *RedisConnection) Client() *redis.Client {
-	return r.client
-}
 
 func (r *RedisConnection) Close() error {
 	return r.client.Close()

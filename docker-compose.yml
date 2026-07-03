@@ -30,12 +30,24 @@ services:
     networks:
       - cartero-network
 
+  reranker:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.7
+    container_name: cartero-reranker
+    restart: unless-stopped
+    command: ["--model-id", "BAAI/bge-reranker-base"]
+    volumes:
+      - tei-data:/data
+    pull_policy: always
+    networks:
+      - cartero-network
+
   cartero:
     image: ghcr.io/dracarys18/cartero:latest
     container_name: cartero
     restart: unless-stopped
     depends_on:
       - redis
+      - reranker
     volumes:
       - ./config.toml:/app/config.toml:ro
       - cartero-data:/app/data
@@ -97,4 +109,6 @@ volumes:
   redis-data:
     driver: local
   postgres-data:
+    driver: local
+  tei-data:
     driver: local

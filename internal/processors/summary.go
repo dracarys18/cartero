@@ -34,7 +34,7 @@ func (d *SummaryProcessor) Initialize(_ context.Context, _ types.StateAccessor) 
 }
 
 func (d *SummaryProcessor) DependsOn() []string {
-	return []string{procnames.ScoreFilter, procnames.KeywordFilter, procnames.ExtractText}
+	return []string{procnames.ScoreFilter, procnames.ExtractText}
 }
 
 func (d *SummaryProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {

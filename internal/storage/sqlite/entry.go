@@ -118,6 +118,24 @@ func (s *entryStore) ListRecentEntries(ctx context.Context, limit int) ([]storag
 	return s.scanEntries(rows, limit)
 }
 
+func (s *entryStore) ListPublishedEntries(ctx context.Context, target string, limit int) ([]storage.FeedEntry, error) {
+	query := `
+		SELECT fe.id, fe.title, fe.link, fe.description, fe.content, fe.author, fe.source, fe.image_url, fe.matched_keywords, fe.hash, fe.entry_timestamp, fe.published_at, fe.created_at
+		FROM feed_entries fe
+		JOIN published p ON p.item_id = fe.id AND p.target = ?
+		ORDER BY p.published_at DESC
+		LIMIT ?
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, target, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query published entries: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	return s.scanEntries(rows, limit)
+}
+
 func (s *entryStore) ListEntriesPaginated(ctx context.Context, page, perPage int, startDate, endDate time.Time) (*storage.PaginationResult, error) {
 	offset := (page - 1) * perPage
 

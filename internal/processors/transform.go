@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"cartero/internal/processors/names"
 	"cartero/internal/types"
 )
 
@@ -32,9 +31,7 @@ func (t *TransformProcessor) Initialize(_ context.Context, _ types.StateAccessor
 }
 
 func (t *TransformProcessor) DependsOn() []string {
-	return []string{
-		names.KeywordFilter,
-	}
+	return nil
 }
 
 func (t *TransformProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
@@ -98,83 +95,3 @@ func TemplateTransformer(name string, template string) *TransformProcessor {
 	})
 }
 
-func EnrichTransformer(name string, enrichments map[string]interface{}) *TransformProcessor {
-	return NewTransformProcessor(name, func(item *types.Item) (interface{}, error) {
-		result := make(map[string]interface{})
-
-		if data, ok := item.Content.(map[string]interface{}); ok {
-			for k, v := range data {
-				result[k] = v
-			}
-		} else {
-			result["content"] = item.Content
-		}
-
-		for k, v := range enrichments {
-			result[k] = v
-		}
-
-		for k, v := range item.Metadata {
-			result[k] = v
-		}
-
-		return result, nil
-	})
-}
-
-func MapTransformer(name string, mapper func(interface{}) (interface{}, error)) *TransformProcessor {
-	return NewTransformProcessor(name, func(item *types.Item) (interface{}, error) {
-		return mapper(item.Content)
-	})
-}
-
-type ChainTransformProcessor struct {
-	name         string
-	transformers []*TransformProcessor
-}
-
-func NewChainTransformProcessor(name string, transformers ...*TransformProcessor) *ChainTransformProcessor {
-	return &ChainTransformProcessor{
-		name:         name,
-		transformers: transformers,
-	}
-}
-
-func (c *ChainTransformProcessor) Name() string {
-	return c.name
-}
-
-func (c *ChainTransformProcessor) Initialize(_ context.Context, _ types.StateAccessor) error {
-	return nil
-}
-
-func (c *ChainTransformProcessor) DependsOn() []string {
-	return []string{}
-}
-
-func (c *ChainTransformProcessor) Process(ctx context.Context, st types.StateAccessor, item *types.Item) error {
-	currentData := item.Content
-
-	for _, transformer := range c.transformers {
-		tempItem := &types.Item{
-			ID:        item.ID,
-			Content:   currentData,
-			Metadata:  item.Metadata,
-			Source:    item.Source,
-			Timestamp: item.Timestamp,
-		}
-
-		if err := transformer.Process(ctx, st, tempItem); err != nil {
-			return fmt.Errorf("transformer %s failed: %w", transformer.Name(), err)
-		}
-
-		currentData = tempItem.GetContent()
-
-		for k, v := range tempItem.Metadata {
-			item.AddMetadata(k, v)
-		}
-	}
-
-	item.ModifyContent(currentData)
-	return nil
-}

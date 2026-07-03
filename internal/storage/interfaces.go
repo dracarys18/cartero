@@ -17,6 +17,12 @@ type Item interface {
 	GetSource() string
 	GetTimestamp() time.Time
 	GetEmbedding() [][]float32
+	GetLink() string
+	GetDescription() string
+	GetFeedContent() string
+	GetAuthor() string
+	GetImageURL() string
+	GetMatchedKeywords() string
 }
 
 type FeedEntry struct {
@@ -53,6 +59,7 @@ type EntryStore interface {
 	IsPublished(ctx context.Context, itemID, target string) (bool, error)
 	InsertEntry(ctx context.Context, id, title, link, description, content, author, source, imageURL, matchedKeywords string, publishedAt time.Time) error
 	ListRecentEntries(ctx context.Context, limit int) ([]FeedEntry, error)
+	ListPublishedEntries(ctx context.Context, target string, limit int) ([]FeedEntry, error)
 	ListEntriesPaginated(ctx context.Context, page, perPage int, startDate, endDate time.Time) (*PaginationResult, error)
 	SetEmbedding(ctx context.Context, id string, embedding []float32) error
 	FindNearestEmbedding(ctx context.Context, embedding []float32, threshold float64, since time.Time) (bool, error)

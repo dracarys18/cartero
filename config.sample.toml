@@ -4,18 +4,27 @@ interval = "10m"
 run_once = false
 
 [storage]
-# SQLite (default)
-type = "sqlite"
-path = "./cartero.db"
+# Postgres + pgvector is required for personalized feeds (vector + FTS ranking).
+type = "postgres"
+dsn  = "postgres://cartero:cartero@localhost:5432/cartero?sslmode=disable"
 
-# Postgres
-# type = "postgres"
-# dsn  = "postgres://cartero:cartero@localhost:5432/cartero?sslmode=disable"
+# SQLite is deprecated and unmaintained (no vector/personalization support).
+# type = "sqlite"
+# path = "./cartero.db"
 
-[platforms.ollama]
-type = "ollama"
-[platforms.ollama.settings]
-embedding_model = "embeddinggemma:300m"
+[platforms.embedder]
+type = "openai"
+enabled = true
+[platforms.embedder.settings]
+embedding_model = "mxbai-embed-large-v1"
+base_url = "http://your-embedder-host/v1"
+api_key = ""
+
+[platforms.reranker]
+type = "rerank"
+enabled = true
+[platforms.reranker.settings]
+rerank_url = "http://reranker:80"
 
 [platforms.discord]
 type = "discord"
@@ -115,22 +124,18 @@ min_score = 100
 
 [processors.extract_text]
 type = "extract_text"
-enabled = false
+enabled = true
 [processors.extract_text.settings]
 min_content_length = 100
 
 [processors.embed]
 type = "embed_text"
-enabled = false
+enabled = true
 [processors.embed.settings]
 chunk_size = 7000
 
-[processors.keyword_filter]
-type = "filter_keyword"
-enabled = false
-[processors.keyword_filter.settings]
-keywords_file = "assets/keywords/my_keywords.json"
-embed_threshold = 0.6
+[interests]
+keywords_file = "https://gist.githubusercontent.com/you/id/raw/keywords.json"
 
 [processors.rate_limiter]
 type = "rate_limit"

@@ -21,14 +21,27 @@ func newEntryStore(db *sql.DB) storage.EntryStore {
 
 func (s *entryStore) Store(ctx context.Context, item storage.Item) error {
 	h := hash.HashURL(item.GetURL())
+	publishedAt := sql.NullTime{Valid: !item.GetTimestamp().IsZero(), Time: item.GetTimestamp()}
 
 	query := `
-		INSERT INTO feed_entries (id, hash, source, entry_timestamp, title)
-		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT(id) DO NOTHING
+		INSERT INTO feed_entries (id, hash, source, entry_timestamp, title, link, description, content, author, image_url, matched_keywords, published_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		ON CONFLICT(id) DO UPDATE SET
+			title = EXCLUDED.title,
+			link = EXCLUDED.link,
+			description = EXCLUDED.description,
+			content = EXCLUDED.content,
+			author = EXCLUDED.author,
+			image_url = EXCLUDED.image_url,
+			matched_keywords = EXCLUDED.matched_keywords,
+			published_at = EXCLUDED.published_at
 	`
 
-	_, err := s.db.ExecContext(ctx, query, item.GetID(), h, item.GetSource(), item.GetTimestamp(), item.GetTitle())
+	_, err := s.db.ExecContext(ctx, query,
+		item.GetID(), h, item.GetSource(), item.GetTimestamp(), item.GetTitle(),
+		item.GetLink(), item.GetDescription(), item.GetFeedContent(), item.GetAuthor(),
+		item.GetImageURL(), item.GetMatchedKeywords(), publishedAt,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to store entry: %w", err)
 	}
@@ -38,9 +51,41 @@ func (s *entryStore) Store(ctx context.Context, item storage.Item) error {
 		if err := s.SetEmbedding(ctx, item.GetID(), embeddings[0]); err != nil {
 			return fmt.Errorf("failed to store embedding: %w", err)
 		}
+		if err := s.setChunks(ctx, item.GetID(), embeddings); err != nil {
+			return fmt.Errorf("failed to store chunks: %w", err)
+		}
 	}
 
 	return nil
+}
+
+func (s *entryStore) setChunks(ctx context.Context, id string, embeddings [][]float32) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM item_chunks WHERE item_id = $1`, id); err != nil {
+		return err
+	}
+
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO item_chunks (item_id, chunk_index, embedding) VALUES ($1, $2, $3)`)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = stmt.Close() }()
+
+	for idx, vec := range embeddings {
+		if len(vec) == 0 {
+			continue
+		}
+		if _, err := stmt.ExecContext(ctx, id, idx, pgvector.NewHalfVector(vec)); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func (s *entryStore) Exists(ctx context.Context, id string) (bool, error) {
@@ -121,6 +166,24 @@ func (s *entryStore) ListRecentEntries(ctx context.Context, limit int) ([]storag
 	rows, err := s.db.QueryContext(ctx, query, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query entries: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	return s.scanEntries(rows, limit)
+}
+
+func (s *entryStore) ListPublishedEntries(ctx context.Context, target string, limit int) ([]storage.FeedEntry, error) {
+	query := `
+		SELECT fe.id, fe.title, fe.link, fe.description, fe.content, fe.author, fe.source, fe.image_url, fe.matched_keywords, fe.hash, fe.entry_timestamp, fe.published_at, fe.created_at
+		FROM feed_entries fe
+		JOIN published p ON p.item_id = fe.id AND p.target = $1
+		ORDER BY p.published_at DESC
+		LIMIT $2
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, target, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query published entries: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
 
@@ -349,3 +412,4 @@ func (s *entryStore) FindNearestEmbedding(ctx context.Context, embedding []float
 
 	return similarity >= threshold, nil
 }
+

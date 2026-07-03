@@ -9,8 +9,6 @@ import (
 	"cartero/internal/components"
 	procnames "cartero/internal/processors/names"
 	"cartero/internal/types"
-
-	"github.com/ollama/ollama/api"
 )
 
 type EmbedTextProcessor struct {
@@ -93,19 +91,19 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 		return nil
 	}
 
-	resp, err := embedder.Embed(ctx, &api.EmbedRequest{Input: cleanChunks})
+	embeddings, err := embedder.Embed(ctx, cleanChunks)
 
 	if err != nil {
 		logger.Warn("embed_text: failed to embed item", "processor", e.name, "item_id", item.ID, "error", err)
 		return nil
 	}
 
-	if len(resp.Embeddings) == 0 {
+	if len(embeddings) == 0 {
 		logger.Warn("embed_text: empty embeddings returned", "processor", e.name, "item_id", item.ID)
 		return nil
 	}
 
-	item.SetEmbedding(resp.Embeddings)
-	logger.Debug("embed_text: stored embedding", "processor", e.name, "item_id", item.ID, "chunks", len(cleanChunks), "dim", len(resp.Embeddings[0]))
+	item.SetEmbedding(embeddings)
+	logger.Debug("embed_text: stored embedding", "processor", e.name, "item_id", item.ID, "chunks", len(cleanChunks), "dim", len(embeddings[0]))
 	return nil
 }

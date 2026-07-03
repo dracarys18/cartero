@@ -150,7 +150,7 @@ func (s *Server) handleServiceWorker(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
-	entries, err := s.entryStore.ListRecentEntries(r.Context(), s.config.FeedSize)
+	entries, err := s.entryStore.ListPublishedEntries(r.Context(), s.name, s.config.FeedSize)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = fmt.Fprintf(w, "Error: %v", err)
@@ -171,7 +171,7 @@ func (s *Server) handleRSSFeed(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleAtomFeed(w http.ResponseWriter, r *http.Request) {
-	entries, err := s.entryStore.ListRecentEntries(r.Context(), s.config.FeedSize)
+	entries, err := s.entryStore.ListPublishedEntries(r.Context(), s.name, s.config.FeedSize)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = fmt.Fprintf(w, "Error: %v", err)
@@ -192,7 +192,7 @@ func (s *Server) handleAtomFeed(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleJSONFeed(w http.ResponseWriter, r *http.Request) {
-	entries, err := s.entryStore.ListRecentEntries(r.Context(), s.config.FeedSize)
+	entries, err := s.entryStore.ListPublishedEntries(r.Context(), s.name, s.config.FeedSize)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = fmt.Fprintf(w, "Error: %v", err)

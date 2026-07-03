@@ -12,8 +12,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/redis/go-redis/v9"
 )
 
 type Item struct {
@@ -139,6 +137,60 @@ func (i *Item) GetEmbedding() [][]float32 {
 	return i.Embedding
 }
 
+func (i *Item) metaString(key string) string {
+	if i.Metadata == nil {
+		return ""
+	}
+	if v, ok := i.Metadata[key].(string); ok {
+		return v
+	}
+	return ""
+}
+
+func (i *Item) GetLink() string {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	if i.URL != "" {
+		return i.URL
+	}
+	return i.metaString("link")
+}
+
+func (i *Item) GetDescription() string {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	return i.metaString("description")
+}
+
+func (i *Item) GetFeedContent() string {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	if i.TextContent != nil && i.TextContent.Text != "" {
+		return i.TextContent.Text
+	}
+	return i.metaString("summary")
+}
+
+func (i *Item) GetAuthor() string {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	return i.metaString("author")
+}
+
+func (i *Item) GetImageURL() string {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	if i.TextContent != nil {
+		return i.TextContent.Image
+	}
+	return ""
+}
+
 func (i *Item) SetEmbedding(v [][]float32) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
@@ -220,7 +272,6 @@ type StateAccessor interface {
 	GetPipeline() interface{}
 	GetChain() ProcessorChain
 	GetQueue() Queue
-	GetRedisClient() *redis.Client
 }
 
 type ProcessorChain interface {

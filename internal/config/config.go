@@ -5,7 +5,6 @@ import (
 	"cartero/internal/utils/keywords"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -20,6 +19,12 @@ type Config struct {
 	Sources    map[string]SourceConfig    `toml:"sources"`
 	Processors map[string]ProcessorConfig `toml:"processors"`
 	Targets    map[string]TargetConfig    `toml:"targets"`
+	Interests  InterestConfig             `toml:"interests"`
+}
+
+type InterestConfig struct {
+	Keywords     []keywords.KeywordWithContext `toml:"keywords"`
+	KeywordsFile string                        `toml:"keywords_file"`
 }
 
 type RedisConfig struct {
@@ -54,6 +59,12 @@ type PlatformSettings struct {
 	OllamaPlatformSettings
 	BlueskyPlatformSettings
 	TelegramPlatformSettings
+	OpenAIPlatformSettings
+	RerankerPlatformSettings
+}
+
+type RerankerPlatformSettings struct {
+	RerankURL string `toml:"rerank_url"`
 }
 
 type DiscordPlatformSettings struct {
@@ -71,6 +82,11 @@ type BlueskyPlatformSettings struct {
 
 type TelegramPlatformSettings struct {
 	BotToken string `toml:"tg_bot_token"`
+}
+
+type OpenAIPlatformSettings struct {
+	BaseURL string `toml:"base_url"`
+	APIKey  string `toml:"api_key"`
 }
 
 type SourceConfig struct {
@@ -127,7 +143,6 @@ type ProcessorConfig struct {
 type ProcessorSettings struct {
 	DedupeSettings
 	ScoreFilterSettings
-	KeywordFilterSettings
 	PublishedAtFilterSettings
 	RateLimitSettings
 	TokenBucketSettings
@@ -145,12 +160,6 @@ type DedupeSettings struct {
 
 type ScoreFilterSettings struct {
 	MinScore int `toml:"min_score"`
-}
-
-type KeywordFilterSettings struct {
-	Keywords       []keywords.KeywordWithContext `toml:"keywords"`
-	KeywordsFile   string                        `toml:"keywords_file"`
-	EmbedThreshold float64                       `toml:"embed_threshold"`
 }
 
 type EmbedTextSettings struct {
@@ -234,8 +243,8 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("failed to parse config: %w", err)
 	}
 
-	if err := loadKeywordFiles(&config); err != nil {
-		return nil, fmt.Errorf("failed to load keywords file: %w", err)
+	if err := loadInterests(&config); err != nil {
+		return nil, fmt.Errorf("failed to load interests file: %w", err)
 	}
 
 	if err := validateConfig(&config); err != nil {
@@ -245,30 +254,23 @@ func Load(path string) (*Config, error) {
 	return &config, nil
 }
 
-func loadKeywordFiles(config *Config) error {
-	for name, proc := range config.Processors {
-		if proc.Settings.KeywordsFile == "" {
-			continue
-		}
-
-		file := file.NewFile(proc.Settings.KeywordsFile)
-		data, err := file.Get()
-		if err != nil {
-			return fmt.Errorf("processor %q: %w", name, err)
-		}
-
-		var keywords []keywords.KeywordWithContext
-		err = json.Unmarshal(data, &keywords)
-
-		if err != nil {
-			log.Fatalf("processor %q: failed to parse keywords file: %v", name, err)
-		}
-
-		settings := proc.Settings
-		settings.Keywords = append(settings.Keywords, keywords...)
-		proc.Settings = settings
-		config.Processors[name] = proc
+func loadInterests(config *Config) error {
+	if config.Interests.KeywordsFile == "" {
+		return nil
 	}
+
+	f := file.NewFile(config.Interests.KeywordsFile)
+	data, err := f.Get()
+	if err != nil {
+		return err
+	}
+
+	var loaded []keywords.KeywordWithContext
+	if err := json.Unmarshal(data, &loaded); err != nil {
+		return fmt.Errorf("parse %s: %w", config.Interests.KeywordsFile, err)
+	}
+
+	config.Interests.Keywords = append(config.Interests.Keywords, loaded...)
 	return nil
 }
 
