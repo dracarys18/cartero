@@ -15,6 +15,8 @@ import (
 const (
 	scoreKey    = "_score"
 	interestKey = "_interest"
+
+	queryPrefix = "Represent this sentence for searching relevant passages: "
 )
 
 type Interest struct {
@@ -34,7 +36,7 @@ func BuildInterests(ctx context.Context, embedder platforms.Embedder, kws []keyw
 		if text == "" {
 			text = kw.Keyword
 		}
-		texts[i] = text
+		texts[i] = queryPrefix + text
 		labels[i] = kw.Keyword
 		if labels[i] == "" {
 			labels[i] = kw.Context
@@ -67,6 +69,8 @@ type RankFilter struct {
 	source    []keywords.KeywordWithContext
 	interests []Interest
 	ready     bool
+	mean      []float32
+	count     float64
 }
 
 func NewRankFilter(embedder platforms.Embedder, source []keywords.KeywordWithContext) *RankFilter {
@@ -84,16 +88,16 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 		}
 		f.interests = interests
 		f.ready = true
+		f.seedMean()
 		state.GetLogger().Info("rank: interests ready", "count", len(interests))
 	}
 	if len(f.interests) == 0 {
 		return items, nil
 	}
 
-	mean := batchMean(items)
 	ivecs := make([][]float32, len(f.interests))
 	for i, in := range f.interests {
-		ivecs[i] = centered(in.Vector, mean)
+		ivecs[i] = centered(in.Vector, f.mean)
 	}
 
 	out := make([]*types.Item, 0, len(items))
@@ -104,7 +108,7 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 		}
 		chunks := make([][]float32, len(raw))
 		for i, ch := range raw {
-			chunks[i] = centered(ch, mean)
+			chunks[i] = centered(ch, f.mean)
 		}
 
 		best := -1.0
@@ -123,30 +127,45 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 		out = append(out, item)
 	}
 
+	for _, item := range items {
+		for _, ch := range item.GetEmbedding() {
+			f.foldMean(ch)
+		}
+	}
+
 	sort.SliceStable(out, func(i, j int) bool { return getScore(out[i]) > getScore(out[j]) })
 	return out, nil
 }
 
-func batchMean(items []*types.Item) []float32 {
+func (f *RankFilter) seedMean() {
 	var sum []float32
 	var n int
-	for _, item := range items {
-		for _, ch := range item.GetEmbedding() {
-			if sum == nil {
-				sum = make([]float32, len(ch))
-			}
-			if len(ch) != len(sum) {
-				continue
-			}
-			vek32.Add_Inplace(sum, ch)
-			n++
+	for _, in := range f.interests {
+		if sum == nil {
+			sum = make([]float32, len(in.Vector))
 		}
+		if len(in.Vector) != len(sum) {
+			continue
+		}
+		vek32.Add_Inplace(sum, in.Vector)
+		n++
 	}
 	if n == 0 {
-		return nil
+		return
 	}
 	vek32.DivNumber_Inplace(sum, float32(n))
-	return sum
+	f.mean = sum
+	f.count = float64(n)
+}
+
+func (f *RankFilter) foldMean(v []float32) {
+	if len(f.mean) != len(v) {
+		return
+	}
+	f.count++
+	diff := vek32.Sub(v, f.mean)
+	vek32.DivNumber_Inplace(diff, float32(f.count))
+	vek32.Add_Inplace(f.mean, diff)
 }
 
 func centered(v, mean []float32) []float32 {
