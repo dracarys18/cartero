@@ -6,6 +6,7 @@ import (
 	"cartero/internal/platforms"
 	"cartero/internal/types"
 	"cartero/internal/utils"
+	strutils "cartero/internal/utils/string"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -85,9 +86,7 @@ func (d *Target) createForumThread(item *types.Item) (string, error) {
 		title = "Untitled"
 	}
 
-	if len(title) > 100 {
-		title = title[:97] + "..."
-	}
+	title = strutils.Truncate(title, 100)
 
 	embed, err := d.buildEmbed(item)
 	if err != nil {

@@ -3,6 +3,7 @@ package bluesky
 import (
 	"bytes"
 	"cartero/internal/types"
+	strutils "cartero/internal/utils/string"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -148,10 +149,7 @@ func (e *EmbedData) TryInto() (*bsky.EmbedExternal_External, error) {
 		return nil, fmt.Errorf("bluesky: embed URI cannot be empty")
 	}
 
-	description := e.Description
-	if len(description) > 300 {
-		description = description[:297] + "..."
-	}
+	description := strutils.Truncate(e.Description, 300)
 
 	return &bsky.EmbedExternal_External{
 		Uri:         e.URI,

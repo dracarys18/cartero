@@ -10,6 +10,7 @@ import (
 	"cartero/internal/config"
 	"cartero/internal/sources/rss"
 	"cartero/internal/types"
+	strutils "cartero/internal/utils/string"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/mmcdole/gofeed"
@@ -168,11 +169,7 @@ func sanitizeID(id string) string {
 	id = strings.ReplaceAll(id, "#", "_")
 	id = strings.ReplaceAll(id, " ", "_")
 
-	if len(id) > 200 {
-		id = id[:200]
-	}
-
-	return id
+	return strutils.Truncate(id, 200)
 }
 
 var htmlStripper = bluemonday.StrictPolicy()
@@ -182,9 +179,5 @@ func stripHTML(s string) string {
 	s = html.UnescapeString(s)
 	s = strings.TrimSpace(s)
 
-	if len(s) > 500 {
-		s = s[:497] + "..."
-	}
-
-	return s
+	return strutils.Truncate(s, 500)
 }

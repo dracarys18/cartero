@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"cartero/internal/types"
+	strutils "cartero/internal/utils/string"
 
 	readability "codeberg.org/readeck/go-readability/v2"
 	"codeberg.org/readeck/go-readability/v2/render"
@@ -56,14 +57,12 @@ func GetArticle(ctx context.Context, u string, limit int, timeout time.Duration,
 
 	textContent := render.InnerText(article.Node)
 
-	if len(textContent) > limit {
-		textContent = textContent[:limit] + "..."
-	}
+	textContent = strutils.Truncate(textContent, limit)
 
 	res := &types.Article{
 		Text:        textContent,
 		Image:       article.ImageURL(),
-		Description: article.Excerpt(),
+		Description: strutils.Clean(article.Excerpt()),
 	}
 
 	return res, nil

@@ -10,6 +10,7 @@ import (
 
 	"cartero/internal/types"
 	"cartero/internal/utils/batch"
+	strutils "cartero/internal/utils/string"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/mmcdole/gofeed"
@@ -18,6 +19,7 @@ import (
 const (
 	maxConcurrentFeeds = 16
 	feedFetchTimeout   = 20 * time.Second
+	feedUserAgent      = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 )
 
 type MultiRSSSource struct {
@@ -27,10 +29,12 @@ type MultiRSSSource struct {
 }
 
 func NewMultiRSSSource(name string, feeds []Feed) *MultiRSSSource {
+	p := gofeed.NewParser()
+	p.UserAgent = feedUserAgent
 	return &MultiRSSSource{
 		name:   name,
 		feeds:  feeds,
-		parser: gofeed.NewParser(),
+		parser: p,
 	}
 }
 
@@ -177,11 +181,7 @@ func sanitizeID(id string) string {
 	id = strings.ReplaceAll(id, "#", "_")
 	id = strings.ReplaceAll(id, " ", "_")
 
-	if len(id) > 200 {
-		id = id[:200]
-	}
-
-	return id
+	return strutils.Truncate(id, 200)
 }
 
 var htmlStripper = bluemonday.StrictPolicy()
@@ -191,9 +191,5 @@ func stripHTML(s string) string {
 	s = html.UnescapeString(s)
 	s = strings.TrimSpace(s)
 
-	if len(s) > 500 {
-		s = s[:497] + "..."
-	}
-
-	return s
+	return strutils.Truncate(s, 500)
 }
