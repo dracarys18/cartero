@@ -5,13 +5,18 @@ import (
 	"fmt"
 	"html"
 	"strings"
-	"sync"
 	"time"
 
 	"cartero/internal/types"
+	"cartero/internal/utils/batch"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/mmcdole/gofeed"
+)
+
+const (
+	maxConcurrentFeeds = 16
+	feedFetchTimeout   = 20 * time.Second
 )
 
 type MultiRSSSource struct {
@@ -43,25 +48,9 @@ func (m *MultiRSSSource) Publish(ctx context.Context, state types.StateAccessor)
 
 	logger.Info("MultiRSS source fetching feeds", "source", m.name, "count", len(m.feeds))
 
-	var wg sync.WaitGroup
-	errChan := make(chan error, len(m.feeds))
-
-	for _, feed := range m.feeds {
-		wg.Add(1)
-		go func(f Feed) {
-			defer wg.Done()
-			m.fetchFeed(ctx, f, stream, q, state)
-		}(feed)
-	}
-
-	wg.Wait()
-	close(errChan)
-
-	for err := range errChan {
-		if err != nil {
-			return err
-		}
-	}
+	batch.Run(ctx, m.feeds, maxConcurrentFeeds, func(ctx context.Context, feed Feed) {
+		m.fetchFeed(ctx, feed, stream, q, state)
+	})
 
 	logger.Info("MultiRSS source finished", "source", m.name)
 	return nil
@@ -70,7 +59,10 @@ func (m *MultiRSSSource) Publish(ctx context.Context, state types.StateAccessor)
 func (m *MultiRSSSource) fetchFeed(ctx context.Context, feed Feed, stream string, q types.Queue, state types.StateAccessor) {
 	logger := state.GetLogger()
 
-	parsedFeed, err := m.parser.ParseURLWithContext(feed.URL, ctx)
+	fctx, cancel := context.WithTimeout(ctx, feedFetchTimeout)
+	defer cancel()
+
+	parsedFeed, err := m.parser.ParseURLWithContext(feed.URL, fctx)
 	if err != nil {
 		logger.Error("MultiRSS feed fetch error", "source", m.name, "feed", feed.Name, "url", feed.URL, "error", err)
 		return
