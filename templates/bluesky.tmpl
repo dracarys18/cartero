@@ -28,7 +28,7 @@
     {{- end }}
   ],
   "embed": {
-    "uri": {{ .URL | json }},
+    "uri": {{ .GetLink.String | json }},
     "title": {{ .Title | json }},
     "description": {{ if .TextContent }}{{ .TextContent.Description | json }}{{ else }}""{{ end }},
     "thumbnail_url": {{ if .TextContent }}{{ .TextContent.Image | json }}{{ else }}""{{ end }}
