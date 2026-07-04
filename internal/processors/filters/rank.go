@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 
+	"cartero/internal/config"
 	"cartero/internal/platforms"
 	"cartero/internal/processors/names"
 	"cartero/internal/types"
@@ -15,8 +16,6 @@ import (
 const (
 	scoreKey    = "_score"
 	interestKey = "_interest"
-
-	queryPrefix = "Represent this sentence for searching relevant passages: "
 )
 
 type Interest struct {
@@ -36,7 +35,7 @@ func BuildInterests(ctx context.Context, embedder platforms.Embedder, kws []keyw
 		if text == "" {
 			text = kw.Keyword
 		}
-		texts[i] = queryPrefix + text
+		texts[i] = text
 		labels[i] = kw.Keyword
 		if labels[i] == "" {
 			labels[i] = kw.Context
@@ -66,15 +65,15 @@ func BuildInterests(ctx context.Context, embedder platforms.Embedder, kws []keyw
 
 type RankFilter struct {
 	embedder  platforms.Embedder
-	source    []keywords.KeywordWithContext
+	cfg       config.InterestConfig
 	interests []Interest
 	ready     bool
 	mean      []float32
 	count     float64
 }
 
-func NewRankFilter(embedder platforms.Embedder, source []keywords.KeywordWithContext) *RankFilter {
-	return &RankFilter{embedder: embedder, source: source}
+func NewRankFilter(embedder platforms.Embedder, cfg config.InterestConfig) *RankFilter {
+	return &RankFilter{embedder: embedder, cfg: cfg}
 }
 
 func (f *RankFilter) Name() string        { return filterRank }
@@ -82,7 +81,7 @@ func (f *RankFilter) DependsOn() []string { return []string{names.EmbedText} }
 
 func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
 	if !f.ready {
-		interests, err := BuildInterests(ctx, f.embedder, f.source)
+		interests, err := BuildInterests(ctx, f.embedder, f.cfg.Keywords)
 		if err != nil {
 			return nil, err
 		}
@@ -124,6 +123,9 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 		setScore(item, best)
 		item.AddMetadata(interestKey, f.interests[bestIdx].Lexical)
 		item.SetMatchedKeywords(f.interests[bestIdx].Lexical)
+		if best < f.cfg.MinScore {
+			continue
+		}
 		out = append(out, item)
 	}
 
@@ -134,6 +136,11 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 	}
 
 	sort.SliceStable(out, func(i, j int) bool { return getScore(out[i]) > getScore(out[j]) })
+
+	logger := state.GetLogger()
+	for _, item := range out {
+		logger.Info("rank: scored", "score", getScore(item), "interest", item.GetMatchedKeywords(), "title", item.GetTitle())
+	}
 	return out, nil
 }
 

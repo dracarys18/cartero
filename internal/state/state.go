@@ -254,8 +254,7 @@ func (s *State) buildFilterChain(ctx context.Context) *filters.Chain {
 
 	pc := s.Registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
 	fs = append(fs,
-		filters.NewRankFilter(pc.Embedder(), s.Config.Interests.Keywords),
-		filters.NewRerankFilter(pc.Reranker()),
+		filters.NewRankFilter(pc.Embedder(), s.Config.Interests),
 		filters.NewDiversifyFilter(),
 		filters.NewLimitFilter(),
 	)
