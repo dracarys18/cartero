@@ -2,13 +2,11 @@ package core
 
 import (
 	"cartero/internal/types"
+	"cartero/internal/utils/batch"
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
-
-	"github.com/redis/go-redis/v9"
 )
 
 type Pipeline struct {
@@ -72,45 +70,28 @@ func (p *Pipeline) Initialize(ctx context.Context, logger *slog.Logger) error {
 	return nil
 }
 
-func (p *Pipeline) InitializeQueues(ctx context.Context, q types.Queue) error {
-	if err := q.CreateGroup(ctx, q.SourceStream()); err != nil {
-		return fmt.Errorf("failed to create source stream group: %w", err)
-	}
-	if err := q.CreateGroup(ctx, q.ProcessedStream()); err != nil {
-		return fmt.Errorf("failed to create processed stream group: %w", err)
-	}
-	return nil
-}
-
 func (p *Pipeline) Gather(ctx context.Context, state types.StateAccessor) ([]*types.Item, error) {
-	if err := p.Run(ctx, state); err != nil {
-		return nil, err
-	}
+	logger := state.GetLogger()
 
-	q := state.GetQueue()
-	stream := q.SourceStream()
+	p.mu.RLock()
+	routes := p.routes
+	p.mu.RUnlock()
 
-	var items []*types.Item
-	for {
-		envelopes, ids, err := q.Consume(ctx, stream)
+	var mu sync.Mutex
+	var out []*types.Item
+
+	batch.Run(ctx, routes, len(routes), func(ctx context.Context, r SourceRoute) {
+		items, err := r.Process(ctx, state)
 		if err != nil {
-			if errors.Is(err, redis.Nil) {
-				break
-			}
-			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-				return items, nil
-			}
-			return nil, err
+			logger.Error("Error processing source", "source", r.Source.Name(), "error", err)
+			return
 		}
-		if len(envelopes) == 0 {
-			break
-		}
-		for i, env := range envelopes {
-			items = append(items, env.Item)
-			_ = q.Ack(ctx, stream, ids[i])
-		}
-	}
-	return items, nil
+		mu.Lock()
+		out = append(out, items...)
+		mu.Unlock()
+	})
+
+	return out, nil
 }
 
 func (p *Pipeline) AllTargets() Targets {
@@ -129,44 +110,6 @@ func (p *Pipeline) AllTargets() Targets {
 		}
 	}
 	return out
-}
-
-func (p *Pipeline) Run(ctx context.Context, state types.StateAccessor) error {
-	logger := state.GetLogger()
-	p.mu.Lock()
-	if p.running {
-		p.mu.Unlock()
-		return fmt.Errorf("pipeline already running")
-	}
-	p.running = true
-	p.mu.Unlock()
-
-	logger.Info("Starting pipeline execution", "sources", len(p.routes))
-
-	defer func() {
-		p.mu.Lock()
-		p.running = false
-		p.mu.Unlock()
-		logger.Info("Pipeline execution completed")
-	}()
-
-	var wg sync.WaitGroup
-
-	for i := range p.routes {
-		wg.Add(1)
-		logger.Debug("Launching goroutine for source", "source", p.routes[i].Source.Name())
-		go func(r *SourceRoute) {
-			defer wg.Done()
-			if err := r.Process(ctx, state); err != nil {
-				logger.Error("Error processing source", "source", r.Source.Name(), "error", err)
-			} else {
-				logger.Info("Source completed successfully", "source", r.Source.Name())
-			}
-		}(&p.routes[i])
-	}
-
-	wg.Wait()
-	return nil
 }
 
 func (p *Pipeline) Shutdown(ctx context.Context, logger *slog.Logger) error {

@@ -56,15 +56,14 @@ func (h *HackerNewsSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (h *HackerNewsSource) Publish(ctx context.Context, state types.StateAccessor) error {
+func (h *HackerNewsSource) Fetch(ctx context.Context, state types.StateAccessor) ([]*types.Item, error) {
 	logger := state.GetLogger()
-	q := state.GetQueue()
-	stream := q.SourceStream()
+	var out []*types.Item
 
 	storyIDs, err := h.fetchStoryIDs(ctx)
 	if err != nil {
 		logger.Error("HackerNews source error fetching story IDs", "source", h.name, "error", err)
-		return err
+		return nil, err
 	}
 
 	logger.Debug("HackerNews source retrieved story IDs", "source", h.name, "count", len(storyIDs))
@@ -79,7 +78,7 @@ func (h *HackerNewsSource) Publish(ctx context.Context, state types.StateAccesso
 	for i := 0; i < limit; i++ {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -108,15 +107,13 @@ func (h *HackerNewsSource) Publish(ctx context.Context, state types.StateAccesso
 			},
 		}
 
-		if err := q.Publish(ctx, stream, types.Envelope{Item: item}); err != nil {
-			return err
-		}
+		out = append(out, item)
 
 		logger.Debug("HackerNews source published item", "source", h.name, "index", i+1, "limit", limit, "story_id", story.ID, "score", story.Score)
 	}
 
 	logger.Debug("HackerNews source finished fetching all items", "source", h.name)
-	return nil
+	return out, nil
 }
 
 func (h *HackerNewsSource) fetchStoryIDs(ctx context.Context) ([]int64, error) {

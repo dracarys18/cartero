@@ -36,10 +36,9 @@ type BlocklistConfig struct {
 }
 
 type RedisConfig struct {
-	Addr         string `toml:"addr"`
-	Password     string `toml:"password"`
-	DB           int    `toml:"db"`
-	StreamMaxLen int64  `toml:"stream_max_len"`
+	Addr     string `toml:"addr"`
+	Password string `toml:"password"`
+	DB       int    `toml:"db"`
 }
 
 type BotConfig struct {
@@ -336,10 +335,6 @@ func validateConfig(config *Config) error {
 
 	if config.Redis.Addr == "" {
 		config.Redis.Addr = "localhost:6379"
-	}
-
-	if config.Redis.StreamMaxLen == 0 {
-		config.Redis.StreamMaxLen = 1000
 	}
 
 	return nil

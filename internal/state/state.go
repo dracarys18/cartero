@@ -4,8 +4,6 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"os"
-	"strconv"
 	"time"
 
 	"cartero/internal/components"
@@ -63,7 +61,7 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 		return fmt.Errorf("failed to connect to redis: %w", err)
 	}
 	s.RedisConn = conn
-	s.Queue = queue.New(conn, s.Config.Redis.StreamMaxLen, consumerName())
+	s.Queue = queue.New(conn)
 
 	if len(s.Config.Blocklist.Domains) > 0 {
 		bl := queue.NewBlocklist(conn.Client(), s.Queue.Prefix()+":blocklist")
@@ -126,10 +124,6 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 
 	if err := s.Pipeline.Initialize(ctx, s.Logger); err != nil {
 		return fmt.Errorf("failed to initialize pipeline: %w", err)
-	}
-
-	if err := s.Pipeline.InitializeQueues(ctx, s.Queue); err != nil {
-		return fmt.Errorf("failed to initialize pipeline queues: %w", err)
 	}
 
 	s.Filters = s.buildFilterChain(ctx)
@@ -370,10 +364,4 @@ func (s *State) createTarget(name string, cfg config.TargetConfig) types.Target 
 	default:
 		return nil
 	}
-}
-
-func consumerName() string {
-	hostname, _ := os.Hostname()
-	pid := strconv.Itoa(os.Getpid())
-	return "worker-" + hostname + "-" + pid
 }

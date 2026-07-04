@@ -6,10 +6,7 @@ import (
 	"cartero/internal/storage"
 	strutils "cartero/internal/utils/string"
 	"context"
-	"encoding/json"
-	"fmt"
 	"log/slog"
-	"strings"
 	"sync"
 	"time"
 )
@@ -206,7 +203,7 @@ type PublishResult struct {
 type Source interface {
 	Name() string
 	Initialize(ctx context.Context) error
-	Publish(ctx context.Context, state StateAccessor) error
+	Fetch(ctx context.Context, state StateAccessor) ([]*Item, error)
 	Shutdown(ctx context.Context) error
 }
 
@@ -217,43 +214,7 @@ type Target interface {
 	Shutdown(ctx context.Context) error
 }
 
-type Envelope struct {
-	Item    *Item    `json:"item"`
-	Targets []string `json:"targets"`
-}
-
-func (e *Envelope) TryFrom(fields map[string]any) error {
-	itemStr, ok := fields["item"].(string)
-	if !ok {
-		return fmt.Errorf("missing or invalid item field")
-	}
-	if err := json.Unmarshal([]byte(itemStr), &e.Item); err != nil {
-		return fmt.Errorf("failed to unmarshal item: %w", err)
-	}
-	if t, ok := fields["targets"].(string); ok && t != "" {
-		e.Targets = strings.Split(t, ",")
-	}
-	return nil
-}
-
-func (e Envelope) TryInto() (map[string]any, error) {
-	item, err := json.Marshal(e.Item)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal item: %w", err)
-	}
-	return map[string]any{
-		"item":    string(item),
-		"targets": strings.Join(e.Targets, ","),
-	}, nil
-}
-
 type Queue interface {
-	SourceStream() string
-	ProcessedStream() string
-	CreateGroup(ctx context.Context, stream string) error
-	Publish(ctx context.Context, stream string, env Envelope) error
-	Consume(ctx context.Context, stream string) ([]Envelope, []string, error)
-	Ack(ctx context.Context, stream string, ids ...string) error
 	Close() error
 }
 

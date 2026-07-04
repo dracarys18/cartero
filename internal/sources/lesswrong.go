@@ -67,15 +67,14 @@ func (l *LessWrongSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (l *LessWrongSource) Publish(ctx context.Context, state types.StateAccessor) error {
+func (l *LessWrongSource) Fetch(ctx context.Context, state types.StateAccessor) ([]*types.Item, error) {
 	logger := state.GetLogger()
-	q := state.GetQueue()
-	stream := q.SourceStream()
+	var out []*types.Item
 
 	posts, err := l.fetchPosts(ctx)
 	if err != nil {
 		logger.Error("LessWrong source error fetching posts", "source", l.name, "error", err)
-		return err
+		return nil, err
 	}
 
 	logger.Debug("LessWrong source retrieved posts", "source", l.name, "count", len(posts))
@@ -83,7 +82,7 @@ func (l *LessWrongSource) Publish(ctx context.Context, state types.StateAccessor
 	for i, post := range posts {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -110,14 +109,12 @@ func (l *LessWrongSource) Publish(ctx context.Context, state types.StateAccessor
 			},
 		}
 
-		if err := q.Publish(ctx, stream, types.Envelope{Item: item}); err != nil {
-			return err
-		}
+		out = append(out, item)
 		logger.Debug("LessWrong source published item", "source", l.name, "index", i+1, "total", len(posts), "post_id", post.ID, "score", post.BaseScore)
 	}
 
 	logger.Debug("LessWrong source finished fetching all items", "source", l.name)
-	return nil
+	return out, nil
 }
 
 func (l *LessWrongSource) fetchPosts(ctx context.Context) ([]LWPost, error) {

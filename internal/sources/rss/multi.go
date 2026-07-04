@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html"
 	"strings"
+	"sync"
 	"time"
 
 	"cartero/internal/types"
@@ -41,22 +42,26 @@ func (m *MultiRSSSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (m *MultiRSSSource) Publish(ctx context.Context, state types.StateAccessor) error {
+func (m *MultiRSSSource) Fetch(ctx context.Context, state types.StateAccessor) ([]*types.Item, error) {
 	logger := state.GetLogger()
-	q := state.GetQueue()
-	stream := q.SourceStream()
 
 	logger.Info("MultiRSS source fetching feeds", "source", m.name, "count", len(m.feeds))
 
+	var mu sync.Mutex
+	var out []*types.Item
+
 	batch.Run(ctx, m.feeds, maxConcurrentFeeds, func(ctx context.Context, feed Feed) {
-		m.fetchFeed(ctx, feed, stream, q, state)
+		items := m.fetchFeed(ctx, feed, state)
+		mu.Lock()
+		out = append(out, items...)
+		mu.Unlock()
 	})
 
 	logger.Info("MultiRSS source finished", "source", m.name)
-	return nil
+	return out, nil
 }
 
-func (m *MultiRSSSource) fetchFeed(ctx context.Context, feed Feed, stream string, q types.Queue, state types.StateAccessor) {
+func (m *MultiRSSSource) fetchFeed(ctx context.Context, feed Feed, state types.StateAccessor) []*types.Item {
 	logger := state.GetLogger()
 
 	fctx, cancel := context.WithTimeout(ctx, feedFetchTimeout)
@@ -65,7 +70,7 @@ func (m *MultiRSSSource) fetchFeed(ctx context.Context, feed Feed, stream string
 	parsedFeed, err := m.parser.ParseURLWithContext(feed.URL, fctx)
 	if err != nil {
 		logger.Error("MultiRSS feed fetch error", "source", m.name, "feed", feed.Name, "url", feed.URL, "error", err)
-		return
+		return nil
 	}
 
 	logger.Debug("MultiRSS feed retrieved", "source", m.name, "feed", feed.Name, "items", len(parsedFeed.Items))
@@ -75,20 +80,19 @@ func (m *MultiRSSSource) fetchFeed(ctx context.Context, feed Feed, stream string
 		limit = len(parsedFeed.Items)
 	}
 
+	var out []*types.Item
 	for i := 0; i < limit; i++ {
 		select {
 		case <-ctx.Done():
-			return
+			return out
 		default:
 		}
 
 		item := m.convertToItem(parsedFeed.Items[i], feed.Name)
-		if err := q.Publish(ctx, stream, types.Envelope{Item: item}); err != nil {
-			logger.Error("MultiRSS failed to publish item", "source", m.name, "feed", feed.Name, "error", err)
-			return
-		}
+		out = append(out, item)
 		logger.Debug("MultiRSS item published", "source", m.name, "feed", feed.Name, "item", i+1)
 	}
+	return out
 }
 
 func (m *MultiRSSSource) convertToItem(feedItem *gofeed.Item, feedName string) *types.Item {

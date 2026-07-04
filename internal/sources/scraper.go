@@ -149,19 +149,18 @@ func (s *ScraperSource) loadScript(loader lua.Loader) (string, error) {
 	return scriptContent, nil
 }
 
-func (s *ScraperSource) Publish(ctx context.Context, state types.StateAccessor) error {
-	q := state.GetQueue()
-	stream := q.SourceStream()
+func (s *ScraperSource) Fetch(ctx context.Context, state types.StateAccessor) ([]*types.Item, error) {
+	var out []*types.Item
 
 	results, err := s.runtime.Execute("scrape", s.config)
 	if err != nil {
 		s.logger.Error("Scraper execution error", "source", s.name, "error", err)
-		return err
+		return nil, err
 	}
 
 	if len(results) == 0 {
 		s.logger.Warn("Scraper returned no results", "source", s.name)
-		return nil
+		return out, nil
 	}
 
 	s.logger.Debug("Scraper returned results", "source", s.name, "count", len(results), "type", fmt.Sprintf("%T", results[0]))
@@ -169,7 +168,7 @@ func (s *ScraperSource) Publish(ctx context.Context, state types.StateAccessor) 
 	items, err := s.convertResultsToItems(results[0])
 	if err != nil {
 		s.logger.Error("Failed to convert scraper results", "source", s.name, "error", err)
-		return err
+		return nil, err
 	}
 
 	s.logger.Debug("Scraper fetched items", "source", s.name, "count", len(items))
@@ -177,17 +176,15 @@ func (s *ScraperSource) Publish(ctx context.Context, state types.StateAccessor) 
 	for _, item := range items {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, ctx.Err()
 		default:
 		}
 
-		if err := q.Publish(ctx, stream, types.Envelope{Item: item}); err != nil {
-			return err
-		}
+		out = append(out, item)
 		s.logger.Debug("Scraper published item", "source", s.name, "id", item.ID)
 	}
 
-	return nil
+	return out, nil
 }
 
 func (s *ScraperSource) convertResultsToItems(result interface{}) ([]*types.Item, error) {

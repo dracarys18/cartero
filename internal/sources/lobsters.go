@@ -60,15 +60,14 @@ func (l *LobstersSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (l *LobstersSource) Publish(ctx context.Context, state types.StateAccessor) error {
+func (l *LobstersSource) Fetch(ctx context.Context, state types.StateAccessor) ([]*types.Item, error) {
 	logger := state.GetLogger()
-	q := state.GetQueue()
-	stream := q.SourceStream()
+	var out []*types.Item
 
 	posts, err := l.fetchPosts(ctx)
 	if err != nil {
 		logger.Error("Lobsters source error fetching posts", "source", l.name, "error", err)
-		return err
+		return nil, err
 	}
 
 	logger.Debug("Lobsters source retrieved posts", "source", l.name, "count", len(posts))
@@ -83,7 +82,7 @@ func (l *LobstersSource) Publish(ctx context.Context, state types.StateAccessor)
 	for i := 0; i < limit; i++ {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, ctx.Err()
 		default:
 		}
 
@@ -115,14 +114,12 @@ func (l *LobstersSource) Publish(ctx context.Context, state types.StateAccessor)
 			},
 		}
 
-		if err := q.Publish(ctx, stream, types.Envelope{Item: item}); err != nil {
-			return err
-		}
+		out = append(out, item)
 		logger.Debug("Lobsters source published item", "source", l.name, "index", i+1, "limit", limit, "post_id", post.ShortID, "score", post.Score)
 	}
 
 	logger.Debug("Lobsters source finished processing all items", "source", l.name)
-	return nil
+	return out, nil
 }
 
 func (l *LobstersSource) fetchPosts(ctx context.Context) ([]LobstersPost, error) {

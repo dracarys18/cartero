@@ -43,15 +43,14 @@ func (r *RSSSource) Initialize(ctx context.Context) error {
 	return nil
 }
 
-func (r *RSSSource) Publish(ctx context.Context, state types.StateAccessor) error {
+func (r *RSSSource) Fetch(ctx context.Context, state types.StateAccessor) ([]*types.Item, error) {
 	logger := state.GetLogger()
-	q := state.GetQueue()
-	stream := q.SourceStream()
+	var out []*types.Item
 
 	feed, err := r.parser.ParseURLWithContext(r.feedURL, ctx)
 	if err != nil {
 		logger.Error("RSS source error fetching feed", "source", r.name, "error", err)
-		return fmt.Errorf("failed to parse feed: %w", err)
+		return nil, fmt.Errorf("failed to parse feed: %w", err)
 	}
 
 	logger.Debug("RSS source retrieved items", "source", r.name, "count", len(feed.Items))
@@ -66,19 +65,17 @@ func (r *RSSSource) Publish(ctx context.Context, state types.StateAccessor) erro
 	for i := 0; i < limit; i++ {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, ctx.Err()
 		default:
 		}
 
 		item := r.convertToItem(feed.Items[i])
-		if err := q.Publish(ctx, stream, types.Envelope{Item: item}); err != nil {
-			return err
-		}
+		out = append(out, item)
 		logger.Debug("RSS source published item", "source", r.name, "index", i+1, "limit", limit, "item_id", item.ID)
 	}
 
 	logger.Debug("RSS source finished processing all items", "source", r.name)
-	return nil
+	return out, nil
 }
 
 func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *types.Item {
