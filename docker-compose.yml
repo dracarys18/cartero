@@ -58,28 +58,22 @@ services:
     ports:
       - "8034:8080"
     command: ["-config", "/app/config.toml"]
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     networks:
       - cartero-network
 
-  diun:
-    image: crazymax/diun:latest
-    container_name: diun
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
     restart: unless-stopped
-    command: serve
     volumes:
-      - diun-data:/data
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - TZ=UTC
-      - LOG_LEVEL=info
-      - LOG_JSON=false
-      - DIUN_WATCH_WORKERS=20
-      - DIUN_WATCH_SCHEDULE=0 */5 * * *
-      - DIUN_WATCH_JITTER=30s
-      - DIUN_PROVIDERS_DOCKER=true
-      - DIUN_PROVIDERS_DOCKER_WATCHSTOPPED=false
-    labels:
-      - diun.enable=true
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=300
     networks:
       - cartero-network
 
@@ -102,11 +96,7 @@ networks:
 volumes:
   cartero-data:
     driver: local
-  diun-data:
-    driver: local
   redis-data:
     driver: local
   postgres-data:
-    driver: local
-  tei-data:
     driver: local
