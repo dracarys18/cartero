@@ -239,11 +239,6 @@ type Blocklist interface {
 	Blocked(ctx context.Context, u *url.URL) bool
 }
 
-type SeenStore interface {
-	Seen(ctx context.Context, hash string) (bool, error)
-	Mark(ctx context.Context, hash string) error
-}
-
 type StateAccessor interface {
 	GetConfig() *config.Config
 	GetStorage() storage.StorageInterface
@@ -252,5 +247,4 @@ type StateAccessor interface {
 	GetPipeline() any
 	GetQueue() Queue
 	GetBlocklist() Blocklist
-	GetSeenStore() SeenStore
 }

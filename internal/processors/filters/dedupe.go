@@ -26,7 +26,6 @@ func (d *DedupeProcessor) DependsOn() []string {
 
 func (d *DedupeProcessor) Process(ctx context.Context, st types.StateAccessor, items []*types.Item) ([]*types.Item, error) {
 	store := st.GetStorage().Entries()
-	seen := st.GetSeenStore()
 	logger := st.GetLogger()
 
 	out := make([]*types.Item, 0, len(items))
@@ -41,18 +40,6 @@ func (d *DedupeProcessor) Process(ctx context.Context, st types.StateAccessor, i
 		if exists {
 			logger.Debug("dedupe: dropped item", "processor", d.name, "item_id", item.ID, "reason", "duplicate url")
 			continue
-		}
-
-		if seen != nil {
-			already, err := seen.Seen(ctx, h)
-			if err != nil {
-				logger.Error("dedupe: seen check failed, dropping item", "processor", d.name, "item_id", item.ID, "error", err)
-				continue
-			}
-			if already {
-				logger.Debug("dedupe: dropped item", "processor", d.name, "item_id", item.ID, "reason", "seen recently")
-				continue
-			}
 		}
 
 		out = append(out, item)

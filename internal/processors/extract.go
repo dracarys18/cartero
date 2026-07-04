@@ -6,7 +6,6 @@ import (
 	"cartero/internal/types"
 	"cartero/internal/utils"
 	"cartero/internal/utils/batch"
-	"cartero/internal/utils/hash"
 	"context"
 	"time"
 )
@@ -49,10 +48,6 @@ func (e *ExtractText) Process(ctx context.Context, st types.StateAccessor, items
 }
 
 func (e *ExtractText) extract(ctx context.Context, st types.StateAccessor, item *types.Item) {
-	if seen := st.GetSeenStore(); seen != nil {
-		_ = seen.Mark(ctx, hash.HashURL(item.GetLink()))
-	}
-
 	logger := st.GetLogger()
 
 	u := item.GetURL()

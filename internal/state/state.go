@@ -4,7 +4,6 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"time"
 
 	"cartero/internal/components"
 	"cartero/internal/config"
@@ -31,7 +30,6 @@ type State struct {
 	Queue           *queue.Queue
 	RedisConn       *queue.RedisConnection
 	Blocklist       types.Blocklist
-	SeenStore       types.SeenStore
 	Logger          *slog.Logger
 	EmbeddedScripts embed.FS
 }
@@ -69,15 +67,6 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 			return fmt.Errorf("failed to load blocklist: %w", err)
 		}
 		s.Blocklist = bl
-	}
-
-	for _, pc := range s.Config.Processors {
-		if pc.Type != names.Dedupe || !pc.Enabled {
-			continue
-		}
-		if ttl, err := time.ParseDuration(pc.Settings.TTL); err == nil && ttl > 0 {
-			s.SeenStore = queue.NewSeenStore(conn.Client(), s.Queue.Prefix(), ttl)
-		}
 	}
 
 	s.Registry = components.NewRegistry()
@@ -161,10 +150,6 @@ func (s *State) GetQueue() types.Queue {
 
 func (s *State) GetBlocklist() types.Blocklist {
 	return s.Blocklist
-}
-
-func (s *State) GetSeenStore() types.SeenStore {
-	return s.SeenStore
 }
 
 func (s *State) buildPlatformComponent() *components.PlatformComponent {

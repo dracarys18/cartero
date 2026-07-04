@@ -95,10 +95,12 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 		ivecs[i] = centered(in.Vector, f.mean)
 	}
 
+	logger := state.GetLogger()
 	out := make([]*types.Item, 0, len(items))
 	for _, item := range items {
 		raw := item.GetEmbedding()
 		if len(raw) == 0 {
+			logger.Warn("rank: rejected", "reason", "no embedding", "item_id", item.ID, "title", item.GetTitle())
 			continue
 		}
 		chunks := make([][]float32, len(raw))
@@ -119,6 +121,7 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 		item.SetScore(best)
 		item.AddMetadata(interestKey, f.interests[bestIdx].Lexical)
 		if best < f.cfg.MinScore {
+			logger.Info("rank: rejected", "score", best, "interest", f.interests[bestIdx].Lexical, "title", item.GetTitle())
 			continue
 		}
 		item.SetMatchedKeywords(f.interests[bestIdx].Lexical)
@@ -133,7 +136,6 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 
 	sort.SliceStable(out, func(i, j int) bool { return out[i].GetScore() > out[j].GetScore() })
 
-	logger := state.GetLogger()
 	for _, item := range out {
 		logger.Info("rank: scored", "score", item.GetScore(), "interest", item.GetMatchedKeywords(), "title", item.GetTitle())
 	}
