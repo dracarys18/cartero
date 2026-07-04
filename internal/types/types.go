@@ -12,12 +12,14 @@ import (
 	"time"
 )
 
+const scoreKey = "_score"
+
 type Item struct {
 	ID              string
 	Title           string
 	URL             *url.URL
-	Content         interface{}
-	Metadata        map[string]interface{}
+	Content         any
+	Metadata        map[string]any
 	Source          string
 	Route           string
 	TextContent     *Article
@@ -47,7 +49,7 @@ func (i *Item) GetSource() string {
 	return strutils.Readable(i.Source)
 }
 
-func (i *Item) GetContent() interface{} {
+func (i *Item) GetContent() any {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 
@@ -79,7 +81,7 @@ func (i *Item) AddMetadata(key string, value any) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 	if i.Metadata == nil {
-		i.Metadata = make(map[string]interface{})
+		i.Metadata = make(map[string]any)
 	}
 	i.Metadata[key] = value
 }
@@ -198,10 +200,21 @@ func (i *Item) SetEmbedding(v [][]float32) {
 	i.Embedding = v
 }
 
+func (i *Item) SetScore(s float64) {
+	i.AddMetadata(scoreKey, s)
+}
+
+func (i *Item) GetScore() float64 {
+	if v, ok := i.Metadata[scoreKey].(float64); ok {
+		return v
+	}
+	return 0
+}
+
 type PublishResult struct {
 	Success  bool
 	Error    error
-	Metadata map[string]interface{}
+	Metadata map[string]any
 }
 
 type Source interface {
@@ -236,7 +249,7 @@ type StateAccessor interface {
 	GetStorage() storage.StorageInterface
 	GetRegistry() *components.Registry
 	GetLogger() *slog.Logger
-	GetPipeline() interface{}
+	GetPipeline() any
 	GetQueue() Queue
 	GetBlocklist() Blocklist
 	GetSeenStore() SeenStore

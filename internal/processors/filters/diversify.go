@@ -34,7 +34,7 @@ func (f *DiversifyFilter) Process(ctx context.Context, state types.StateAccessor
 					maxSim = sim
 				}
 			}
-			mmr := mmrLambda*getScore(item) - (1-mmrLambda)*maxSim
+			mmr := mmrLambda*item.GetScore() - (1-mmrLambda)*maxSim
 			if mmr > bestMMR {
 				bestMMR = mmr
 				bestIdx = i

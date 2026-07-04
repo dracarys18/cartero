@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	scoreKey    = "_score"
 	interestKey = "_interest"
 )
 
@@ -45,10 +44,7 @@ func BuildInterests(ctx context.Context, embedder platforms.Embedder, kws []keyw
 	const batch = 32
 	var vectors [][]float32
 	for start := 0; start < len(texts); start += batch {
-		end := start + batch
-		if end > len(texts) {
-			end = len(texts)
-		}
+		end := min(start+batch, len(texts))
 		vecs, err := embedder.Embed(ctx, texts[start:end])
 		if err != nil {
 			return nil, err
@@ -120,12 +116,12 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 				}
 			}
 		}
-		setScore(item, best)
+		item.SetScore(best)
 		item.AddMetadata(interestKey, f.interests[bestIdx].Lexical)
-		item.SetMatchedKeywords(f.interests[bestIdx].Lexical)
 		if best < f.cfg.MinScore {
 			continue
 		}
+		item.SetMatchedKeywords(f.interests[bestIdx].Lexical)
 		out = append(out, item)
 	}
 
@@ -135,11 +131,11 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 		}
 	}
 
-	sort.SliceStable(out, func(i, j int) bool { return getScore(out[i]) > getScore(out[j]) })
+	sort.SliceStable(out, func(i, j int) bool { return out[i].GetScore() > out[j].GetScore() })
 
 	logger := state.GetLogger()
 	for _, item := range out {
-		logger.Info("rank: scored", "score", getScore(item), "interest", item.GetMatchedKeywords(), "title", item.GetTitle())
+		logger.Info("rank: scored", "score", item.GetScore(), "interest", item.GetMatchedKeywords(), "title", item.GetTitle())
 	}
 	return out, nil
 }
@@ -180,13 +176,4 @@ func centered(v, mean []float32) []float32 {
 		return v
 	}
 	return vek32.Sub(v, mean)
-}
-
-func setScore(item *types.Item, s float64) { item.AddMetadata(scoreKey, s) }
-
-func getScore(item *types.Item) float64 {
-	if v, ok := item.Metadata[scoreKey].(float64); ok {
-		return v
-	}
-	return 0
 }
