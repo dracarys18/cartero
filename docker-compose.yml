@@ -58,22 +58,6 @@ services:
     ports:
       - "8034:8080"
     command: ["-config", "/app/config.toml"]
-    labels:
-      - com.centurylinklabs.watchtower.enable=true
-    networks:
-      - cartero-network
-
-  watchtower:
-    image: containrrr/watchtower:latest
-    container_name: watchtower
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - TZ=UTC
-      - WATCHTOWER_LABEL_ENABLE=true
-      - WATCHTOWER_CLEANUP=true
-      - WATCHTOWER_POLL_INTERVAL=300
     networks:
       - cartero-network
 
