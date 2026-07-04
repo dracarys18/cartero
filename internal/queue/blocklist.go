@@ -34,7 +34,7 @@ func (b *Blocklist) Load(ctx context.Context, domains []string) error {
 		return nil
 	}
 
-	return b.client.CFInsert(ctx, b.key, &redis.CFInsertOptions{Capacity: int64(len(elems))}, elems...).Err()
+	return b.client.SAdd(ctx, b.key, elems...).Err()
 }
 
 func (b *Blocklist) Blocked(ctx context.Context, u *url.URL) bool {
@@ -47,6 +47,6 @@ func (b *Blocklist) Blocked(ctx context.Context, u *url.URL) bool {
 		return false
 	}
 
-	ok, err := b.client.CFExists(ctx, b.key, host).Result()
+	ok, err := b.client.SIsMember(ctx, b.key, host).Result()
 	return err == nil && ok
 }

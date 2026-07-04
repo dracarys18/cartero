@@ -31,6 +31,7 @@ func (e *ExtractText) DependsOn() []string {
 	return []string{
 		names.Dedupe,
 		names.ScoreFilter,
+		names.PublishedAt,
 	}
 }
 
