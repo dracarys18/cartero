@@ -256,7 +256,6 @@ func (s *State) buildFilterChain(ctx context.Context) *filters.Chain {
 	fs = append(fs,
 		filters.NewRankFilter(pc.Embedder(), s.Config.Interests),
 		filters.NewDiversifyFilter(),
-		filters.NewLimitFilter(),
 	)
 
 	return filters.NewChain(fs...)
