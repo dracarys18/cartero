@@ -12,7 +12,7 @@ import (
 const (
 	groupName     = "cartero:workers"
 	defaultPrefix = "cartero"
-	consumeCount  = 1
+	consumeCount  = 256
 	consumeBlock  = 5 * time.Second
 )
 
