@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"cartero/internal/types"
@@ -90,11 +91,12 @@ func (l *LessWrongSource) Fetch(ctx context.Context, state types.StateAccessor) 
 		if postURL == "" {
 			postURL = fmt.Sprintf("https://www.lesswrong.com/posts/%s/%s", post.ID, post.Slug)
 		}
+		postLink, _ := url.Parse(postURL)
 
 		item := &types.Item{
 			ID:        fmt.Sprintf("lw_%s", post.ID),
 			Title:     post.Title,
-			URL:       postURL,
+			URL:       postLink,
 			Source:    l.name,
 			Route:     l.name,
 			Timestamp: post.PostedAt,

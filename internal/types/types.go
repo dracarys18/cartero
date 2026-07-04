@@ -7,6 +7,7 @@ import (
 	strutils "cartero/internal/utils/string"
 	"context"
 	"log/slog"
+	"net/url"
 	"sync"
 	"time"
 )
@@ -14,7 +15,7 @@ import (
 type Item struct {
 	ID              string
 	Title           string
-	URL             string
+	URL             *url.URL
 	Content         interface{}
 	Metadata        map[string]interface{}
 	Source          string
@@ -102,17 +103,17 @@ func (i *Item) SetTitle(title string) {
 	i.Title = title
 }
 
-func (i *Item) GetURL() string {
+func (i *Item) GetURL() *url.URL {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 
 	return i.URL
 }
 
-func (i *Item) SetURL(url string) {
+func (i *Item) SetURL(u *url.URL) {
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	i.URL = url
+	i.URL = u
 }
 
 func (i *Item) GetMatchedKeywords() string {
@@ -144,14 +145,17 @@ func (i *Item) metaString(key string) string {
 	return ""
 }
 
-func (i *Item) GetLink() string {
+func (i *Item) GetLink() *url.URL {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 
-	if i.URL != "" {
+	if i.URL != nil {
 		return i.URL
 	}
-	return i.metaString("link")
+	if l, err := url.Parse(i.metaString("link")); err == nil {
+		return l
+	}
+	return &url.URL{}
 }
 
 func (i *Item) GetDescription() string {
@@ -219,7 +223,7 @@ type Queue interface {
 }
 
 type Blocklist interface {
-	Blocked(ctx context.Context, link string) bool
+	Blocked(ctx context.Context, u *url.URL) bool
 }
 
 type SeenStore interface {

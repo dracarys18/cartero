@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/pgvector/pgvector-go"
@@ -39,7 +40,7 @@ func (s *entryStore) Store(ctx context.Context, item storage.Item) error {
 
 	_, err := s.db.ExecContext(ctx, query,
 		item.GetID(), h, item.GetSource(), item.GetTimestamp(), item.GetTitle(),
-		item.GetLink(), item.GetDescription(), item.GetFeedContent(), item.GetAuthor(),
+		item.GetLink().String(), item.GetDescription(), item.GetFeedContent(), item.GetAuthor(),
 		item.GetImageURL(), item.GetMatchedKeywords(), publishedAt,
 	)
 	if err != nil {
@@ -130,7 +131,7 @@ func (s *entryStore) IsPublished(ctx context.Context, itemID, target string) (bo
 	return exists, nil
 }
 
-func (s *entryStore) InsertEntry(ctx context.Context, id, title, link, description, content, author, source, imageURL, matchedKeywords string, publishedAt time.Time) error {
+func (s *entryStore) InsertEntry(ctx context.Context, id, title string, link *url.URL, description, content, author, source, imageURL, matchedKeywords string, publishedAt time.Time) error {
 	query := `
 		INSERT INTO feed_entries (id, title, link, description, content, author, source, image_url, matched_keywords, hash, published_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -148,7 +149,7 @@ func (s *entryStore) InsertEntry(ctx context.Context, id, title, link, descripti
 
 	publishedAtNull := sql.NullTime{Valid: !publishedAt.IsZero(), Time: publishedAt}
 
-	_, err := s.db.ExecContext(ctx, query, id, title, link, description, content, author, source, imageURL, matchedKeywords, hash.HashURL(link), publishedAtNull)
+	_, err := s.db.ExecContext(ctx, query, id, title, link.String(), description, content, author, source, imageURL, matchedKeywords, hash.HashURL(link), publishedAtNull)
 	if err != nil {
 		return fmt.Errorf("failed to insert feed entry: %w", err)
 	}

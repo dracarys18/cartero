@@ -4,12 +4,13 @@ import (
 	"cartero/internal/storage"
 	"cartero/internal/types"
 	"context"
+	"net/url"
 	"time"
 )
 
 type FeedItem struct {
-	Title       string `json:"title"`
-	Link        string `json:"link"`
+	Title       string   `json:"title"`
+	Link        *url.URL `json:"link"`
 	Description string `json:"description,omitempty"`
 	Content     string `json:"content,omitempty"`
 	Author      string `json:"author,omitempty"`

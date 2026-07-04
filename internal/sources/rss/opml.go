@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -41,7 +42,7 @@ func ParseOPML(data []byte) ([]Feed, error) {
 
 func extractFeeds(result *[]Feed, outlines []OPMLOutline) {
 	for _, outline := range outlines {
-		if outline.XMLURL != "" {
+		if u, err := url.Parse(outline.XMLURL); outline.XMLURL != "" && err == nil {
 			name := outline.Title
 			if name == "" {
 				name = outline.Text
@@ -53,7 +54,7 @@ func extractFeeds(result *[]Feed, outlines []OPMLOutline) {
 			name = sanitizeName(name)
 
 			*result = append(*result, Feed{
-				URL:  outline.XMLURL,
+				URL:  u,
 				Name: name,
 			})
 		}

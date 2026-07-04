@@ -55,8 +55,8 @@ func (e *ExtractText) extract(ctx context.Context, st types.StateAccessor, item 
 
 	logger := st.GetLogger()
 
-	urlStr := item.GetURL()
-	if urlStr == "" {
+	u := item.GetURL()
+	if u == nil || u.String() == "" {
 		return
 	}
 
@@ -65,7 +65,7 @@ func (e *ExtractText) extract(ctx context.Context, st types.StateAccessor, item 
 		timeout = defaultExtractTimeout
 	}
 
-	article, err := utils.GetArticle(ctx, urlStr, e.settings.Limit, timeout)
+	article, err := utils.GetArticle(ctx, u, e.settings.Limit, timeout)
 	if err != nil {
 		logger.Error("ExtractText processor failed to extract article text", "processor", names.ExtractText, "item_id", item.ID, "error", err)
 		return

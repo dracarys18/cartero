@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"net/url"
 	"time"
 )
 
@@ -12,12 +13,12 @@ type StorageInterface interface {
 
 type Item interface {
 	GetID() string
-	GetURL() string
+	GetURL() *url.URL
 	GetTitle() string
 	GetSource() string
 	GetTimestamp() time.Time
 	GetEmbedding() [][]float32
-	GetLink() string
+	GetLink() *url.URL
 	GetDescription() string
 	GetFeedContent() string
 	GetAuthor() string
@@ -57,7 +58,7 @@ type EntryStore interface {
 	ExistsByHash(ctx context.Context, hash string) (bool, error)
 	MarkPublished(ctx context.Context, itemID, target string) error
 	IsPublished(ctx context.Context, itemID, target string) (bool, error)
-	InsertEntry(ctx context.Context, id, title, link, description, content, author, source, imageURL, matchedKeywords string, publishedAt time.Time) error
+	InsertEntry(ctx context.Context, id, title string, link *url.URL, description, content, author, source, imageURL, matchedKeywords string, publishedAt time.Time) error
 	ListRecentEntries(ctx context.Context, limit int) ([]FeedEntry, error)
 	ListPublishedEntries(ctx context.Context, target string, limit int) ([]FeedEntry, error)
 	ListEntriesPaginated(ctx context.Context, page, perPage int, startDate, endDate time.Time) (*PaginationResult, error)

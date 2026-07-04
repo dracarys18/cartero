@@ -1,11 +1,18 @@
 package rss
 
+import "net/url"
+
 type RSSLoader struct{}
 
 func (r *RSSLoader) Load(value string, maxItems int) ([]Feed, error) {
+	u, err := url.Parse(value)
+	if err != nil {
+		return nil, err
+	}
+
 	return []Feed{
 		{
-			URL:      value,
+			URL:      u,
 			Name:     "rss",
 			MaxItems: maxItems,
 		},

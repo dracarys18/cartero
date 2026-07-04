@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"time"
 )
 
@@ -76,7 +77,7 @@ func (s *entryStore) IsPublished(ctx context.Context, itemID, target string) (bo
 	return exists, nil
 }
 
-func (s *entryStore) InsertEntry(ctx context.Context, id, title, link, description, content, author, source, imageURL, matchedKeywords string, publishedAt time.Time) error {
+func (s *entryStore) InsertEntry(ctx context.Context, id, title string, link *url.URL, description, content, author, source, imageURL, matchedKeywords string, publishedAt time.Time) error {
 	query := `
 		INSERT INTO feed_entries (id, title, link, description, content, author, source, image_url, matched_keywords, hash, published_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -94,7 +95,7 @@ func (s *entryStore) InsertEntry(ctx context.Context, id, title, link, descripti
 
 	publishedAtNull := sql.NullTime{Valid: !publishedAt.IsZero(), Time: publishedAt}
 
-	_, err := s.db.ExecContext(ctx, query, id, title, link, description, content, author, source, imageURL, matchedKeywords, hash.HashURL(link), publishedAtNull)
+	_, err := s.db.ExecContext(ctx, query, id, title, link.String(), description, content, author, source, imageURL, matchedKeywords, hash.HashURL(link), publishedAtNull)
 	if err != nil {
 		return fmt.Errorf("failed to insert feed entry: %w", err)
 	}

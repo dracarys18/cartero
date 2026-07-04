@@ -1,7 +1,9 @@
 package rss
 
+import "net/url"
+
 type Feed struct {
-	URL      string
+	URL      *url.URL
 	Name     string
 	MaxItems int
 }

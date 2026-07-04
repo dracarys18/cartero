@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"cartero/internal/types"
@@ -88,10 +89,12 @@ func (h *HackerNewsSource) Fetch(ctx context.Context, state types.StateAccessor)
 			continue
 		}
 
+		storyURL, _ := url.Parse(story.URL)
+
 		item := &types.Item{
 			ID:        fmt.Sprintf("hn_%d", story.ID),
 			Title:     story.Title,
-			URL:       story.URL,
+			URL:       storyURL,
 			Source:    h.name,
 			Route:     h.name,
 			Timestamp: time.Unix(story.Time, 0),

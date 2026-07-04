@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"html"
+	"net/url"
 	"strings"
 	"time"
 
@@ -80,6 +81,12 @@ func (r *RSSSource) Fetch(ctx context.Context, state types.StateAccessor) ([]*ty
 }
 
 func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *types.Item {
+	base, _ := url.Parse(r.feedURL)
+	link := base
+	if abs, err := base.Parse(feedItem.Link); err == nil {
+		link = abs
+	}
+
 	timestamp := time.Now()
 	if feedItem.PublishedParsed != nil {
 		timestamp = *feedItem.PublishedParsed
@@ -115,7 +122,7 @@ func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *types.Item {
 
 	metadata := map[string]interface{}{
 		"title":       feedItem.Title,
-		"link":        feedItem.Link,
+		"link":        link,
 		"description": stripHTML(description),
 		"author":      author,
 		"published":   feedItem.Published,
@@ -137,7 +144,7 @@ func (r *RSSSource) convertToItem(feedItem *gofeed.Item) *types.Item {
 	return &types.Item{
 		ID:        fmt.Sprintf("rss_%s", sanitizeID(itemID)),
 		Title:     feedItem.Title,
-		URL:       feedItem.Link,
+		URL:       link,
 		Content:   feedItem,
 		Source:    r.name,
 		Route:     r.name,

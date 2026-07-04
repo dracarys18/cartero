@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -93,11 +94,12 @@ func (l *LobstersSource) Fetch(ctx context.Context, state types.StateAccessor) (
 		}
 
 		createdAt, _ := time.Parse(time.RFC3339, post.CreatedAt)
+		postURL, _ := url.Parse(post.URL)
 
 		item := &types.Item{
 			ID:        fmt.Sprintf("lobsters_%s", post.ShortID),
 			Title:     post.Title,
-			URL:       post.URL,
+			URL:       postURL,
 			Content:   post,
 			Source:    l.name,
 			Route:     l.name,

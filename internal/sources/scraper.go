@@ -9,6 +9,7 @@ import (
 	"embed"
 	"fmt"
 	"log/slog"
+	neturl "net/url"
 	"time"
 
 	"github.com/cjoudrey/gluahttp"
@@ -239,7 +240,8 @@ func (s *ScraperSource) convertMapToItem(itemMap map[string]interface{}) *types.
 		item.SetTitle(title)
 	}
 	if url != "" {
-		item.SetURL(url)
+		u, _ := neturl.Parse(url)
+		item.SetURL(u)
 	}
 
 	if author, ok := itemMap["author"].(string); ok && author != "" {

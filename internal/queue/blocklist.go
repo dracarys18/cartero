@@ -37,9 +37,8 @@ func (b *Blocklist) Load(ctx context.Context, domains []string) error {
 	return b.client.CFInsert(ctx, b.key, &redis.CFInsertOptions{Capacity: int64(len(elems))}, elems...).Err()
 }
 
-func (b *Blocklist) Blocked(ctx context.Context, link string) bool {
-	u, err := url.Parse(link)
-	if err != nil {
+func (b *Blocklist) Blocked(ctx context.Context, u *url.URL) bool {
+	if u == nil {
 		return false
 	}
 

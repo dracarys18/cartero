@@ -15,18 +15,12 @@ import (
 	"github.com/enetx/surf"
 )
 
-func GetArticle(ctx context.Context, u string, limit int, timeout time.Duration, mod ...readability.RequestWith) (*types.Article, error) {
+func GetArticle(ctx context.Context, u *url.URL, limit int, timeout time.Duration, mod ...readability.RequestWith) (*types.Article, error) {
 	if limit <= 0 {
 		limit = 20000
 	}
-	if u == "" {
+	if u == nil || u.String() == "" {
 		return nil, fmt.Errorf("URL is empty")
-	}
-
-	parsedUrl, err := url.Parse(u)
-
-	if err != nil {
-		return nil, err
 	}
 
 	surfClient := surf.NewClient().
@@ -38,7 +32,7 @@ func GetArticle(ctx context.Context, u string, limit int, timeout time.Duration,
 		Unwrap()
 
 	client := surfClient.Std()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +43,7 @@ func GetArticle(ctx context.Context, u string, limit int, timeout time.Duration,
 
 	defer func() { _ = resp.Body.Close() }()
 
-	article, err := readability.FromReader(resp.Body, parsedUrl)
+	article, err := readability.FromReader(resp.Body, u)
 
 	if err != nil || article.Node == nil {
 		return nil, fmt.Errorf("failed to extract content: %v", err)

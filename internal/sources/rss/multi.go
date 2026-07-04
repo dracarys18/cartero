@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"html"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -71,9 +72,9 @@ func (m *MultiRSSSource) fetchFeed(ctx context.Context, feed Feed, state types.S
 	fctx, cancel := context.WithTimeout(ctx, feedFetchTimeout)
 	defer cancel()
 
-	parsedFeed, err := m.parser.ParseURLWithContext(feed.URL, fctx)
+	parsedFeed, err := m.parser.ParseURLWithContext(feed.URL.String(), fctx)
 	if err != nil {
-		logger.Error("MultiRSS feed fetch error", "source", m.name, "feed", feed.Name, "url", feed.URL, "error", err)
+		logger.Error("MultiRSS feed fetch error", "source", m.name, "feed", feed.Name, "url", feed.URL.String(), "error", err)
 		return nil
 	}
 
@@ -92,14 +93,19 @@ func (m *MultiRSSSource) fetchFeed(ctx context.Context, feed Feed, state types.S
 		default:
 		}
 
-		item := m.convertToItem(parsedFeed.Items[i], feed.Name)
+		item := m.convertToItem(parsedFeed.Items[i], feed.Name, feed.URL)
 		out = append(out, item)
 		logger.Debug("MultiRSS item published", "source", m.name, "feed", feed.Name, "item", i+1)
 	}
 	return out
 }
 
-func (m *MultiRSSSource) convertToItem(feedItem *gofeed.Item, feedName string) *types.Item {
+func (m *MultiRSSSource) convertToItem(feedItem *gofeed.Item, feedName string, base *url.URL) *types.Item {
+	link := base
+	if abs, err := base.Parse(feedItem.Link); err == nil {
+		link = abs
+	}
+
 	timestamp := time.Now()
 	if feedItem.PublishedParsed != nil {
 		timestamp = *feedItem.PublishedParsed
@@ -135,7 +141,7 @@ func (m *MultiRSSSource) convertToItem(feedItem *gofeed.Item, feedName string) *
 
 	metadata := map[string]interface{}{
 		"title":       feedItem.Title,
-		"link":        feedItem.Link,
+		"link":        link,
 		"description": stripHTML(description),
 		"author":      author,
 		"published":   feedItem.Published,
@@ -159,7 +165,7 @@ func (m *MultiRSSSource) convertToItem(feedItem *gofeed.Item, feedName string) *
 	return &types.Item{
 		ID:        fmt.Sprintf("rss_%s", sanitizeID(itemID)),
 		Title:     feedItem.Title,
-		URL:       feedItem.Link,
+		URL:       link,
 		Content:   feedItem,
 		Source:    sourceName,
 		Route:     m.name,
