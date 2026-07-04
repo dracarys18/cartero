@@ -66,13 +66,13 @@ func (d *Target) Publish(ctx context.Context, item *types.Item) (*types.PublishR
 
 	if err != nil {
 		return &types.PublishResult{
-			Success:   false,
-			Error:     err,
+			Success: false,
+			Error:   err,
 		}, err
 	}
 
 	return &types.PublishResult{
-		Success:   true,
+		Success: true,
 		Metadata: map[string]any{
 			"message_id": messageID,
 			"channel_id": d.channelID,

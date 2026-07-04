@@ -96,4 +96,3 @@ func TemplateTransformer(name string, template string) *TransformProcessor {
 		return output, nil
 	})
 }
-

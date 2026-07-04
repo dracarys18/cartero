@@ -9,14 +9,14 @@ import (
 )
 
 type Target struct {
-	name      string
+	name       string
 	entryStore storage.EntryStore
 }
 
 func New(name string, registry *components.Registry) *Target {
 	store := registry.Get(components.StorageComponentName).(*components.StorageComponent).Store()
 	return &Target{
-		name:      name,
+		name:       name,
 		entryStore: store.Entries(),
 	}
 }

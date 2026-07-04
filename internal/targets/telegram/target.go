@@ -47,8 +47,8 @@ func (t *Target) Publish(_ context.Context, item *types.Item) (*types.PublishRes
 	var buf bytes.Buffer
 	if err := t.template.Execute(&buf, item); err != nil {
 		return &types.PublishResult{
-			Success:   false,
-			Error:     err,
+			Success: false,
+			Error:   err,
 		}, fmt.Errorf("telegram: template execution error: %w", err)
 	}
 
@@ -58,13 +58,13 @@ func (t *Target) Publish(_ context.Context, item *types.Item) (*types.PublishRes
 	sent, err := t.platform.Bot().Send(msg)
 	if err != nil {
 		return &types.PublishResult{
-			Success:   false,
-			Error:     err,
+			Success: false,
+			Error:   err,
 		}, fmt.Errorf("telegram: failed to send message: %w", err)
 	}
 
 	return &types.PublishResult{
-		Success:   true,
+		Success: true,
 		Metadata: map[string]any{
 			"message_id": sent.MessageID,
 			"chat_id":    t.chatID,

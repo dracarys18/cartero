@@ -156,4 +156,3 @@ func (b *Bot) markStopped() {
 	b.running = false
 	b.mu.Unlock()
 }
-

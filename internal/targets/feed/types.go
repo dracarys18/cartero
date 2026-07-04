@@ -11,11 +11,11 @@ import (
 type FeedItem struct {
 	Title       string   `json:"title"`
 	Link        *url.URL `json:"link"`
-	Description string `json:"description,omitempty"`
-	Content     string `json:"content,omitempty"`
-	Author      string `json:"author,omitempty"`
-	ImageURL    string `json:"image_url,omitempty"`
-	Published   string `json:"published"`
+	Description string   `json:"description,omitempty"`
+	Content     string   `json:"content,omitempty"`
+	Author      string   `json:"author,omitempty"`
+	ImageURL    string   `json:"image_url,omitempty"`
+	Published   string   `json:"published"`
 }
 
 type FeedEntry struct {
@@ -25,7 +25,6 @@ type FeedEntry struct {
 	MatchedKeywords string
 	PublishedAt     time.Time
 }
-
 
 func (f *FeedItem) From(item *types.Item) {
 	if title := item.GetTitle(); title != "" {
@@ -41,7 +40,6 @@ func (f *FeedItem) From(item *types.Item) {
 	f.ImageURL = item.GetImageURL()
 	f.Published = item.Timestamp.Format(time.RFC3339)
 }
-
 
 func NewFeedEntry(id string, item FeedItem, source string, publishedAt time.Time) FeedEntry {
 	if item.Published == "" {

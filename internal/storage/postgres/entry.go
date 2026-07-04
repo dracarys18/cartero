@@ -414,4 +414,3 @@ func (s *entryStore) FindNearestEmbedding(ctx context.Context, embedding []float
 
 	return similarity >= threshold, nil
 }
-
