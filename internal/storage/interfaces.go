@@ -55,7 +55,7 @@ type PaginationResult struct {
 type EntryStore interface {
 	Store(ctx context.Context, item Item) error
 	Exists(ctx context.Context, id string) (bool, error)
-	ExistsByHash(ctx context.Context, hash string) (bool, error)
+	ExistsByHash(ctx context.Context, hashes []string) ([]string, error)
 	MarkPublished(ctx context.Context, itemID, target string) error
 	IsPublished(ctx context.Context, itemID, target string) (bool, error)
 	InsertEntry(ctx context.Context, id, title string, link *url.URL, description, content, author, source, imageURL, matchedKeywords string, publishedAt time.Time) error

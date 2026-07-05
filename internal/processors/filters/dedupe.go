@@ -28,20 +28,31 @@ func (d *DedupeProcessor) Process(ctx context.Context, st types.StateAccessor, i
 	store := st.GetStorage().Entries()
 	logger := st.GetLogger()
 
-	out := make([]*types.Item, 0, len(items))
-	for _, item := range items {
-		h := hash.HashURL(item.GetLink())
+	hashes := make([]string, len(items))
+	for i, item := range items {
+		hashes[i] = hash.HashURL(item.GetLink())
+	}
 
-		exists, err := store.ExistsByHash(ctx, h)
-		if err != nil {
-			logger.Error("dedupe: hash check failed, dropping item", "processor", d.name, "item_id", item.ID, "error", err)
-			continue
-		}
-		if exists {
+	existingList, err := store.ExistsByHash(ctx, hashes)
+	if err != nil {
+		logger.Error("dedupe: hash check failed, passing batch through", "processor", d.name, "error", err)
+		return items, nil
+	}
+
+	existing := make(map[string]bool, len(existingList))
+	for _, h := range existingList {
+		existing[h] = true
+	}
+
+	out := make([]*types.Item, 0, len(items))
+	seen := make(map[string]bool, len(items))
+	for i, item := range items {
+		h := hashes[i]
+		if existing[h] || seen[h] {
 			logger.Debug("dedupe: dropped item", "processor", d.name, "item_id", item.ID, "reason", "duplicate url")
 			continue
 		}
-
+		seen[h] = true
 		out = append(out, item)
 	}
 	return out, nil

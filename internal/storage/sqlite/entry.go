@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -44,13 +45,36 @@ func (s *entryStore) Exists(ctx context.Context, id string) (bool, error) {
 	return exists, nil
 }
 
-func (s *entryStore) ExistsByHash(ctx context.Context, hash string) (bool, error) {
-	var exists bool
-	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM feed_entries WHERE hash = ?)`, hash).Scan(&exists)
-	if err != nil {
-		return false, fmt.Errorf("failed to check hash existence: %w", err)
+func (s *entryStore) ExistsByHash(ctx context.Context, hashes []string) ([]string, error) {
+	var existing []string
+	const chunk = 900
+	for start := 0; start < len(hashes); start += chunk {
+		end := min(start+chunk, len(hashes))
+		batch := hashes[start:end]
+
+		placeholders := make([]string, len(batch))
+		args := make([]any, len(batch))
+		for i, h := range batch {
+			placeholders[i] = "?"
+			args[i] = h
+		}
+
+		q := `SELECT hash FROM feed_entries WHERE hash IN (` + strings.Join(placeholders, ",") + `)`
+		rows, err := s.db.QueryContext(ctx, q, args...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check hash existence: %w", err)
+		}
+		for rows.Next() {
+			var h string
+			if err := rows.Scan(&h); err != nil {
+				_ = rows.Close()
+				return nil, err
+			}
+			existing = append(existing, h)
+		}
+		_ = rows.Close()
 	}
-	return exists, nil
+	return existing, nil
 }
 
 func (s *entryStore) MarkPublished(ctx context.Context, itemID, target string) error {

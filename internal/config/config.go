@@ -169,7 +169,8 @@ type ScoreFilterSettings struct {
 }
 
 type EmbedTextSettings struct {
-	ChunkSize int `toml:"chunk_size"`
+	ChunkSize   int `toml:"chunk_size"`
+	Concurrency int `toml:"concurrency"`
 }
 
 type PublishedAtFilterSettings struct {

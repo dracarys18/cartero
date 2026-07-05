@@ -10,7 +10,10 @@ import (
 	"cartero/internal/config"
 	procnames "cartero/internal/processors/names"
 	"cartero/internal/types"
+	"cartero/internal/utils/batch"
 )
+
+const defaultEmbedConcurrency = 8
 
 type EmbedTextProcessor struct {
 	name     string
@@ -43,7 +46,12 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 		chunkSize = 400
 	}
 
-	for _, item := range items {
+	concurrency := e.settings.Concurrency
+	if concurrency <= 0 {
+		concurrency = defaultEmbedConcurrency
+	}
+
+	batch.Run(ctx, items, concurrency, func(ctx context.Context, item *types.Item) {
 		var body, description string
 		if article := item.GetArticle(); article != nil {
 			body = article.Text
@@ -79,22 +87,22 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 			cleanChunks = append(cleanChunks, strings.TrimSpace(chunk))
 		}
 		if len(cleanChunks) == 0 {
-			continue
+			return
 		}
 
 		embeddings, err := embedder.Embed(ctx, cleanChunks)
 		if err != nil {
 			logger.Warn("embed_text: failed to embed item", "processor", e.name, "item_id", item.ID, "error", err)
-			continue
+			return
 		}
 		if len(embeddings) == 0 {
 			logger.Warn("embed_text: empty embeddings returned", "processor", e.name, "item_id", item.ID)
-			continue
+			return
 		}
 
 		item.SetEmbedding(embeddings)
 		logger.Debug("embed_text: stored embedding", "processor", e.name, "item_id", item.ID, "chunks", len(cleanChunks), "dim", len(embeddings[0]))
-	}
+	})
 
 	return items, nil
 }
