@@ -108,8 +108,9 @@
             .masthead { flex-wrap: wrap; gap: 4px 12px; }
             .nameplate { font-size: 1.9rem; }
             .stories { grid-template-columns: 1fr; }
-            .stories .story { border-left: none; padding-left: 0; padding-right: 0; }
-            .story-thumb img { max-height: 180px; }
+            .stories .story { border-left: none; padding-left: 0; padding-right: 0; overflow: hidden; }
+            .story-thumb { float: right; width: 104px; margin: 2px 0 6px 14px; }
+            .story-thumb img { width: 104px; height: 104px; max-height: none; aspect-ratio: 1; }
             .pagination { flex-wrap: wrap; gap: 12px 18px; }
             .colophon { flex-direction: column; gap: 8px; align-items: flex-start; }
         }
