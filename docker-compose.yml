@@ -41,6 +41,7 @@ services:
         condition: service_started
     volumes:
       - ./config.toml:/app/config.toml:ro
+      - ./templates:/app/templates:ro
       - cartero-data:/app/data
     environment:
       - TZ=UTC

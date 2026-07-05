@@ -75,7 +75,7 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 		if pc.Type != names.EmbedText || !pc.Enabled {
 			continue
 		}
-		if ttl, err := time.ParseDuration(pc.Settings.EmbedTextSettings.CacheTTL); err == nil && ttl > 0 {
+		if ttl, err := time.ParseDuration(pc.Settings.CacheTTL); err == nil && ttl > 0 {
 			s.EmbedCache = queue.NewEmbedCache(conn.Client(), s.Queue.Prefix(), ttl)
 		}
 	}
