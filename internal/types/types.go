@@ -239,6 +239,11 @@ type Blocklist interface {
 	Blocked(ctx context.Context, u *url.URL) bool
 }
 
+type EmbedCache interface {
+	Get(ctx context.Context, hash string) [][]float32
+	Set(ctx context.Context, hash string, embedding [][]float32)
+}
+
 type StateAccessor interface {
 	GetConfig() *config.Config
 	GetStorage() storage.StorageInterface
@@ -247,4 +252,5 @@ type StateAccessor interface {
 	GetPipeline() any
 	GetQueue() Queue
 	GetBlocklist() Blocklist
+	GetEmbedCache() EmbedCache
 }

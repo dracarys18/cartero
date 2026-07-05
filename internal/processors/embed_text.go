@@ -11,6 +11,7 @@ import (
 	procnames "cartero/internal/processors/names"
 	"cartero/internal/types"
 	"cartero/internal/utils/batch"
+	"cartero/internal/utils/hash"
 )
 
 const defaultEmbedConcurrency = 8
@@ -51,7 +52,17 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 		concurrency = defaultEmbedConcurrency
 	}
 
+	cache := st.GetEmbedCache()
+
 	batch.Run(ctx, items, concurrency, func(ctx context.Context, item *types.Item) {
+		h := hash.HashURL(item.GetLink())
+		if cache != nil {
+			if cached := cache.Get(ctx, h); len(cached) > 0 {
+				item.SetEmbedding(cached)
+				return
+			}
+		}
+
 		var body, description string
 		if article := item.GetArticle(); article != nil {
 			body = article.Text
@@ -101,6 +112,9 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 		}
 
 		item.SetEmbedding(embeddings)
+		if cache != nil {
+			cache.Set(ctx, h, embeddings)
+		}
 		logger.Debug("embed_text: stored embedding", "processor", e.name, "item_id", item.ID, "chunks", len(cleanChunks), "dim", len(embeddings[0]))
 	})
 
