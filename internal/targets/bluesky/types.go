@@ -25,6 +25,7 @@ type Post struct {
 type Segment struct {
 	Text string `json:"text"`
 	URI  string `json:"uri,omitempty"`
+	Tag  string `json:"tag,omitempty"`
 }
 
 type EmbedData struct {
@@ -104,7 +105,11 @@ func (p *Post) Into() RichText {
 	var facets []*bsky.RichtextFacet
 
 	for _, seg := range p.Segments {
-		if seg.Text == "" {
+		segText := seg.Text
+		if seg.Tag != "" {
+			segText = "#" + seg.Tag
+		}
+		if segText == "" {
 			continue
 		}
 
@@ -113,7 +118,7 @@ func (p *Post) Into() RichText {
 			break
 		}
 
-		segText := seg.Text
+		full := segText
 		if len([]rune(segText)) > remaining {
 			segText = truncateRunes(segText, remaining)
 		}
@@ -122,18 +127,23 @@ func (p *Post) Into() RichText {
 		text += segText
 		end := int64(len(text))
 
-		if seg.URI != "" && segText == seg.Text {
+		if segText != full {
+			continue
+		}
+
+		switch {
+		case seg.Tag != "":
 			facets = append(facets, &bsky.RichtextFacet{
-				Index: &bsky.RichtextFacet_ByteSlice{
-					ByteStart: start,
-					ByteEnd:   end,
-				},
+				Index: &bsky.RichtextFacet_ByteSlice{ByteStart: start, ByteEnd: end},
 				Features: []*bsky.RichtextFacet_Features_Elem{
-					{
-						RichtextFacet_Link: &bsky.RichtextFacet_Link{
-							Uri: seg.URI,
-						},
-					},
+					{RichtextFacet_Tag: &bsky.RichtextFacet_Tag{Tag: seg.Tag}},
+				},
+			})
+		case seg.URI != "":
+			facets = append(facets, &bsky.RichtextFacet{
+				Index: &bsky.RichtextFacet_ByteSlice{ByteStart: start, ByteEnd: end},
+				Features: []*bsky.RichtextFacet_Features_Elem{
+					{RichtextFacet_Link: &bsky.RichtextFacet_Link{Uri: seg.URI}},
 				},
 			})
 		}

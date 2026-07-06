@@ -13,3 +13,6 @@
 <i>{{ slice $summary 0 800 }}</i>
 {{ end -}}
 <i>Source: {{ .Source }}</i>
+{{ if .MatchedKeywords }}
+#{{ hashtag .MatchedKeywords }}
+{{ end -}}

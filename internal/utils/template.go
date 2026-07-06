@@ -5,8 +5,10 @@ import (
 	"fmt"
 	htmltemplate "html/template"
 	"os"
+	"strings"
 	texttemplate "text/template"
 	"time"
+	"unicode"
 )
 
 // Template wraps either text/template or html/template
@@ -117,7 +119,8 @@ func LoadTemplate(path string) (*texttemplate.Template, error) {
 	}
 
 	funcMap := texttemplate.FuncMap{
-		"json": ToJSON,
+		"json":    ToJSON,
+		"hashtag": Hashtag,
 	}
 
 	tmpl, err := texttemplate.New("template").Funcs(funcMap).Parse(string(data))
@@ -126,6 +129,27 @@ func LoadTemplate(path string) (*texttemplate.Template, error) {
 	}
 
 	return tmpl, nil
+}
+
+func Hashtag(s string) string {
+	var b strings.Builder
+	capNext := true
+	for _, r := range s {
+		switch {
+		case unicode.IsLetter(r):
+			if capNext {
+				r = unicode.ToUpper(r)
+			}
+			b.WriteRune(r)
+			capNext = false
+		case unicode.IsDigit(r):
+			b.WriteRune(r)
+			capNext = false
+		default:
+			capNext = true
+		}
+	}
+	return b.String()
 }
 
 // ToJSON converts a value to a JSON string

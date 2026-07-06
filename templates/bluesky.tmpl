@@ -26,6 +26,14 @@
       "text": {{ index .Metadata "author" | json }}
     }
     {{- end }}
+    {{- if .MatchedKeywords }},
+    {
+      "text": "\n\n"
+    },
+    {
+      "tag": {{ hashtag .MatchedKeywords | json }}
+    }
+    {{- end }}
   ],
   "embed": {
     "uri": {{ .GetLink.String | json }},
