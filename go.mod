@@ -1,8 +1,6 @@
 module cartero
 
-go 1.27
-
-toolchain go1.27rc1
+go 1.26.0
 
 require (
 	codeberg.org/readeck/go-readability/v2 v2.1.2
@@ -11,7 +9,7 @@ require (
 	github.com/bluesky-social/indigo v0.0.0-20260629160527-dfe5578fd537
 	github.com/bwmarrin/discordgo v0.29.0
 	github.com/cjoudrey/gluahttp v0.0.0-20201111170219-25003d9adfa9
-	github.com/enetx/surf v1.0.202
+	github.com/enetx/surf v1.0.201
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/gorilla/feeds v1.2.0
 	github.com/jackc/pgx/v5 v5.10.0
@@ -39,11 +37,11 @@ require (
 	github.com/chewxy/math32 v1.11.2 // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/earthboundkid/versioninfo/v2 v2.24.1 // indirect
-	github.com/enetx/g v1.0.227 // indirect
+	github.com/enetx/g v1.0.225 // indirect
 	github.com/enetx/http v1.0.29 // indirect
 	github.com/enetx/http2 v1.0.26 // indirect
 	github.com/enetx/http3 v1.0.8 // indirect
-	github.com/enetx/iter v0.0.0-20260703211843-75f7a9fffd6d // indirect
+	github.com/enetx/iter v0.0.0-20250912135656-f1583323588f // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
