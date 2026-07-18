@@ -11,32 +11,36 @@ import (
 	utils "cartero/internal/utils/string"
 )
 
+func timeAgo(t time.Time) string {
+	duration := time.Since(t)
+	switch {
+	case duration < time.Minute:
+		return "just now"
+	case duration < time.Hour:
+		mins := int(duration.Minutes())
+		if mins == 1 {
+			return "1 minute ago"
+		}
+		return fmt.Sprintf("%d minutes ago", mins)
+	case duration < 24*time.Hour:
+		hours := int(duration.Hours())
+		if hours == 1 {
+			return "1 hour ago"
+		}
+		return fmt.Sprintf("%d hours ago", hours)
+	default:
+		days := int(duration.Hours() / 24)
+		if days == 1 {
+			return "1 day ago"
+		}
+		return fmt.Sprintf("%d days ago", days)
+	}
+}
+
 func funcMap() htmltemplate.FuncMap {
 	return htmltemplate.FuncMap{
-		"timeAgo": func(t time.Time) string {
-			duration := time.Since(t)
-			if duration < time.Minute {
-				return "just now"
-			} else if duration < time.Hour {
-				mins := int(duration.Minutes())
-				if mins == 1 {
-					return "1 minute ago"
-				}
-				return fmt.Sprintf("%d minutes ago", mins)
-			} else if duration < 24*time.Hour {
-				hours := int(duration.Hours())
-				if hours == 1 {
-					return "1 hour ago"
-				}
-				return fmt.Sprintf("%d hours ago", hours)
-			}
-			days := int(duration.Hours() / 24)
-			if days == 1 {
-				return "1 day ago"
-			}
-			return fmt.Sprintf("%d days ago", days)
-		},
-		"add": func(a, b int) int { return a + b },
+		"timeAgo": timeAgo,
+		"add":     func(a, b int) int { return a + b },
 		"sub": func(a, b int) int { return a - b },
 		"split": func(s, sep string) []string {
 			if s == "" {

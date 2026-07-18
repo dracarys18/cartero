@@ -41,18 +41,22 @@
             --ink-soft:  #4b4b47;
             --ink-faint: #85847e;
             --rule:      #d8d6ce;
+            --field-bg:  #e4e2da;
+            --field-bd:  #c7c4ba;
             --accent:    #8f2d1f;
         }
         @media (prefers-color-scheme: dark) {
             :root {
-                --paper:     #171613;
-                --ink:       #e4e1d8;
-                --ink-soft:  #a7a399;
-                --ink-faint: #78746b;
-                --rule:      #302d27;
-                --accent:    #dd9578;
+                --paper:     #191817;
+                --ink:       #ebe8e0;
+                --ink-soft:  #b0aca2;
+                --ink-faint: #827e74;
+                --rule:      #33302a;
+                --field-bg:  #232120;
+                --field-bd:  #423e37;
+                --accent:    #e0876a;
             }
-            .story-thumb img { filter: saturate(.9) brightness(.85); }
+            .story-thumb img { filter: saturate(.92) brightness(.86); }
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -70,14 +74,21 @@
             display: flex; justify-content: space-between; align-items: center; gap: 16px;
             padding-bottom: 7px; border-bottom: 1px solid var(--ink);
         }
-        .search { display: flex; align-items: center; }
-        .search input {
-            font-family: inherit; font-size: .78rem; color: var(--ink);
-            background: transparent; border: none; border-bottom: 1px solid var(--rule);
-            padding: 3px 2px; width: 160px; outline: none;
+        .search { position: relative; display: flex; align-items: center; }
+        .search svg {
+            position: absolute; left: 11px; width: 14px; height: 14px;
+            fill: var(--ink-faint); pointer-events: none;
         }
-        .search input:focus { border-bottom-color: var(--accent); }
-        .search input::placeholder { color: var(--ink-faint); text-transform: uppercase; letter-spacing: .1em; font-size: .66rem; }
+        .search input {
+            font-family: inherit; font-size: .82rem; color: var(--ink);
+            background: var(--field-bg); border: 1px solid var(--field-bd); border-radius: 7px;
+            padding: 7px 12px 7px 34px; width: 210px; outline: none;
+            transition: border-color .15s, background .15s;
+        }
+        .search input:hover { border-color: var(--ink-faint); }
+        .search input:focus { border-color: var(--accent); }
+        .search:focus-within svg { fill: var(--accent); }
+        .search input::placeholder { color: var(--ink-faint); }
         .results-head {
             display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
             margin-top: 22px; padding-bottom: 8px; border-bottom: 1px solid var(--rule);
@@ -177,7 +188,8 @@
 <body>
     <div class="topbar">
         <form class="search" method="get" action="/search" role="search">
-            <input type="search" name="q" value="{{.Query}}" placeholder="Search" aria-label="Search stories">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>
+            <input type="search" name="q" placeholder="Search stories…" aria-label="Search stories" autocomplete="off">
         </form>
         <nav class="sections">
             <a href="/feed.rss">RSS</a>
@@ -192,30 +204,31 @@
     </header>
 
     <main>
-        {{if .Query}}<div class="results-head"><span>results for “{{.Query}}”</span><a href="/">← back to front page</a></div>{{end}}
-        {{if .Entries}}
-        <div class="stories">
-            {{range $e := .Entries}}
-            <article class="story">
-                {{if $e.ImageURL}}<a class="story-thumb" href="{{$e.Link}}" target="_blank" rel="noopener"><img src="{{$e.ImageURL}}" alt="" loading="lazy" onerror="this.closest('.story-thumb').remove()"></a>{{end}}
-                {{if $e.MatchedKeywords}}<span class="kicker">{{$e.MatchedKeywords}}</span>{{end}}
-                <h3 class="story-title"><a class="title-link" href="{{$e.Link}}" target="_blank" rel="noopener">{{$e.Title}}</a></h3>
-                <div class="byline">{{formatSource $e.Source}} &nbsp;·&nbsp; {{timeAgo $e.CreatedAt}} &nbsp;·&nbsp; <button class="share-btn" data-title="{{$e.Title}}" data-url="{{$e.Link}}" onclick="shareStory(this)" aria-label="Share"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg><span>share</span></button></div>
-                {{if $e.Description}}<p class="story-excerpt">{{$e.Description}}</p>{{end}}
-            </article>
+        <div class="results-head" id="results-head" hidden></div>
+        <div id="front">
+            {{if .Entries}}
+            <div class="stories">
+                {{range $e := .Entries}}
+                <article class="story">
+                    {{if $e.ImageURL}}<a class="story-thumb" href="{{$e.Link}}" target="_blank" rel="noopener"><img src="{{$e.ImageURL}}" alt="" loading="lazy" onerror="this.closest('.story-thumb').remove()"></a>{{end}}
+                    {{if $e.MatchedKeywords}}<span class="kicker">{{$e.MatchedKeywords}}</span>{{end}}
+                    <h3 class="story-title"><a class="title-link" href="{{$e.Link}}" target="_blank" rel="noopener">{{$e.Title}}</a></h3>
+                    <div class="byline">{{formatSource $e.Source}} &nbsp;·&nbsp; {{timeAgo $e.CreatedAt}} &nbsp;·&nbsp; <button class="share-btn" data-title="{{$e.Title}}" data-url="{{$e.Link}}" onclick="shareStory(this)" aria-label="Share"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg><span>share</span></button></div>
+                    {{if $e.Description}}<p class="story-excerpt">{{$e.Description}}</p>{{end}}
+                </article>
+                {{end}}
+            </div>
+
+            <div class="pagination">
+                {{if .HasPrev}}<a href="/?page={{sub .Page 1}}">← Newer</a>{{else}}<span class="disabled">← Newer</span>{{end}}
+                <span class="page-info">page {{.Page}} of {{.TotalPages}} · {{.Total}} stories</span>
+                {{if .HasNext}}<a href="/?page={{add .Page 1}}">Older →</a>{{else}}<span class="disabled">Older →</span>{{end}}
+            </div>
+            {{else}}
+            <div class="empty">no stories yet</div>
             {{end}}
         </div>
-
-        {{if not .Query}}
-        <div class="pagination">
-            {{if .HasPrev}}<a href="/?page={{sub .Page 1}}">← Newer</a>{{else}}<span class="disabled">← Newer</span>{{end}}
-            <span class="page-info">page {{.Page}} of {{.TotalPages}} · {{.Total}} stories</span>
-            {{if .HasNext}}<a href="/?page={{add .Page 1}}">Older →</a>{{else}}<span class="disabled">Older →</span>{{end}}
-        </div>
-        {{end}}
-        {{else}}
-        <div class="empty">{{if .Query}}no results for “{{.Query}}”{{else}}no stories yet{{end}}</div>
-        {{end}}
+        <div id="results" hidden></div>
     </main>
 
     <footer class="colophon">
@@ -246,6 +259,52 @@
                 setTimeout(() => { span.textContent = 'share'; btn.classList.remove('copied'); }, 2000);
             });
         }
+
+        (function () {
+            const form = document.querySelector('.search');
+            const input = form.querySelector('input');
+            const front = document.getElementById('front');
+            const results = document.getElementById('results');
+            const head = document.getElementById('results-head');
+
+            function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+            function safeURL(u) { try { const p = new URL(u, location.origin); return (p.protocol === 'http:' || p.protocol === 'https:') ? p.href : '#'; } catch (e) { return '#'; } }
+
+            function card(r) {
+                const link = safeURL(r.link);
+                const thumb = r.image_url ? `<a class="story-thumb" href="${link}" target="_blank" rel="noopener"><img src="${safeURL(r.image_url)}" alt="" loading="lazy" onerror="this.closest('.story-thumb').remove()"></a>` : '';
+                const kicker = r.matched_keywords ? `<span class="kicker">${esc(r.matched_keywords)}</span>` : '';
+                const excerpt = r.description ? `<p class="story-excerpt">${esc(r.description)}</p>` : '';
+                return `<article class="story">${thumb}${kicker}<h3 class="story-title"><a class="title-link" href="${link}" target="_blank" rel="noopener">${esc(r.title)}</a></h3><div class="byline">${esc(r.source)} &nbsp;·&nbsp; ${esc(r.age)}</div>${excerpt}</article>`;
+            }
+
+            function showFront() { input.value = ''; results.hidden = true; head.hidden = true; front.hidden = false; }
+
+            async function runSearch(q) {
+                front.hidden = true; results.hidden = false; results.innerHTML = '';
+                head.hidden = false; head.innerHTML = '<span>searching…</span>';
+                let data;
+                try {
+                    const res = await fetch('/search?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+                    data = await res.json();
+                } catch (e) { head.innerHTML = '<span>search failed</span> <a href="/">← back</a>'; return; }
+                head.innerHTML = `<span>results for “${esc(data.query)}”</span> <a href="/" id="back">← back to front page</a>`;
+                head.querySelector('#back').addEventListener('click', function (e) { e.preventDefault(); showFront(); });
+                results.innerHTML = data.results.length
+                    ? '<div class="stories">' + data.results.map(card).join('') + '</div>'
+                    : `<div class="empty">no results for “${esc(data.query)}”</div>`;
+            }
+
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const q = input.value.trim();
+                if (!q) { showFront(); return; }
+                runSearch(q);
+            });
+
+            const q0 = new URLSearchParams(location.search).get('q');
+            if (q0) { input.value = q0; runSearch(q0); }
+        })();
     </script>
 </body>
 </html>

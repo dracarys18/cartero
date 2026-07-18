@@ -1,20 +1,34 @@
 package handler
 
 import (
-	"fmt"
+	"encoding/json"
 	"net/http"
 	"strings"
-	"time"
 
-	"cartero/internal/storage"
+	utils "cartero/internal/utils/string"
 )
 
 const searchLimit = 40
 
+type searchResult struct {
+	Title           string `json:"title"`
+	Link            string `json:"link"`
+	Source          string `json:"source"`
+	Age             string `json:"age"`
+	Description     string `json:"description"`
+	ImageURL        string `json:"image_url"`
+	MatchedKeywords string `json:"matched_keywords"`
+}
+
+type searchResponse struct {
+	Query   string         `json:"query"`
+	Results []searchResult `json:"results"`
+}
+
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
 	key := "search:" + strings.ToLower(query)
 	if e, ok := h.cache.get(key); ok {
@@ -22,49 +36,39 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var entries []storage.FeedEntry
+	resp := searchResponse{Query: query, Results: []searchResult{}}
+
 	if query != "" && h.embedder != nil {
 		vecs, err := h.embedder.Embed(r.Context(), []string{query})
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			_, _ = fmt.Fprintf(w, "Error: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if len(vecs) > 0 {
-			entries, err = h.entryStore.SearchSemantic(r.Context(), vecs[0], searchLimit)
+			entries, err := h.entryStore.SearchSemantic(r.Context(), vecs[0], searchLimit)
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				_, _ = fmt.Fprintf(w, "Error: %v", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
+			}
+			for _, e := range entries {
+				resp.Results = append(resp.Results, searchResult{
+					Title:           e.Title,
+					Link:            e.Link,
+					Source:          utils.Readable(e.Source),
+					Age:             timeAgo(e.CreatedAt),
+					Description:     e.Description,
+					ImageURL:        e.ImageURL,
+					MatchedKeywords: e.MatchedKeywords,
+				})
 			}
 		}
 	}
 
-	title := h.config.SiteName
-	if query != "" {
-		title = fmt.Sprintf("%s — %s", h.config.SiteName, query)
-	}
-
-	data := map[string]interface{}{
-		"Title":       title,
-		"Query":       query,
-		"Entries":     entries,
-		"Now":         time.Now(),
-		"Page":        1,
-		"TotalPages":  1,
-		"HasNext":     false,
-		"HasPrev":     false,
-		"Total":       len(entries),
-		"BaseURL":     h.config.SiteURL,
-		"Canonical":   h.config.SiteURL + "/search",
-		"Description": h.config.SiteDescription,
-		"NoIndex":     true,
-	}
-
-	html, err := h.renderBytes(data)
+	body, err := json.Marshal(resp)
 	if err != nil {
-		fmt.Printf("Template error: %v\n", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	writeHTML(w, r, h.cache.set(key, html))
+
+	writeHTML(w, r, h.cache.set(key, body))
 }
