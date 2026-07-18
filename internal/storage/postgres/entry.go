@@ -405,8 +405,8 @@ func (s *entryStore) searchLexical(ctx context.Context, query string, limit int)
 	q := `
 		SELECT fe.id, fe.title, fe.link, fe.description, fe.content, fe.author, fe.source, fe.image_url, fe.matched_keywords, fe.hash, fe.entry_timestamp, fe.published_at, fe.created_at
 		FROM feed_entries fe
-		WHERE fe.search_tsv @@ websearch_to_tsquery('english', $1)
-		ORDER BY ts_rank(fe.search_tsv, websearch_to_tsquery('english', $1)) DESC, fe.published_at DESC NULLS LAST
+		WHERE to_tsvector('english', coalesce(fe.title, '') || ' ' || coalesce(fe.description, '')) @@ websearch_to_tsquery('english', $1)
+		ORDER BY ts_rank(to_tsvector('english', coalesce(fe.title, '') || ' ' || coalesce(fe.description, '')), websearch_to_tsquery('english', $1)) DESC, fe.published_at DESC NULLS LAST
 		LIMIT $2
 	`
 
