@@ -4,6 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Title}}</title>
+    <link rel="canonical" href="{{.Canonical}}">
+    <meta name="description" content="{{.Description}}">
+    {{if .NoIndex}}<meta name="robots" content="noindex,follow">{{end}}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="cartero">
+    <meta property="og:title" content="{{.Title}}">
+    <meta property="og:description" content="{{.Description}}">
+    <meta property="og:url" content="{{.Canonical}}">
+    <meta property="og:image" content="{{.BaseURL}}/assets/favicon.jpg">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{.Title}}">
+    <meta name="twitter:description" content="{{.Description}}">
+    <meta name="twitter:image" content="{{.BaseURL}}/assets/favicon.jpg">
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"WebSite","name":"cartero","url":"{{.BaseURL}}/","potentialAction":{"@type":"SearchAction","target":{"@type":"EntryPoint","urlTemplate":"{{.BaseURL}}/search?q={search_term_string}"},"query-input":"required name=search_term_string"}}
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXNGBLNTPW"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XXNGBLNTPW');
+    </script>
     <link rel="icon" type="image/jpeg" href="/assets/favicon.jpg">
     <link rel="manifest" href="/assets/manifest.webmanifest">
     <meta name="theme-color" content="#ecebe6">
@@ -32,9 +55,23 @@
         a { text-decoration: none; color: inherit; }
 
         .topbar {
-            display: flex; justify-content: flex-end; align-items: center;
+            display: flex; justify-content: space-between; align-items: center; gap: 16px;
             padding-bottom: 7px; border-bottom: 1px solid var(--ink);
         }
+        .search { display: flex; align-items: center; }
+        .search input {
+            font-family: inherit; font-size: .78rem; color: var(--ink);
+            background: transparent; border: none; border-bottom: 1px solid var(--rule);
+            padding: 3px 2px; width: 160px; outline: none;
+        }
+        .search input:focus { border-bottom-color: var(--accent); }
+        .search input::placeholder { color: var(--ink-faint); text-transform: uppercase; letter-spacing: .1em; font-size: .66rem; }
+        .results-head {
+            display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+            margin-top: 22px; padding-bottom: 8px; border-bottom: 1px solid var(--rule);
+            font-size: .82rem; color: var(--ink-soft);
+        }
+        .results-head a { color: var(--accent); text-transform: uppercase; letter-spacing: .1em; font-size: .66rem; font-weight: 600; }
         .sections {
             display: flex; gap: 18px;
             text-transform: uppercase; letter-spacing: .13em; font-size: .68rem; font-weight: 600;
@@ -127,6 +164,9 @@
 </head>
 <body>
     <div class="topbar">
+        <form class="search" method="get" action="/search" role="search">
+            <input type="search" name="q" value="{{.Query}}" placeholder="Search" aria-label="Search stories">
+        </form>
         <nav class="sections">
             <a href="/feed.rss">RSS</a>
             <a href="/feed.atom">Atom</a>
@@ -140,6 +180,7 @@
     </header>
 
     <main>
+        {{if .Query}}<div class="results-head"><span>results for “{{.Query}}”</span><a href="/">← back to front page</a></div>{{end}}
         {{if .Entries}}
         <div class="stories">
             {{range $e := .Entries}}
@@ -153,13 +194,15 @@
             {{end}}
         </div>
 
+        {{if not .Query}}
         <div class="pagination">
             {{if .HasPrev}}<a href="/?page={{sub .Page 1}}">← Newer</a>{{else}}<span class="disabled">← Newer</span>{{end}}
             <span class="page-info">page {{.Page}} of {{.TotalPages}} · {{.Total}} stories</span>
             {{if .HasNext}}<a href="/?page={{add .Page 1}}">Older →</a>{{else}}<span class="disabled">Older →</span>{{end}}
         </div>
+        {{end}}
         {{else}}
-        <div class="empty">no stories yet</div>
+        <div class="empty">{{if .Query}}no results for “{{.Query}}”{{else}}no stories yet{{end}}</div>
         {{end}}
     </main>
 
