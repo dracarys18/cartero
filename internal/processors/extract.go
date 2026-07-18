@@ -4,7 +4,6 @@ import (
 	"cartero/internal/config"
 	"cartero/internal/processors/names"
 	"cartero/internal/types"
-	"cartero/internal/utils"
 	"cartero/internal/utils/batch"
 	"context"
 	"time"
@@ -16,11 +15,12 @@ const (
 )
 
 type ExtractText struct {
-	settings config.ExtractTextSettings
+	settings  config.ExtractTextSettings
+	extractor Extractor
 }
 
 func NewExtractProcessor(settings config.ExtractTextSettings) *ExtractText {
-	return &ExtractText{settings: settings}
+	return &ExtractText{settings: settings, extractor: newExtractor(settings)}
 }
 
 func (e *ExtractText) Name() string {
@@ -61,7 +61,7 @@ func (e *ExtractText) extract(ctx context.Context, st types.StateAccessor, item 
 		timeout = defaultExtractTimeout
 	}
 
-	article, err := utils.GetArticle(ctx, u, e.settings.Limit, timeout)
+	article, err := e.extractor.Extract(ctx, u, e.settings.Limit, timeout)
 	if err != nil {
 		logger.Error("ExtractText processor failed to extract article text", "processor", names.ExtractText, "item_id", item.ID, "error", err)
 		return

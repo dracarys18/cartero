@@ -187,10 +187,12 @@ type ExtractFieldsSettings struct {
 }
 
 type ExtractTextSettings struct {
-	Limit            int `toml:"limit"`
-	MinContentLength int `toml:"min_content_length"`
-	Concurrency      int `toml:"concurrency"`
-	TimeoutSeconds   int `toml:"timeout_seconds"`
+	Limit            int    `toml:"limit"`
+	MinContentLength int    `toml:"min_content_length"`
+	Concurrency      int    `toml:"concurrency"`
+	TimeoutSeconds   int    `toml:"timeout_seconds"`
+	ExtractType      string `toml:"extract_type"`
+	ReaderURL        string `toml:"reader_url"`
 }
 
 type TemplateSettings struct {

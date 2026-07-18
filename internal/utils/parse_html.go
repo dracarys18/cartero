@@ -3,8 +3,10 @@ package utils
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"cartero/internal/types"
@@ -60,4 +62,43 @@ func GetArticle(ctx context.Context, u *url.URL, limit int, timeout time.Duratio
 	}
 
 	return res, nil
+}
+
+func GetArticleViaReader(ctx context.Context, readerURL string, u *url.URL, limit int, timeout time.Duration) (string, error) {
+	if readerURL == "" {
+		return "", fmt.Errorf("reader URL is empty")
+	}
+	if u == nil || u.String() == "" {
+		return "", fmt.Errorf("URL is empty")
+	}
+
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
+
+	endpoint := strings.TrimRight(readerURL, "/") + "/" + u.String()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("X-Return-Format", "text")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("reader request failed: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("reader returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return strutils.Truncate(string(body), limit), nil
 }
