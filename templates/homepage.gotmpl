@@ -29,7 +29,8 @@
     </script>
     <link rel="icon" type="image/jpeg" href="/assets/favicon.jpg">
     <link rel="manifest" href="/assets/manifest.webmanifest">
-    <meta name="theme-color" content="#ecebe6">
+    <meta name="theme-color" content="#ecebe6" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#171613" media="(prefers-color-scheme: dark)">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -41,6 +42,17 @@
             --ink-faint: #85847e;
             --rule:      #d8d6ce;
             --accent:    #8f2d1f;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --paper:     #171613;
+                --ink:       #e4e1d8;
+                --ink-soft:  #a7a399;
+                --ink-faint: #78746b;
+                --rule:      #302d27;
+                --accent:    #dd9578;
+            }
+            .story-thumb img { filter: saturate(.9) brightness(.85); }
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
