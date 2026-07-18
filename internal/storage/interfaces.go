@@ -62,7 +62,7 @@ type EntryStore interface {
 	ListRecentEntries(ctx context.Context, limit int) ([]FeedEntry, error)
 	ListPublishedEntries(ctx context.Context, target string, limit int) ([]FeedEntry, error)
 	ListEntriesPaginated(ctx context.Context, page, perPage int, startDate, endDate time.Time) (*PaginationResult, error)
-	SearchSemantic(ctx context.Context, embedding []float32, limit int, maxDistance float64) ([]FeedEntry, error)
+	Search(ctx context.Context, query string, embedding []float32, limit int, maxDistance float64) ([]FeedEntry, error)
 	SetEmbedding(ctx context.Context, id string, embedding []float32) error
 	FindNearestEmbedding(ctx context.Context, embedding []float32, threshold float64, since time.Time) (bool, error)
 }

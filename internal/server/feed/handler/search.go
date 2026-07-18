@@ -38,29 +38,34 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 
 	resp := searchResponse{Query: query, Results: []searchResult{}}
 
-	if query != "" && h.embedder != nil {
-		vecs, err := h.embedder.Embed(r.Context(), []string{query})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if len(vecs) > 0 {
-			entries, err := h.entryStore.SearchSemantic(r.Context(), vecs[0], searchLimit, h.config.SearchMaxDistance)
+	if query != "" {
+		var embedding []float32
+		if h.embedder != nil {
+			vecs, err := h.embedder.Embed(r.Context(), []string{query})
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			for _, e := range entries {
-				resp.Results = append(resp.Results, searchResult{
-					Title:           e.Title,
-					Link:            e.Link,
-					Source:          utils.Readable(e.Source),
-					Age:             timeAgo(e.CreatedAt),
-					Description:     e.Description,
-					ImageURL:        e.ImageURL,
-					MatchedKeywords: e.MatchedKeywords,
-				})
+			if len(vecs) > 0 {
+				embedding = vecs[0]
 			}
+		}
+
+		entries, err := h.entryStore.Search(r.Context(), query, embedding, searchLimit, h.config.SearchMaxDistance)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		for _, e := range entries {
+			resp.Results = append(resp.Results, searchResult{
+				Title:           e.Title,
+				Link:            e.Link,
+				Source:          utils.Readable(e.Source),
+				Age:             timeAgo(e.CreatedAt),
+				Description:     e.Description,
+				ImageURL:        e.ImageURL,
+				MatchedKeywords: e.MatchedKeywords,
+			})
 		}
 	}
 

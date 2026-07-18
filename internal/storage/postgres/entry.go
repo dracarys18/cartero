@@ -390,10 +390,39 @@ func (s *entryStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEn
 	return entries, nil
 }
 
-func (s *entryStore) SearchSemantic(ctx context.Context, embedding []float32, limit int, maxDistance float64) ([]storage.FeedEntry, error) {
+func (s *entryStore) Search(ctx context.Context, query string, embedding []float32, limit int, maxDistance float64) ([]storage.FeedEntry, error) {
+	entries, err := s.searchLexical(ctx, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	if len(entries) > 0 || len(embedding) == 0 {
+		return entries, nil
+	}
+	return s.searchSemantic(ctx, embedding, limit, maxDistance)
+}
+
+func (s *entryStore) searchLexical(ctx context.Context, query string, limit int) ([]storage.FeedEntry, error) {
+	q := `
+		SELECT fe.id, fe.title, fe.link, fe.description, fe.content, fe.author, fe.source, fe.image_url, fe.matched_keywords, fe.hash, fe.entry_timestamp, fe.published_at, fe.created_at
+		FROM feed_entries fe
+		WHERE fe.search_tsv @@ websearch_to_tsquery('english', $1)
+		ORDER BY ts_rank(fe.search_tsv, websearch_to_tsquery('english', $1)) DESC, fe.published_at DESC NULLS LAST
+		LIMIT $2
+	`
+
+	rows, err := s.db.QueryContext(ctx, q, query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("lexical search failed: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	return s.scanEntries(rows, limit)
+}
+
+func (s *entryStore) searchSemantic(ctx context.Context, embedding []float32, limit int, maxDistance float64) ([]storage.FeedEntry, error) {
 	vec := pgvector.NewHalfVector(embedding)
 
-	query := `
+	q := `
 		SELECT fe.id, fe.title, fe.link, fe.description, fe.content, fe.author, fe.source, fe.image_url, fe.matched_keywords, fe.hash, fe.entry_timestamp, fe.published_at, fe.created_at
 		FROM item_embeddings e
 		JOIN feed_entries fe ON fe.id = e.id
@@ -402,9 +431,9 @@ func (s *entryStore) SearchSemantic(ctx context.Context, embedding []float32, li
 		LIMIT $2
 	`
 
-	rows, err := s.db.QueryContext(ctx, query, vec, limit, maxDistance)
+	rows, err := s.db.QueryContext(ctx, q, vec, limit, maxDistance)
 	if err != nil {
-		return nil, fmt.Errorf("failed to search embeddings: %w", err)
+		return nil, fmt.Errorf("semantic search failed: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
 
