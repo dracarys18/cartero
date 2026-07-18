@@ -25,7 +25,7 @@ func (t Targets) Publish(ctx context.Context, state types.StateAccessor, items [
 		if len(pending) == 0 {
 			continue
 		}
-		if err := store.Entries().InsertEntry(ctx, item.ID, item.GetTitle(), item.GetLink(), item.GetDescription(), item.GetFeedContent(), item.GetAuthor(), item.GetSource(), item.GetImageURL(), item.GetMatchedKeywords(), item.GetTimestamp()); err != nil {
+		if err := store.Entries().Store(ctx, item); err != nil {
 			logger.Error("publish: failed to persist entry", "item_id", item.ID, "error", err)
 			continue
 		}

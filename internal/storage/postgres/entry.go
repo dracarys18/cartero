@@ -390,6 +390,31 @@ func (s *entryStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEn
 	return entries, nil
 }
 
+func (s *entryStore) SearchSemantic(ctx context.Context, embedding []float32, limit int) ([]storage.FeedEntry, error) {
+	vec := pgvector.NewHalfVector(embedding)
+
+	query := `
+		SELECT fe.id, fe.title, fe.link, fe.description, fe.content, fe.author, fe.source, fe.image_url, fe.matched_keywords, fe.hash, fe.entry_timestamp, fe.published_at, fe.created_at
+		FROM (
+			SELECT item_id, MIN(embedding <=> $1) AS dist
+			FROM item_chunks
+			GROUP BY item_id
+			ORDER BY dist
+			LIMIT $2
+		) c
+		JOIN feed_entries fe ON fe.id = c.item_id
+		ORDER BY c.dist
+	`
+
+	rows, err := s.db.QueryContext(ctx, query, vec, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search embeddings: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	return s.scanEntries(rows, limit)
+}
+
 func (s *entryStore) SetEmbedding(ctx context.Context, id string, embedding []float32) error {
 	query := `
 		INSERT INTO item_embeddings (id, embedding)

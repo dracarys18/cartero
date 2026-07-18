@@ -286,6 +286,10 @@ func (s *entryStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEn
 	return entries, nil
 }
 
+func (s *entryStore) SearchSemantic(ctx context.Context, embedding []float32, limit int) ([]storage.FeedEntry, error) {
+	return nil, nil
+}
+
 func (s *entryStore) SetEmbedding(ctx context.Context, id string, embedding []float32) error {
 	return nil
 }

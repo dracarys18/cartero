@@ -217,9 +217,12 @@ type DiscordTargetSettings struct {
 }
 
 type FeedTargetSettings struct {
-	Port     string `toml:"port"`
-	FeedSize int    `toml:"feed_size"`
-	MaxItems int    `toml:"max_items"`
+	Port            string `toml:"port"`
+	FeedSize        int    `toml:"feed_size"`
+	MaxItems        int    `toml:"max_items"`
+	SiteURL         string `toml:"site_url"`
+	SiteName        string `toml:"site_name"`
+	SiteDescription string `toml:"site_description"`
 }
 
 type BlueskyTargetSettings struct {

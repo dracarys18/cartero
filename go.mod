@@ -10,6 +10,7 @@ require (
 	github.com/bwmarrin/discordgo v0.29.0
 	github.com/cjoudrey/gluahttp v0.0.0-20201111170219-25003d9adfa9
 	github.com/enetx/surf v1.0.201
+	github.com/go-chi/chi/v5 v5.3.1
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/gorilla/feeds v1.2.0
 	github.com/jackc/pgx/v5 v5.10.0
