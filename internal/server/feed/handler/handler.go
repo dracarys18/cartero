@@ -11,12 +11,13 @@ import (
 const renderCacheTTL = 60 * time.Second
 
 type Config struct {
-	Name            string
-	FeedSize        int
-	MaxItems        int
-	SiteURL         string
-	SiteName        string
-	SiteDescription string
+	Name              string
+	FeedSize          int
+	MaxItems          int
+	SiteURL           string
+	SiteName          string
+	SiteDescription   string
+	SearchMaxDistance float64
 }
 
 type Handler struct {

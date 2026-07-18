@@ -8,15 +8,11 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=1 go build -o cartero ./cmd/cartero
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o cartero ./cmd/cartero
 
-FROM debian:bookworm-slim
-
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+FROM gcr.io/distroless/static-debian12
 
 WORKDIR /app
-
-RUN mkdir -p /app/data
 
 COPY --from=builder /build/cartero /app/cartero
 
@@ -27,8 +23,6 @@ COPY templates /app/templates
 COPY assets /app/assets
 
 COPY db/migrations /app/db/migrations
-
-RUN chmod +x /app/cartero
 
 ENTRYPOINT ["/app/cartero"]
 CMD ["-config", "/app/config.toml"]

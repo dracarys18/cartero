@@ -4,13 +4,9 @@ interval = "10m"
 run_once = false
 
 [storage]
-# Postgres + pgvector is required for personalized feeds (vector + FTS ranking).
+# Postgres + pgvector is required (vector search + ranking).
 type = "postgres"
 dsn  = "postgres://cartero:cartero@localhost:5432/cartero?sslmode=disable"
-
-# SQLite is deprecated and unmaintained (no vector/personalization support).
-# type = "sqlite"
-# path = "./cartero.db"
 
 [platforms.embedder]
 type = "openai"

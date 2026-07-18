@@ -16,7 +16,6 @@ import (
 	"cartero/internal/sources"
 	"cartero/internal/storage"
 	_ "cartero/internal/storage/postgres"
-	_ "cartero/internal/storage/sqlite"
 	"cartero/internal/targets"
 	"cartero/internal/types"
 	"log/slog"
@@ -101,13 +100,14 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 		cfg := targetCfg.Settings.FeedTargetSettings
 
 		serverComp.Register(components.ServerConfig{
-			Name:            name,
-			Port:            cfg.Port,
-			FeedSize:        cfg.FeedSize,
-			MaxItems:        cfg.MaxItems,
-			SiteURL:         cfg.SiteURL,
-			SiteName:        cfg.SiteName,
-			SiteDescription: cfg.SiteDescription,
+			Name:              name,
+			Port:              cfg.Port,
+			FeedSize:          cfg.FeedSize,
+			MaxItems:          cfg.MaxItems,
+			SiteURL:           cfg.SiteURL,
+			SiteName:          cfg.SiteName,
+			SiteDescription:   cfg.SiteDescription,
+			SearchMaxDistance: cfg.SearchMaxDistance,
 		})
 	}
 

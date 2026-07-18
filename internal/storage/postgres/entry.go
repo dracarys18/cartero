@@ -390,18 +390,19 @@ func (s *entryStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEn
 	return entries, nil
 }
 
-func (s *entryStore) SearchSemantic(ctx context.Context, embedding []float32, limit int) ([]storage.FeedEntry, error) {
+func (s *entryStore) SearchSemantic(ctx context.Context, embedding []float32, limit int, maxDistance float64) ([]storage.FeedEntry, error) {
 	vec := pgvector.NewHalfVector(embedding)
 
 	query := `
 		SELECT fe.id, fe.title, fe.link, fe.description, fe.content, fe.author, fe.source, fe.image_url, fe.matched_keywords, fe.hash, fe.entry_timestamp, fe.published_at, fe.created_at
 		FROM item_embeddings e
 		JOIN feed_entries fe ON fe.id = e.id
+		WHERE (e.embedding <=> $1) < $3
 		ORDER BY e.embedding <=> $1
 		LIMIT $2
 	`
 
-	rows, err := s.db.QueryContext(ctx, query, vec, limit)
+	rows, err := s.db.QueryContext(ctx, query, vec, limit, maxDistance)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search embeddings: %w", err)
 	}

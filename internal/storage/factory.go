@@ -16,7 +16,7 @@ func RegisterFactory(storageType string, fn func(string) (StorageInterface, erro
 func New(ctx context.Context, cfg config.StorageConfig) (StorageInterface, error) {
 	storageType := cfg.Type
 	if storageType == "" {
-		storageType = "sqlite"
+		storageType = "postgres"
 	}
 
 	fn, exists := factoryFuncs[storageType]
@@ -24,8 +24,5 @@ func New(ctx context.Context, cfg config.StorageConfig) (StorageInterface, error
 		return nil, fmt.Errorf("unsupported storage type: %s", storageType)
 	}
 
-	if storageType == "postgres" {
-		return fn(cfg.DSN)
-	}
-	return fn(cfg.Path)
+	return fn(cfg.DSN)
 }

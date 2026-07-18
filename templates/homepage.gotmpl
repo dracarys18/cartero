@@ -302,7 +302,7 @@
                 head.querySelector('#back').addEventListener('click', function (e) { e.preventDefault(); showFront(); });
                 results.innerHTML = data.results.length
                     ? '<div class="stories">' + data.results.map(card).join('') + '</div>'
-                    : `<div class="empty">no results for “${esc(data.query)}”</div>`;
+                    : `<div class="empty">No results found for “${esc(data.query)}”.</div>`;
             }
 
             form.addEventListener('submit', function (e) {

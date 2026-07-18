@@ -45,7 +45,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if len(vecs) > 0 {
-			entries, err := h.entryStore.SearchSemantic(r.Context(), vecs[0], searchLimit)
+			entries, err := h.entryStore.SearchSemantic(r.Context(), vecs[0], searchLimit, h.config.SearchMaxDistance)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

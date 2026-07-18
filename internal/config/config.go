@@ -50,7 +50,6 @@ type BotConfig struct {
 
 type StorageConfig struct {
 	Type string `toml:"type"`
-	Path string `toml:"path"`
 	DSN  string `toml:"dsn"`
 }
 
@@ -217,12 +216,13 @@ type DiscordTargetSettings struct {
 }
 
 type FeedTargetSettings struct {
-	Port            string `toml:"port"`
-	FeedSize        int    `toml:"feed_size"`
-	MaxItems        int    `toml:"max_items"`
-	SiteURL         string `toml:"site_url"`
-	SiteName        string `toml:"site_name"`
-	SiteDescription string `toml:"site_description"`
+	Port              string  `toml:"port"`
+	FeedSize          int     `toml:"feed_size"`
+	MaxItems          int     `toml:"max_items"`
+	SiteURL           string  `toml:"site_url"`
+	SiteName          string  `toml:"site_name"`
+	SiteDescription   string  `toml:"site_description"`
+	SearchMaxDistance float64 `toml:"search_max_distance"`
 }
 
 type BlueskyTargetSettings struct {
@@ -325,17 +325,11 @@ func validateConfig(config *Config) error {
 	}
 
 	if config.Storage.Type == "" {
-		config.Storage.Type = "sqlite"
+		config.Storage.Type = "postgres"
 	}
 
-	if config.Storage.Type == "postgres" {
-		if config.Storage.DSN == "" {
-			return fmt.Errorf("storage.dsn is required when storage.type is postgres")
-		}
-	}
-
-	if config.Storage.Type == "sqlite" && config.Storage.Path == "" {
-		config.Storage.Path = "./cartero.db"
+	if config.Storage.DSN == "" {
+		return fmt.Errorf("storage.dsn is required")
 	}
 
 	if config.Redis.Addr == "" {
