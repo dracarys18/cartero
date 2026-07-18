@@ -71,23 +71,25 @@
         a { text-decoration: none; color: inherit; }
 
         .topbar {
-            display: flex; justify-content: space-between; align-items: center; gap: 16px;
+            display: flex; justify-content: flex-start; align-items: center; gap: 16px;
             padding-bottom: 7px; border-bottom: 1px solid var(--ink);
         }
-        .search { position: relative; display: flex; align-items: center; }
-        .search svg {
-            position: absolute; left: 11px; width: 14px; height: 14px;
-            fill: var(--ink-faint); pointer-events: none;
-        }
+        .search { display: flex; align-items: stretch; }
         .search input {
-            font-family: inherit; font-size: .82rem; color: var(--ink);
-            background: var(--field-bg); border: 1px solid var(--field-bd); border-radius: 7px;
-            padding: 7px 12px 7px 34px; width: 210px; outline: none;
-            transition: border-color .15s, background .15s;
+            font-family: inherit; font-size: .76rem; color: var(--ink);
+            background: transparent; border: 1px solid var(--field-bd); border-right: none;
+            padding: 5px 9px; width: 156px; outline: none;
+            transition: border-color .15s;
         }
-        .search input:hover { border-color: var(--ink-faint); }
-        .search input:focus { border-color: var(--accent); }
-        .search:focus-within svg { fill: var(--accent); }
+        .search input:focus { border-color: var(--ink-faint); }
+        .search button {
+            font-family: inherit; font-size: .64rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: .09em; color: var(--ink-soft);
+            background: var(--field-bg); border: 1px solid var(--field-bd);
+            padding: 5px 13px; cursor: pointer; transition: color .15s;
+        }
+        .search button:hover { color: var(--accent); }
+        .search input:focus + button { border-color: var(--ink-faint); }
         .search input::placeholder { color: var(--ink-faint); }
         .results-head {
             display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
@@ -102,13 +104,16 @@
         .sections a { color: var(--ink-soft); }
         .sections a:hover { color: var(--accent); }
         .masthead {
-            display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+            display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px;
             padding: 13px 0 11px; border-bottom: 3px double var(--ink);
         }
         .nameplate {
+            justify-self: start;
             font-family: "Manrope", sans-serif; font-weight: 800;
             font-size: 2rem; line-height: 1; letter-spacing: -.03em; color: var(--ink);
         }
+        .masthead .dateline { justify-self: center; text-align: center; }
+        .masthead .search { justify-self: end; }
         .dateline {
             text-transform: uppercase; letter-spacing: .1em; font-size: .64rem; font-weight: 600;
             color: var(--ink-soft);
@@ -173,9 +178,14 @@
 
         @media (max-width: 680px) {
             body { padding: 18px 16px 56px; }
-            .sections { flex-wrap: wrap; justify-content: flex-end; gap: 12px 14px; }
-            .masthead { flex-wrap: wrap; gap: 4px 12px; }
-            .nameplate { font-size: 1.9rem; }
+            .topbar { justify-content: center; }
+            .sections { flex-wrap: wrap; justify-content: center; gap: 12px 14px; }
+            .masthead {
+                grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 10px;
+            }
+            .nameplate { justify-self: center; font-size: 1.9rem; }
+            .masthead .search { justify-self: stretch; }
+            .search input { flex: 1; width: auto; }
             .stories { grid-template-columns: 1fr; }
             .stories .story { border-left: none; padding-left: 0; padding-right: 0; overflow: hidden; }
             .story-thumb { float: right; width: 104px; margin: 2px 0 6px 14px; }
@@ -187,10 +197,6 @@
 </head>
 <body>
     <div class="topbar">
-        <form class="search" method="get" action="/search" role="search">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/></svg>
-            <input type="search" name="q" placeholder="Search stories…" aria-label="Search stories" autocomplete="off">
-        </form>
         <nav class="sections">
             <a href="/feed.rss">RSS</a>
             <a href="/feed.atom">Atom</a>
@@ -201,6 +207,10 @@
     <header class="masthead">
         <a href="/" class="nameplate">cartero</a>
         <span class="dateline">{{.Now.Format "Monday, January 2, 2006"}} · No. {{.Total}}</span>
+        <form class="search" method="get" action="/search" role="search">
+            <input type="search" name="q" placeholder="Search…" aria-label="Search stories" autocomplete="off">
+            <button type="submit">Search</button>
+        </form>
     </header>
 
     <main>
