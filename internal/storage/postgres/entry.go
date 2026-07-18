@@ -395,15 +395,10 @@ func (s *entryStore) SearchSemantic(ctx context.Context, embedding []float32, li
 
 	query := `
 		SELECT fe.id, fe.title, fe.link, fe.description, fe.content, fe.author, fe.source, fe.image_url, fe.matched_keywords, fe.hash, fe.entry_timestamp, fe.published_at, fe.created_at
-		FROM (
-			SELECT item_id, MIN(embedding <=> $1) AS dist
-			FROM item_chunks
-			GROUP BY item_id
-			ORDER BY dist
-			LIMIT $2
-		) c
-		JOIN feed_entries fe ON fe.id = c.item_id
-		ORDER BY c.dist
+		FROM item_embeddings e
+		JOIN feed_entries fe ON fe.id = e.id
+		ORDER BY e.embedding <=> $1
+		LIMIT $2
 	`
 
 	rows, err := s.db.QueryContext(ctx, query, vec, limit)
