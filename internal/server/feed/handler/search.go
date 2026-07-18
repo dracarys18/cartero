@@ -40,9 +40,13 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	base := baseURL(r)
+	title := h.config.SiteName
+	if query != "" {
+		title = fmt.Sprintf("%s — %s", h.config.SiteName, query)
+	}
+
 	data := map[string]interface{}{
-		"Title":       fmt.Sprintf("cartero — search — %s", query),
+		"Title":       title,
 		"Query":       query,
 		"Entries":     entries,
 		"Now":         time.Now(),
@@ -51,9 +55,9 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		"HasNext":     false,
 		"HasPrev":     false,
 		"Total":       len(entries),
-		"BaseURL":     base,
-		"Canonical":   base + "/search",
-		"Description": siteDescription,
+		"BaseURL":     h.config.SiteURL,
+		"Canonical":   h.config.SiteURL + "/search",
+		"Description": h.config.SiteDescription,
 		"NoIndex":     true,
 	}
 

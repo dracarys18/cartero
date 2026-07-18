@@ -101,10 +101,13 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 		cfg := targetCfg.Settings.FeedTargetSettings
 
 		serverComp.Register(components.ServerConfig{
-			Name:     name,
-			Port:     cfg.Port,
-			FeedSize: cfg.FeedSize,
-			MaxItems: cfg.MaxItems,
+			Name:            name,
+			Port:            cfg.Port,
+			FeedSize:        cfg.FeedSize,
+			MaxItems:        cfg.MaxItems,
+			SiteURL:         cfg.SiteURL,
+			SiteName:        cfg.SiteName,
+			SiteDescription: cfg.SiteDescription,
 		})
 	}
 

@@ -17,6 +17,16 @@ func (h *Handler) ServiceWorker(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "assets/sw.js")
 }
 
+func (h *Handler) Robots(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	http.ServeFile(w, r, "assets/robots.txt")
+}
+
+func (h *Handler) Sitemap(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+	http.ServeFile(w, r, "assets/sitemap.xml")
+}
+
 func (h *Handler) RSSFeed(w http.ResponseWriter, r *http.Request) {
 	entries, err := h.entryStore.ListPublishedEntries(r.Context(), h.config.Name, h.config.FeedSize)
 	if err != nil {

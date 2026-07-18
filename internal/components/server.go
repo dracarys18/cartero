@@ -10,10 +10,13 @@ import (
 )
 
 type ServerConfig struct {
-	Name     string
-	Port     string
-	FeedSize int
-	MaxItems int
+	Name            string
+	Port            string
+	FeedSize        int
+	MaxItems        int
+	SiteURL         string
+	SiteName        string
+	SiteDescription string
 }
 
 type ServerComponent struct {
@@ -77,9 +80,12 @@ func (c *ServerComponent) startServer(ctx context.Context, cfg ServerConfig, ent
 	}
 
 	server := feed.New(cfg.Name, feed.Config{
-		Port:     cfg.Port,
-		FeedSize: cfg.FeedSize,
-		MaxItems: cfg.MaxItems,
+		Port:            cfg.Port,
+		FeedSize:        cfg.FeedSize,
+		MaxItems:        cfg.MaxItems,
+		SiteURL:         cfg.SiteURL,
+		SiteName:        cfg.SiteName,
+		SiteDescription: cfg.SiteDescription,
 	}, entryStore, embedder)
 
 	if err := server.Start(ctx); err != nil {

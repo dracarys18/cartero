@@ -28,9 +28,8 @@ func (h *Handler) Homepage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	base := baseURL(r)
 	data := map[string]interface{}{
-		"Title":       fmt.Sprintf("cartero — %s", h.config.Name),
+		"Title":       h.config.SiteName,
 		"Query":       "",
 		"Entries":     result.Entries,
 		"Now":         time.Now(),
@@ -39,9 +38,9 @@ func (h *Handler) Homepage(w http.ResponseWriter, r *http.Request) {
 		"HasNext":     result.HasNext,
 		"HasPrev":     result.HasPrevious,
 		"Total":       result.Total,
-		"BaseURL":     base,
-		"Canonical":   base + r.URL.RequestURI(),
-		"Description": siteDescription,
+		"BaseURL":     h.config.SiteURL,
+		"Canonical":   h.config.SiteURL + r.URL.RequestURI(),
+		"Description": h.config.SiteDescription,
 		"NoIndex":     false,
 	}
 

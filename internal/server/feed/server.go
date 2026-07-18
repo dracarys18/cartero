@@ -12,9 +12,12 @@ import (
 )
 
 type Config struct {
-	Port     string
-	FeedSize int
-	MaxItems int
+	Port            string
+	FeedSize        int
+	MaxItems        int
+	SiteURL         string
+	SiteName        string
+	SiteDescription string
 }
 
 type Server struct {
@@ -37,9 +40,12 @@ func New(name string, config Config, entryStore storage.EntryStore, embedder pla
 	}
 
 	h := handler.New(handler.Config{
-		Name:     name,
-		FeedSize: config.FeedSize,
-		MaxItems: config.MaxItems,
+		Name:            name,
+		FeedSize:        config.FeedSize,
+		MaxItems:        config.MaxItems,
+		SiteURL:         config.SiteURL,
+		SiteName:        config.SiteName,
+		SiteDescription: config.SiteDescription,
 	}, entryStore, embedder)
 
 	return &Server{

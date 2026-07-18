@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /search
+
+Sitemap: https://news.karthihegde.dev/sitemap.xml
