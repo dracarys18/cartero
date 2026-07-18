@@ -74,6 +74,15 @@ services:
     profiles:
       - tunnel
 
+  reader:
+    image: ghcr.io/jina-ai/reader:latest
+    container_name: cartero-reader
+    restart: unless-stopped
+    networks:
+      - cartero-network
+    profiles:
+      - reader
+
 networks:
   cartero-network:
     driver: bridge
