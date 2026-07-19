@@ -10,15 +10,11 @@ import (
 	"cartero/internal/types"
 	strutils "cartero/internal/utils/string"
 
-	readability "codeberg.org/readeck/go-readability/v2"
-	"codeberg.org/readeck/go-readability/v2/render"
 	"github.com/enetx/surf"
+	"github.com/markusmobius/go-trafilatura"
 )
 
-func GetArticle(ctx context.Context, u *url.URL, limit int, timeout time.Duration, mod ...readability.RequestWith) (*types.Article, error) {
-	if limit <= 0 {
-		limit = 20000
-	}
+func GetArticle(ctx context.Context, u *url.URL, limit int, timeout time.Duration) (*types.Article, error) {
 	if u == nil || u.String() == "" {
 		return nil, fmt.Errorf("URL is empty")
 	}
@@ -40,24 +36,20 @@ func GetArticle(ctx context.Context, u *url.URL, limit int, timeout time.Duratio
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch URL: %w", err)
 	}
-
 	defer func() { _ = resp.Body.Close() }()
 
-	article, err := readability.FromReader(resp.Body, u)
-
-	if err != nil || article.Node == nil {
-		return nil, fmt.Errorf("failed to extract content: %v", err)
+	result, err := trafilatura.Extract(resp.Body, trafilatura.Options{
+		OriginalURL:     u,
+		EnableFallback:  true,
+		ExcludeComments: true,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract content: %w", err)
 	}
 
-	textContent := render.InnerText(article.Node)
-
-	textContent = strutils.Truncate(textContent, limit)
-
-	res := &types.Article{
-		Text:        textContent,
-		Image:       article.ImageURL(),
-		Description: strutils.Clean(article.Excerpt()),
-	}
-
-	return res, nil
+	return &types.Article{
+		Text:        strutils.Truncate(result.ContentText, limit),
+		Image:       result.Metadata.Image,
+		Description: strutils.Clean(result.Metadata.Description),
+	}, nil
 }

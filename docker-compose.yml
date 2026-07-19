@@ -53,7 +53,6 @@ services:
       - 1.1.1.1
       - 8.8.8.8
     dns_opt:
-      - use-vc
       - timeout:2
       - attempts:3
     ports:
