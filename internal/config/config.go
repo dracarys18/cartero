@@ -191,7 +191,6 @@ type ExtractTextSettings struct {
 	MinContentLength int    `toml:"min_content_length"`
 	Concurrency      int    `toml:"concurrency"`
 	TimeoutSeconds   int    `toml:"timeout_seconds"`
-	ExtractType      string `toml:"extract_type"`
 	ReaderURL        string `toml:"reader_url"`
 }
 

@@ -73,9 +73,38 @@ func (j JinaExtractor) Extract(ctx context.Context, u *url.URL, limit int, timeo
 	return &types.Article{Text: strutils.Truncate(string(body), limit)}, nil
 }
 
-func newExtractor(settings config.ExtractTextSettings) Extractor {
-	if settings.ExtractType == "jina" {
-		return JinaExtractor{url: settings.ReaderURL}
+type TieredExtractor struct {
+	primary  Extractor
+	fallback Extractor
+	minLen   int
+}
+
+func (t TieredExtractor) Extract(ctx context.Context, u *url.URL, limit int, timeout time.Duration) (*types.Article, error) {
+	article, err := t.primary.Extract(ctx, u, limit, timeout)
+	if err == nil && article != nil && len(article.Text) >= t.minLen {
+		return article, nil
 	}
-	return ReadabilityExtractor{}
+
+	if t.fallback != nil {
+		if rendered, rerr := t.fallback.Extract(ctx, u, limit, timeout); rerr == nil && rendered != nil && len(rendered.Text) > 0 {
+			return rendered, nil
+		}
+	}
+
+	if article != nil {
+		return article, nil
+	}
+	return nil, err
+}
+
+func newExtractor(settings config.ExtractTextSettings) Extractor {
+	var fallback Extractor
+	if settings.ReaderURL != "" {
+		fallback = JinaExtractor{url: settings.ReaderURL}
+	}
+	return TieredExtractor{
+		primary:  ReadabilityExtractor{},
+		fallback: fallback,
+		minLen:   settings.MinContentLength,
+	}
 }
