@@ -55,6 +55,8 @@ services:
     dns_opt:
       - timeout:2
       - attempts:3
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1
     ports:
       - "8034:8080"
     command: ["-config", "/app/config.toml"]
@@ -79,7 +81,14 @@ services:
     restart: unless-stopped
     mem_limit: 2g
     memswap_limit: 2g
+    shm_size: "1gb"
     cpus: 1.5
+    security_opt: ["seccomp=unconfined"]
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=1
     networks:
       - cartero-network
     profiles:
