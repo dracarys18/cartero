@@ -26,7 +26,7 @@ func (t Targets) Publish(ctx context.Context, state types.StateAccessor, items [
 			continue
 		}
 		if err := store.Entries().Store(ctx, item); err != nil {
-			logger.Error("publish: failed to persist entry", "item_id", item.ID, "error", err)
+			logger.Error("publish: DROPPED item — persist failed, will NOT be delivered", "item_id", item.ID, "title", item.GetTitle(), "score", item.GetScore(), "error", err)
 			continue
 		}
 		if err := pending.Process(ctx, state, item, logger); err != nil {
