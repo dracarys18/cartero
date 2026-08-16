@@ -79,10 +79,10 @@ services:
     image: ghcr.io/jina-ai/reader:latest
     container_name: cartero-reader
     restart: unless-stopped
-    mem_limit: 2g
-    memswap_limit: 2g
+    mem_limit: 4g
+    memswap_limit: 4g
     shm_size: "1gb"
-    cpus: 1.5
+    cpus: 2
     security_opt: ["seccomp=unconfined"]
     dns:
       - 1.1.1.1
