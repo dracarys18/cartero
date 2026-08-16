@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -10,11 +11,13 @@ import (
 	"cartero/internal/types"
 	strutils "cartero/internal/utils/string"
 
+	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/enetx/surf"
 	"github.com/markusmobius/go-trafilatura"
+	"golang.org/x/net/html"
 )
 
-func GetArticle(ctx context.Context, u *url.URL, limit int, timeout time.Duration) (*types.Article, error) {
+func GetArticle(ctx context.Context, u *url.URL, timeout time.Duration) (*types.Article, error) {
 	if u == nil || u.String() == "" {
 		return nil, fmt.Errorf("URL is empty")
 	}
@@ -47,8 +50,17 @@ func GetArticle(ctx context.Context, u *url.URL, limit int, timeout time.Duratio
 		return nil, fmt.Errorf("failed to extract content: %w", err)
 	}
 
+	var buf bytes.Buffer
+	if err := html.Render(&buf, result.ContentNode); err != nil {
+		return nil, fmt.Errorf("failed to render content: %w", err)
+	}
+	markdown, err := md.NewConverter(u.Hostname(), true, nil).ConvertString(buf.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert content to markdown: %w", err)
+	}
+
 	return &types.Article{
-		Text:        strutils.Truncate(result.ContentText, limit),
+		Text:        markdown,
 		Image:       result.Metadata.Image,
 		Description: strutils.Clean(result.Metadata.Description),
 	}, nil

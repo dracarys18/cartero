@@ -41,7 +41,7 @@ func funcMap() htmltemplate.FuncMap {
 	return htmltemplate.FuncMap{
 		"timeAgo": timeAgo,
 		"add":     func(a, b int) int { return a + b },
-		"sub": func(a, b int) int { return a - b },
+		"sub":     func(a, b int) int { return a - b },
 		"split": func(s, sep string) []string {
 			if s == "" {
 				return []string{}

@@ -169,6 +169,7 @@ type ScoreFilterSettings struct {
 
 type EmbedTextSettings struct {
 	ChunkSize   int    `toml:"chunk_size"`
+	MaxChunks   int    `toml:"max_chunks"`
 	Concurrency int    `toml:"concurrency"`
 	CacheTTL    string `toml:"cache_ttl"`
 }
@@ -187,7 +188,6 @@ type ExtractFieldsSettings struct {
 }
 
 type ExtractTextSettings struct {
-	Limit            int    `toml:"limit"`
 	MinContentLength int    `toml:"min_content_length"`
 	Concurrency      int    `toml:"concurrency"`
 	TimeoutSeconds   int    `toml:"timeout_seconds"`

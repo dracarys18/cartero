@@ -81,14 +81,18 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 		}
 
 		if body != "" {
-			splitter := textsplitter.NewRecursiveCharacter(
+			splitter := textsplitter.NewMarkdownTextSplitter(
 				textsplitter.WithChunkSize(chunkSize),
 				textsplitter.WithChunkOverlap(chunkSize/8),
+				textsplitter.WithHeadingHierarchy(true),
 			)
 			bodyChunk, err := splitter.SplitText(body)
 			if err != nil {
 				logger.Warn("embed_text: failed to split text", "processor", e.name, "item_id", item.ID, "error", err)
 			} else if len(bodyChunk) > 0 {
+				if e.settings.MaxChunks > 0 && len(bodyChunk) > e.settings.MaxChunks {
+					bodyChunk = bodyChunk[:e.settings.MaxChunks]
+				}
 				chunks = append(chunks, bodyChunk...)
 			}
 		}

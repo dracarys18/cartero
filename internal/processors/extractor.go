@@ -13,24 +13,23 @@ import (
 	"cartero/internal/config"
 	"cartero/internal/types"
 	"cartero/internal/utils"
-	strutils "cartero/internal/utils/string"
 )
 
 type Extractor interface {
-	Extract(ctx context.Context, u *url.URL, limit int, timeout time.Duration) (*types.Article, error)
+	Extract(ctx context.Context, u *url.URL, timeout time.Duration) (*types.Article, error)
 }
 
 type ReadabilityExtractor struct{}
 
-func (ReadabilityExtractor) Extract(ctx context.Context, u *url.URL, limit int, timeout time.Duration) (*types.Article, error) {
-	return utils.GetArticle(ctx, u, limit, timeout)
+func (ReadabilityExtractor) Extract(ctx context.Context, u *url.URL, timeout time.Duration) (*types.Article, error) {
+	return utils.GetArticle(ctx, u, timeout)
 }
 
 type JinaExtractor struct {
 	url string
 }
 
-func (j JinaExtractor) Extract(ctx context.Context, u *url.URL, limit int, timeout time.Duration) (*types.Article, error) {
+func (j JinaExtractor) Extract(ctx context.Context, u *url.URL, timeout time.Duration) (*types.Article, error) {
 	if j.url == "" {
 		return nil, fmt.Errorf("reader URL is empty")
 	}
@@ -49,7 +48,7 @@ func (j JinaExtractor) Extract(ctx context.Context, u *url.URL, limit int, timeo
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("X-Return-Format", "text")
+	req.Header.Set("X-Return-Format", "markdown")
 	req.Header.Set("X-Retain-Images", "none")
 	if timeout > 0 {
 		req.Header.Set("X-Timeout", strconv.Itoa(int(timeout.Seconds())))
@@ -70,7 +69,7 @@ func (j JinaExtractor) Extract(ctx context.Context, u *url.URL, limit int, timeo
 		return nil, err
 	}
 
-	return &types.Article{Text: strutils.Truncate(string(body), limit)}, nil
+	return &types.Article{Text: string(body)}, nil
 }
 
 type TieredExtractor struct {
@@ -79,14 +78,14 @@ type TieredExtractor struct {
 	minLen   int
 }
 
-func (t TieredExtractor) Extract(ctx context.Context, u *url.URL, limit int, timeout time.Duration) (*types.Article, error) {
-	article, err := t.primary.Extract(ctx, u, limit, timeout)
+func (t TieredExtractor) Extract(ctx context.Context, u *url.URL, timeout time.Duration) (*types.Article, error) {
+	article, err := t.primary.Extract(ctx, u, timeout)
 	if err == nil && article != nil && len(article.Text) >= t.minLen {
 		return article, nil
 	}
 
 	if t.fallback != nil {
-		if rendered, rerr := t.fallback.Extract(ctx, u, limit, timeout); rerr == nil && rendered != nil && len(rendered.Text) > 0 {
+		if rendered, rerr := t.fallback.Extract(ctx, u, timeout); rerr == nil && rendered != nil && len(rendered.Text) > 0 {
 			return rendered, nil
 		}
 	}

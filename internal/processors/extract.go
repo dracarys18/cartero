@@ -61,7 +61,7 @@ func (e *ExtractText) extract(ctx context.Context, st types.StateAccessor, item 
 		timeout = defaultExtractTimeout
 	}
 
-	article, err := e.extractor.Extract(ctx, u, e.settings.Limit, timeout)
+	article, err := e.extractor.Extract(ctx, u, timeout)
 	if err != nil {
 		logger.Error("ExtractText processor failed to extract article text", "processor", names.ExtractText, "item_id", item.ID, "error", err)
 		return
