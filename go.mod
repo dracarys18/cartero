@@ -9,6 +9,7 @@ require (
 	github.com/bluesky-social/indigo v0.0.0-20260629160527-dfe5578fd537
 	github.com/bwmarrin/discordgo v0.29.0
 	github.com/cjoudrey/gluahttp v0.0.0-20201111170219-25003d9adfa9
+	github.com/enetx/g v1.0.225
 	github.com/enetx/surf v1.0.201
 	github.com/go-chi/chi/v5 v5.3.1
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
@@ -42,7 +43,6 @@ require (
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/earthboundkid/versioninfo/v2 v2.24.1 // indirect
 	github.com/elliotchance/pie/v2 v2.9.0 // indirect
-	github.com/enetx/g v1.0.225 // indirect
 	github.com/enetx/http v1.0.29 // indirect
 	github.com/enetx/http2 v1.0.26 // indirect
 	github.com/enetx/http3 v1.0.8 // indirect

@@ -31,6 +31,7 @@ type State struct {
 	RedisConn       *queue.RedisConnection
 	Blocklist       types.Blocklist
 	EmbedCache      types.EmbedCache
+	Rejected        types.Rejected
 	Logger          *slog.Logger
 	EmbeddedScripts embed.FS
 }
@@ -70,14 +71,17 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 		s.Blocklist = bl
 	}
 
+	var cacheTTL time.Duration
 	for _, pc := range s.Config.Processors {
 		if pc.Type != names.EmbedText || !pc.Enabled {
 			continue
 		}
 		if ttl, err := time.ParseDuration(pc.Settings.CacheTTL); err == nil && ttl > 0 {
+			cacheTTL = ttl
 			s.EmbedCache = queue.NewEmbedCache(conn.Client(), s.Queue.Prefix(), ttl)
 		}
 	}
+	s.Rejected = queue.NewRejectedSet(conn.Client(), s.Queue.Prefix(), cacheTTL)
 
 	s.Registry = components.NewRegistry()
 
@@ -168,6 +172,10 @@ func (s *State) GetBlocklist() types.Blocklist {
 
 func (s *State) GetEmbedCache() types.EmbedCache {
 	return s.EmbedCache
+}
+
+func (s *State) GetRejected() types.Rejected {
+	return s.Rejected
 }
 
 func (s *State) buildPlatformComponent() *components.PlatformComponent {

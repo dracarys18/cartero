@@ -192,6 +192,7 @@ type ExtractTextSettings struct {
 	Concurrency      int    `toml:"concurrency"`
 	TimeoutSeconds   int    `toml:"timeout_seconds"`
 	ReaderURL        string `toml:"reader_url"`
+	Resolver         string `toml:"resolver"`
 }
 
 type TemplateSettings struct {

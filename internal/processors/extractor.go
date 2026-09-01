@@ -15,14 +15,18 @@ import (
 	"cartero/internal/utils"
 )
 
+const defaultResolver = "1.1.1.1:53"
+
 type Extractor interface {
 	Extract(ctx context.Context, u *url.URL, timeout time.Duration) (*types.Article, error)
 }
 
-type ReadabilityExtractor struct{}
+type ReadabilityExtractor struct {
+	resolver string
+}
 
-func (ReadabilityExtractor) Extract(ctx context.Context, u *url.URL, timeout time.Duration) (*types.Article, error) {
-	return utils.GetArticle(ctx, u, timeout)
+func (r ReadabilityExtractor) Extract(ctx context.Context, u *url.URL, timeout time.Duration) (*types.Article, error) {
+	return utils.GetArticle(ctx, u, timeout, r.resolver)
 }
 
 type JinaExtractor struct {
@@ -101,8 +105,12 @@ func newExtractor(settings config.ExtractTextSettings) Extractor {
 	if settings.ReaderURL != "" {
 		fallback = JinaExtractor{url: settings.ReaderURL}
 	}
+	resolver := settings.Resolver
+	if resolver == "" {
+		resolver = defaultResolver
+	}
 	return TieredExtractor{
-		primary:  ReadabilityExtractor{},
+		primary:  ReadabilityExtractor{resolver: resolver},
 		fallback: fallback,
 		minLen:   settings.MinContentLength,
 	}

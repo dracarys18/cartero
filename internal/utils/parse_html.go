@@ -12,23 +12,26 @@ import (
 	strutils "cartero/internal/utils/string"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
+	"github.com/enetx/g"
 	"github.com/enetx/surf"
 	"github.com/markusmobius/go-trafilatura"
 	"golang.org/x/net/html"
 )
 
-func GetArticle(ctx context.Context, u *url.URL, timeout time.Duration) (*types.Article, error) {
+func GetArticle(ctx context.Context, u *url.URL, timeout time.Duration, resolver string) (*types.Article, error) {
 	if u == nil || u.String() == "" {
 		return nil, fmt.Errorf("URL is empty")
 	}
 
-	surfClient := surf.NewClient().
+	builder := surf.NewClient().
 		Builder().
 		Impersonate().Firefox().
 		Timeout(timeout).
-		Session().
-		Build().
-		Unwrap()
+		Session()
+	if resolver != "" {
+		builder = builder.DNS(g.String(resolver))
+	}
+	surfClient := builder.Build().Unwrap()
 
 	client := surfClient.Std()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)

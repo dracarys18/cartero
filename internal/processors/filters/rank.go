@@ -122,6 +122,9 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 		item.AddMetadata(interestKey, f.interests[bestIdx].Lexical)
 		if best < f.cfg.MinScore {
 			logger.Info("rank: rejected", "score", best, "interest", f.interests[bestIdx].Lexical, "title", item.GetTitle())
+			if err := state.GetRejected().Add(ctx, item.ID); err != nil {
+				logger.Warn("rank: failed to record rejection", "item_id", item.ID, "error", err)
+			}
 			continue
 		}
 		item.SetMatchedKeywords(f.interests[bestIdx].Lexical)

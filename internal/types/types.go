@@ -244,6 +244,11 @@ type EmbedCache interface {
 	Set(ctx context.Context, hash string, embedding [][]float32)
 }
 
+type Rejected interface {
+	Add(ctx context.Context, id string) error
+	Has(ctx context.Context, id string) (bool, error)
+}
+
 type StateAccessor interface {
 	GetConfig() *config.Config
 	GetStorage() storage.StorageInterface
@@ -253,4 +258,5 @@ type StateAccessor interface {
 	GetQueue() Queue
 	GetBlocklist() Blocklist
 	GetEmbedCache() EmbedCache
+	GetRejected() Rejected
 }
