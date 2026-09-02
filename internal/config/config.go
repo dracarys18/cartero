@@ -28,6 +28,7 @@ type InterestConfig struct {
 	Keywords     []keywords.KeywordWithContext `toml:"keywords"`
 	KeywordsFile string                        `toml:"keywords_file"`
 	MinScore     float64                       `toml:"min_score"`
+	Margin       float64                       `toml:"margin"`
 }
 
 type BlocklistConfig struct {

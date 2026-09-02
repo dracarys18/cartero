@@ -134,6 +134,14 @@ chunk_size = 7000
 
 [interests]
 keywords_file = "https://gist.githubusercontent.com/you/id/raw/keywords.json"
+# Minimum cosine similarity between the article title and an interest for it
+# to be tagged/published at all. Lower it to publish more (with more wrong
+# tags); raise it to publish less (fewer, higher-confidence tags).
+min_score = 0.5
+# Minimum gap between the best and second-best category. If the two best
+# categories are within this margin the tag is ambiguous and the item is
+# rejected instead of being force-tagged.
+margin = 0.03
 
 [blocklist]
 domains_file = "https://gist.githubusercontent.com/you/id/raw/blocklist.txt"

@@ -9,8 +9,6 @@ import (
 	"cartero/internal/processors/names"
 	"cartero/internal/types"
 	"cartero/internal/utils/keywords"
-
-	"github.com/viterin/vek/vek32"
 )
 
 const (
@@ -64,11 +62,15 @@ type RankFilter struct {
 	cfg       config.InterestConfig
 	interests []Interest
 	ready     bool
-	mean      []float32
-	count     float64
 }
 
 func NewRankFilter(embedder platforms.Embedder, cfg config.InterestConfig) *RankFilter {
+	if cfg.MinScore <= 0 {
+		cfg.MinScore = 0.5
+	}
+	if cfg.Margin <= 0 {
+		cfg.Margin = 0.03
+	}
 	return &RankFilter{embedder: embedder, cfg: cfg}
 }
 
@@ -83,58 +85,62 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 		}
 		f.interests = interests
 		f.ready = true
-		f.seedMean()
 		state.GetLogger().Info("rank: interests ready", "count", len(interests))
 	}
 	if len(f.interests) == 0 {
 		return items, nil
 	}
 
-	ivecs := make([][]float32, len(f.interests))
-	for i, in := range f.interests {
-		ivecs[i] = centered(in.Vector, f.mean)
-	}
-
 	logger := state.GetLogger()
+	labelScores := make(map[string]float64, len(f.interests))
 	out := make([]*types.Item, 0, len(items))
+
 	for _, item := range items {
-		raw := item.GetEmbedding()
-		if len(raw) == 0 {
+		doc := docVector(item)
+		if len(doc) == 0 {
 			logger.Warn("rank: rejected", "reason", "no embedding", "item_id", item.ID, "title", item.GetTitle())
 			continue
 		}
-		chunks := make([][]float32, len(raw))
-		for i, ch := range raw {
-			chunks[i] = centered(ch, f.mean)
+
+		// Score each category as the max of its facets so repeated
+		// facets of the same label don't inflate the margin check.
+		for k := range labelScores {
+			delete(labelScores, k)
+		}
+		for _, in := range f.interests {
+			if s := cosine(in.Vector, doc); s > labelScores[in.Lexical] {
+				labelScores[in.Lexical] = s
+			}
 		}
 
-		best := -1.0
-		bestIdx := 0
-		for i, iv := range ivecs {
-			for _, chunk := range chunks {
-				if s := cosine(iv, chunk); s > best {
-					best = s
-					bestIdx = i
-				}
+		best, bestLabel, second := -1.0, "", -1.0
+		for label, s := range labelScores {
+			if s > best {
+				second = best
+				best, bestLabel = s, label
+			} else if s > second {
+				second = s
 			}
 		}
+
 		item.SetScore(best)
-		item.AddMetadata(interestKey, f.interests[bestIdx].Lexical)
-		if best < f.cfg.MinScore {
-			logger.Info("rank: rejected", "score", best, "interest", f.interests[bestIdx].Lexical, "title", item.GetTitle())
-			if err := state.GetRejected().Add(ctx, item.ID); err != nil {
-				logger.Warn("rank: failed to record rejection", "item_id", item.ID, "error", err)
-			}
+		item.AddMetadata(interestKey, bestLabel)
+
+		reason := ""
+		switch {
+		case best < f.cfg.MinScore:
+			reason = "below_threshold"
+		case second > -1 && best-second < f.cfg.Margin:
+			reason = "ambiguous"
+		}
+
+		if reason != "" {
+			f.reject(ctx, state, item, reason, best, bestLabel)
 			continue
 		}
-		item.SetMatchedKeywords(f.interests[bestIdx].Lexical)
-		out = append(out, item)
-	}
 
-	for _, item := range items {
-		for _, ch := range item.GetEmbedding() {
-			f.foldMean(ch)
-		}
+		item.SetMatchedKeywords(bestLabel)
+		out = append(out, item)
 	}
 
 	sort.SliceStable(out, func(i, j int) bool { return out[i].GetScore() > out[j].GetScore() })
@@ -145,40 +151,21 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 	return out, nil
 }
 
-func (f *RankFilter) seedMean() {
-	var sum []float32
-	var n int
-	for _, in := range f.interests {
-		if sum == nil {
-			sum = make([]float32, len(in.Vector))
+func (f *RankFilter) reject(ctx context.Context, state types.StateAccessor, item *types.Item, reason string, score float64, label string) {
+	state.GetLogger().Info("rank: rejected", "reason", reason, "score", score, "interest", label, "item_id", item.ID, "title", item.GetTitle())
+	if state.GetRejected() != nil {
+		if err := state.GetRejected().Add(ctx, item.ID); err != nil {
+			state.GetLogger().Warn("rank: failed to record rejection", "item_id", item.ID, "error", err)
 		}
-		if len(in.Vector) != len(sum) {
-			continue
-		}
-		vek32.Add_Inplace(sum, in.Vector)
-		n++
 	}
-	if n == 0 {
-		return
-	}
-	vek32.DivNumber_Inplace(sum, float32(n))
-	f.mean = sum
-	f.count = float64(n)
 }
 
-func (f *RankFilter) foldMean(v []float32) {
-	if len(f.mean) != len(v) {
-		return
+// docVector returns the item's title embedding (the first chunk produced by
+// embed_text). Classifying on the title instead of max-pooling over every
+// body chunk stops a single noisy paragraph from steering the tag.
+func docVector(item *types.Item) []float32 {
+	if e := item.GetEmbedding(); len(e) > 0 {
+		return e[0]
 	}
-	f.count++
-	diff := vek32.Sub(v, f.mean)
-	vek32.DivNumber_Inplace(diff, float32(f.count))
-	vek32.Add_Inplace(f.mean, diff)
-}
-
-func centered(v, mean []float32) []float32 {
-	if len(mean) != len(v) {
-		return v
-	}
-	return vek32.Sub(v, mean)
+	return nil
 }
