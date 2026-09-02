@@ -144,29 +144,7 @@
         .story-title {
             font-family: "Manrope", sans-serif; font-weight: 700;
             font-size: 1.32rem; line-height: 1.15; letter-spacing: -.006em; margin-bottom: 6px;
-        }
-        /* per-category title colors */
-        .ph0 { color: #a03a2a; }
-        .ph1 { color: #b0561c; }
-        .ph2 { color: #8a7416; }
-        .ph3 { color: #4a7a2a; }
-        .ph4 { color: #1f7a63; }
-        .ph5 { color: #2a669e; }
-        .ph6 { color: #514a9e; }
-        .ph7 { color: #7a3f9e; }
-        .ph8 { color: #9e2f6e; }
-        .ph9 { color: #5f6e78; }
-        @media (prefers-color-scheme: dark) {
-            .ph0 { color: #e0876a; }
-            .ph1 { color: #e89a5a; }
-            .ph2 { color: #cfba52; }
-            .ph3 { color: #86c25e; }
-            .ph4 { color: #52c09c; }
-            .ph5 { color: #66a4e0; }
-            .ph6 { color: #9286e8; }
-            .ph7 { color: #b886e0; }
-            .ph8 { color: #e078a8; }
-            .ph9 { color: #98a8b4; }
+            color: #dc9e63;
         }
         .story .byline { font-size: .8rem; margin-bottom: 8px; }
         .share-btn {
@@ -267,7 +245,7 @@
                 {{range $e := .Entries}}
                 <article class="story">
                     {{if $e.ImageURL}}<a class="story-thumb" href="/read?url={{$e.Link | urlquery}}&title={{$e.Title | urlquery}}"><img src="{{$e.ImageURL}}" alt="" loading="lazy" onerror="this.closest('.story-thumb').remove()"></a>{{end}}
-                    <h3 class="story-title {{if $e.MatchedKeywords}}{{hueClass $e.MatchedKeywords}}{{else}}{{hueClass $e.Source}}{{end}}"><a class="title-link" href="/read?url={{$e.Link | urlquery}}&title={{$e.Title | urlquery}}">{{$e.Title}}</a></h3>
+                    <h3 class="story-title"><a class="title-link" href="/read?url={{$e.Link | urlquery}}&title={{$e.Title | urlquery}}">{{$e.Title}}</a></h3>
                     <div class="byline">{{formatSource $e.Source}} &nbsp;·&nbsp; {{timeAgo $e.CreatedAt}}{{if $e.Content}} &nbsp;·&nbsp; {{readingTime $e.Content}}{{end}} &nbsp;·&nbsp; <span class="card-actions"><a class="orig" href="{{$e.Link}}" target="_blank" rel="noopener" title="Original">↗</a> <button class="save-btn" data-url="{{$e.Link}}" data-title="{{$e.Title}}" data-image="{{$e.ImageURL}}" data-source="{{$e.Source}}" data-excerpt="{{$e.Description}}" onclick="toggleSave(this)" aria-label="Save"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></button> <button class="share-btn" data-title="{{$e.Title}}" data-url="{{$e.Link}}" onclick="shareStory(this)" aria-label="Share"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg><span>share</span></button></span></div>
                     {{if $e.Description}}<p class="story-excerpt">{{$e.Description}}</p>{{end}}
                 </article>
