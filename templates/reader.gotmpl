@@ -88,6 +88,9 @@
         }
         .topbar button:hover, .topbar .orig:hover { color: var(--accent); border-color: var(--accent); }
         .topbar button.saved { color: var(--accent); border-color: var(--accent); }
+        #save-btn { display: inline-flex; align-items: center; }
+        #save-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+        #save-btn.saved svg { fill: currentColor; }
 
         .reader {
             max-width: 720px;
@@ -183,7 +186,7 @@
     <header class="topbar">
         <a class="brand" href="/">{{.SiteName}}</a>
         <span class="spacer"></span>
-        <button id="save-btn" hidden aria-label="Save">Save</button>
+        <button id="save-btn" hidden aria-label="Save"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></button>
         <a class="orig" id="orig-link" href="#" target="_blank" rel="noopener">Original ↗</a>
     </header>
 

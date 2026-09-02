@@ -114,7 +114,7 @@
             font-size: 2rem; line-height: 1; letter-spacing: -.03em; color: var(--ink);
         }
         .masthead .dateline { justify-self: center; text-align: center; }
-        .masthead .search { justify-self: end; }
+        .masthead-tools { justify-self: end; display: flex; align-items: center; gap: 12px; }
         .dateline {
             text-transform: uppercase; letter-spacing: .1em; font-size: .64rem; font-weight: 600;
             color: var(--ink-soft);
@@ -160,11 +160,19 @@
         .orig:hover { color: var(--accent); }
         .save-btn {
             background: none; border: none; cursor: pointer; padding: 0;
-            color: var(--ink-faint); font-family: inherit;
-            font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+            color: var(--ink-faint); display: inline-flex; align-items: center; vertical-align: baseline;
         }
+        .save-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; }
         .save-btn:hover { color: var(--accent); }
         .save-btn.saved { color: var(--accent); }
+        .save-btn.saved svg { fill: currentColor; }
+        .saved-link {
+            background: none; border: none; cursor: pointer; padding: 4px;
+            color: var(--ink-soft); display: inline-flex; align-items: center; gap: 5px;
+        }
+        .saved-link:hover { color: var(--accent); }
+        .saved-link svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+        .saved-count { font-size: .7rem; font-weight: 700; color: var(--accent); }
         .story-excerpt { font-size: .9rem; line-height: 1.52; color: var(--ink-soft); }
 
         .pagination {
@@ -195,7 +203,8 @@
                 grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 10px;
             }
             .nameplate { justify-self: center; font-size: 1.9rem; }
-            .masthead .search { justify-self: stretch; }
+            .masthead-tools { justify-self: stretch; justify-content: center; flex-wrap: wrap; gap: 10px; }
+            .masthead .search { flex: 1; min-width: 180px; }
             .search input { flex: 1; width: auto; }
             .stories { grid-template-columns: 1fr; }
             .stories .story { border-left: none; padding-left: 0; padding-right: 0; overflow: hidden; }
@@ -213,16 +222,18 @@
             <a href="/feed.atom">Atom</a>
             <a href="/feed.json">JSON</a>
             <a href="https://bsky.app/profile/news.karthihegde.dev" target="_blank" rel="noopener">Bluesky</a>
-            <a href="#saved" id="saved-nav" onclick="showSaved(); return false;">Saved</a>
         </nav>
     </div>
     <header class="masthead">
         <a href="/" class="nameplate">cartero</a>
         <span class="dateline">{{.Now.Format "Monday, January 2, 2006"}} · No. {{.Total}}</span>
-        <form class="search" method="get" action="/search" role="search">
-            <input type="search" name="q" placeholder="Search…" aria-label="Search stories" autocomplete="off">
-            <button type="submit">Search</button>
-        </form>
+        <div class="masthead-tools">
+            <button class="saved-link" onclick="showSaved(); return false;" aria-label="Saved articles" title="Saved"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg><span id="saved-count" class="saved-count" hidden>0</span></button>
+            <form class="search" method="get" action="/search" role="search">
+                <input type="search" name="q" placeholder="Search…" aria-label="Search stories" autocomplete="off">
+                <button type="submit">Search</button>
+            </form>
+        </div>
     </header>
 
     <main>
@@ -235,7 +246,7 @@
                     {{if $e.ImageURL}}<a class="story-thumb" href="/read?url={{$e.Link | urlquery}}&title={{$e.Title | urlquery}}"><img src="{{$e.ImageURL}}" alt="" loading="lazy" onerror="this.closest('.story-thumb').remove()"></a>{{end}}
                     {{if $e.MatchedKeywords}}<span class="kicker">{{$e.MatchedKeywords}}</span>{{end}}
                     <h3 class="story-title"><a class="title-link" href="/read?url={{$e.Link | urlquery}}&title={{$e.Title | urlquery}}">{{$e.Title}}</a></h3>
-                    <div class="byline">{{formatSource $e.Source}} &nbsp;·&nbsp; {{timeAgo $e.CreatedAt}} &nbsp;·&nbsp; {{readingTime $e.Content}} &nbsp;·&nbsp; <span class="card-actions"><a class="orig" href="{{$e.Link}}" target="_blank" rel="noopener" title="Original">↗</a> <button class="save-btn" data-url="{{$e.Link}}" data-title="{{$e.Title}}" data-image="{{$e.ImageURL}}" data-source="{{$e.Source}}" data-excerpt="{{$e.Description}}" onclick="toggleSave(this)">save</button> <button class="share-btn" data-title="{{$e.Title}}" data-url="{{$e.Link}}" onclick="shareStory(this)" aria-label="Share"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg><span>share</span></button></span></div>
+                    <div class="byline">{{formatSource $e.Source}} &nbsp;·&nbsp; {{timeAgo $e.CreatedAt}}{{if $e.Content}} &nbsp;·&nbsp; {{readingTime $e.Content}}{{end}} &nbsp;·&nbsp; <span class="card-actions"><a class="orig" href="{{$e.Link}}" target="_blank" rel="noopener" title="Original">↗</a> <button class="save-btn" data-url="{{$e.Link}}" data-title="{{$e.Title}}" data-image="{{$e.ImageURL}}" data-source="{{$e.Source}}" data-excerpt="{{$e.Description}}" onclick="toggleSave(this)" aria-label="Save"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></button> <button class="share-btn" data-title="{{$e.Title}}" data-url="{{$e.Link}}" onclick="shareStory(this)" aria-label="Share"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg><span>share</span></button></span></div>
                     {{if $e.Description}}<p class="story-excerpt">{{$e.Description}}</p>{{end}}
                 </article>
                 {{end}}
@@ -300,7 +311,7 @@
                 const thumb = r.image_url ? `<a class="story-thumb" href="${link}"><img src="${safeURL(r.image_url)}" alt="" loading="lazy" onerror="this.closest('.story-thumb').remove()"></a>` : '';
                 const kicker = r.matched_keywords ? `<span class="kicker">${esc(r.matched_keywords)}</span>` : '';
                 const excerpt = r.description ? `<p class="story-excerpt">${esc(r.description)}</p>` : '';
-                return `<article class="story">${thumb}${kicker}<h3 class="story-title"><a class="title-link" href="${link}">${esc(r.title)}</a></h3><div class="byline">${esc(r.source)} &nbsp;·&nbsp; ${esc(r.age)} &nbsp;·&nbsp; <span class="card-actions"><a class="orig" href="${orig}" target="_blank" rel="noopener">↗</a> <button class="save-btn" data-url="${escAttr(r.link)}" data-title="${escAttr(r.title)}" data-image="${escAttr(r.image_url || '')}" data-source="${escAttr(r.source)}" data-excerpt="${escAttr(r.description || '')}" onclick="toggleSave(this)">save</button></span></div>${excerpt}</article>`;
+                return `<article class="story">${thumb}${kicker}<h3 class="story-title"><a class="title-link" href="${link}">${esc(r.title)}</a></h3><div class="byline">${esc(r.source)} &nbsp;·&nbsp; ${esc(r.age)} &nbsp;·&nbsp; <span class="card-actions"><a class="orig" href="${orig}" target="_blank" rel="noopener">↗</a> <button class="save-btn" data-url="${escAttr(r.link)}" data-title="${escAttr(r.title)}" data-image="${escAttr(r.image_url || '')}" data-source="${escAttr(r.source)}" data-excerpt="${escAttr(r.description || '')}" onclick="toggleSave(this)" aria-label="Save"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></button></span></div>${excerpt}</article>`;
             }
 
             function showFront() { input.value = ''; results.hidden = true; head.hidden = true; front.hidden = false; const sv = document.getElementById('saved'); if (sv) sv.hidden = true; }
@@ -356,15 +367,19 @@
             if (!window.CarteroSaved) return;
             document.querySelectorAll('.save-btn[data-url]').forEach(function (b) {
                 const s = window.CarteroSaved.isSaved(b.dataset.url);
-                b.textContent = s ? 'saved' : 'save';
                 b.classList.toggle('saved', !!s);
+                b.setAttribute('aria-label', s ? 'Remove from saved' : 'Save');
+                b.title = s ? 'Remove from saved' : 'Save';
             });
         }
 
         function updateSavedCount() {
             const n = window.CarteroSaved ? window.CarteroSaved.load().length : 0;
-            const el = document.getElementById('saved-nav');
-            if (el) el.textContent = 'Saved' + (n ? ' (' + n + ')' : '');
+            const el = document.getElementById('saved-count');
+            if (el) {
+                el.textContent = n;
+                el.hidden = n === 0;
+            }
         }
 
         function savedCard(s) {
@@ -374,7 +389,7 @@
             const excerpt = s.excerpt ? '<p class="story-excerpt">' + esc(s.excerpt) + '</p>' : '';
             return '<article class="story">' + thumb +
                 '<h3 class="story-title"><a class="title-link" href="' + link + '">' + esc(s.title) + '</a></h3>' +
-                '<div class="byline">' + esc(s.siteName || '') + ' <span class="card-actions"><a class="orig" href="' + orig + '" target="_blank" rel="noopener">↗</a> <button class="save-btn saved" data-url="' + escAttr(s.url) + '" data-title="' + escAttr(s.title) + '" data-image="' + escAttr(s.image_url || '') + '" data-source="' + escAttr(s.siteName || '') + '" data-excerpt="' + escAttr(s.excerpt || '') + '" onclick="toggleSave(this)">saved</button></span></div>' + excerpt + '</article>';
+                '<div class="byline">' + esc(s.siteName || '') + ' <span class="card-actions"><a class="orig" href="' + orig + '" target="_blank" rel="noopener">↗</a> <button class="save-btn saved" data-url="' + escAttr(s.url) + '" data-title="' + escAttr(s.title) + '" data-image="' + escAttr(s.image_url || '') + '" data-source="' + escAttr(s.siteName || '') + '" data-excerpt="' + escAttr(s.excerpt || '') + '" onclick="toggleSave(this)" aria-label="Remove from saved"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></button></span></div>' + excerpt + '</article>';
         }
 
         function showSaved() {

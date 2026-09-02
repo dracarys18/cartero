@@ -56,7 +56,10 @@ func funcMap() htmltemplate.FuncMap {
 
 func readingTime(content string) string {
 	words := len(strings.Fields(content))
-	mins := words / 225
+	if words == 0 {
+		return ""
+	}
+	mins := (words + 224) / 225 // ceil
 	if mins < 1 {
 		mins = 1
 	}

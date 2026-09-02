@@ -64,8 +64,9 @@
     if (!current || !current.url) return;
     if (window.CarteroSaved && window.CarteroSaved.isSaved) {
       var saved = window.CarteroSaved.isSaved(current.url);
-      saveBtn.textContent = saved ? 'Saved ✓' : 'Save';
       saveBtn.classList.toggle('saved', saved);
+      saveBtn.setAttribute('aria-label', saved ? 'Remove from saved' : 'Save');
+      saveBtn.title = saved ? 'Remove from saved' : 'Save';
     }
   }
 
