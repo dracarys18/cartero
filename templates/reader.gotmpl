@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    <link rel="canonical" href="{{.Canonical}}">
+    <meta name="description" content="{{.Description}}">
+    {{if .NoIndex}}<meta name="robots" content="noindex,follow">{{end}}
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="{{.SiteName}}">
+    <meta property="og:title" content="{{.Title}}">
+    <meta property="og:description" content="{{.Description}}">
+    <meta property="og:url" content="{{.Canonical}}">
+    <meta property="og:image" content="{{.BaseURL}}/assets/favicon.jpg">
+    <meta name="twitter:card" content="summary">
+    <link rel="icon" type="image/jpeg" href="/assets/favicon.jpg">
+    <meta name="theme-color" content="#ecebe6" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#171613" media="(prefers-color-scheme: dark)">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --paper:     #ecebe6;
+            --ink:       #222221;
+            --ink-soft:  #4b4b47;
+            --ink-faint: #85847e;
+            --rule:      #d8d6ce;
+            --field-bg:  #e4e2da;
+            --field-bd:  #c7c4ba;
+            --accent:    #8f2d1f;
+            --code-bg:   #dedcd4;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --paper:     #191817;
+                --ink:       #ebe8e0;
+                --ink-soft:  #b0aca2;
+                --ink-faint: #827e74;
+                --rule:      #33302a;
+                --field-bg:  #232120;
+                --field-bd:  #423e37;
+                --accent:    #e0876a;
+                --code-bg:   #242320;
+            }
+            .hero img { filter: saturate(.92) brightness(.86); }
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        [hidden] { display: none !important; }
+        html { scroll-behavior: smooth; }
+        body {
+            background: var(--paper);
+            color: var(--ink);
+            font-family: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+        }
+        a { color: var(--accent); }
+
+        /* top progress bar */
+        #progress {
+            position: fixed; top: 0; left: 0; height: 3px; width: 0;
+            background: var(--accent); z-index: 50;
+            transition: width .1s linear;
+        }
+
+        .topbar {
+            position: sticky; top: 0; z-index: 40;
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 22px;
+            background: color-mix(in srgb, var(--paper) 86%, transparent);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--rule);
+        }
+        .topbar .brand {
+            font-weight: 800; letter-spacing: -.02em; color: var(--ink);
+            text-decoration: none; font-size: 1rem;
+        }
+        .topbar .spacer { flex: 1; }
+        .topbar button, .topbar .orig {
+            font-family: inherit; font-size: .72rem; font-weight: 600;
+            text-transform: uppercase; letter-spacing: .08em;
+            color: var(--ink-soft); background: transparent;
+            border: 1px solid var(--field-bd); padding: 6px 12px;
+            cursor: pointer; border-radius: 2px; text-decoration: none;
+            transition: color .15s, border-color .15s;
+        }
+        .topbar button:hover, .topbar .orig:hover { color: var(--accent); border-color: var(--accent); }
+        .topbar button.saved { color: var(--accent); border-color: var(--accent); }
+
+        .reader {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 40px 24px 96px;
+        }
+        .kicker {
+            display: block; text-transform: uppercase; letter-spacing: .13em;
+            font-size: .68rem; font-weight: 700; color: var(--accent);
+            margin-bottom: 14px;
+        }
+        h1.title {
+            font-family: "Manrope", sans-serif;
+            font-weight: 800; font-size: 2.1rem; line-height: 1.12;
+            letter-spacing: -.02em; margin-bottom: 16px; color: var(--ink);
+        }
+        .byline {
+            display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center;
+            color: var(--ink-faint); font-size: .84rem;
+            padding-bottom: 18px; margin-bottom: 26px; border-bottom: 1px solid var(--rule);
+        }
+        .byline .dot { color: var(--ink-faint); }
+        .hero { margin-bottom: 28px; }
+        .hero img { width: 100%; max-height: 460px; object-fit: cover; border-radius: 2px; }
+
+        /* the actual article text */
+        .article-body {
+            font-family: "Source Serif 4", "Manrope", Georgia, "Times New Roman", serif;
+            font-size: 1.09rem; line-height: 1.78; color: var(--ink);
+            overflow-wrap: break-word;
+        }
+        .article-body p { margin: 0 0 1.15em; }
+        .article-body h1, .article-body h2, .article-body h3,
+        .article-body h4, .article-body h5, .article-body h6 {
+            font-family: "Manrope", sans-serif;
+            font-weight: 700; line-height: 1.25; color: var(--ink);
+            margin: 1.6em 0 .6em; letter-spacing: -.01em;
+        }
+        .article-body h1 { font-size: 1.5rem; }
+        .article-body h2 { font-size: 1.32rem; }
+        .article-body h3 { font-size: 1.16rem; }
+        .article-body h4, .article-body h5, .article-body h6 { font-size: 1.02rem; }
+        .article-body a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+        .article-body img { max-width: 100%; height: auto; border-radius: 2px; margin: 1.4em 0; }
+        .article-body figure { margin: 1.4em 0; }
+        .article-body figcaption { font-family: "Manrope", sans-serif; font-size: .8rem; color: var(--ink-faint); text-align: center; margin-top: 6px; }
+        .article-body blockquote {
+            margin: 1.4em 0; padding: .2em 0 .2em 1.1em;
+            border-left: 3px solid var(--accent);
+            color: var(--ink-soft); font-style: italic;
+        }
+        .article-body ul, .article-body ol { margin: 0 0 1.15em; padding-left: 1.4em; }
+        .article-body li { margin-bottom: .4em; }
+        .article-body code {
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+            font-size: .86em; background: var(--code-bg); border-radius: 3px;
+            padding: .15em .35em; color: var(--ink);
+        }
+        .article-body pre {
+            background: var(--code-bg); border: 1px solid var(--rule); border-radius: 4px;
+            padding: 14px 16px; margin: 1.4em 0; overflow-x: auto; line-height: 1.5;
+        }
+        .article-body pre code { background: none; padding: 0; font-size: .85rem; }
+        .article-body hr { border: none; border-top: 1px solid var(--rule); margin: 2em 0; }
+        .article-body table { border-collapse: collapse; width: 100%; margin: 1.4em 0; font-size: .92rem; }
+        .article-body th, .article-body td { border: 1px solid var(--rule); padding: 8px 10px; text-align: left; }
+        .article-body th { font-family: "Manrope", sans-serif; background: var(--field-bg); }
+
+        .status {
+            padding: 60px 0; text-align: center; color: var(--ink-soft);
+            font-family: "Manrope", sans-serif;
+        }
+        .status .spinner {
+            display: inline-block; width: 22px; height: 22px; margin-bottom: 14px;
+            border: 2px solid var(--rule); border-top-color: var(--accent);
+            border-radius: 50%; animation: spin .8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .status a { color: var(--accent); }
+        .err { color: var(--accent); }
+
+        @media (max-width: 680px) {
+            .reader { padding: 24px 18px 72px; }
+            h1.title { font-size: 1.62rem; }
+            .article-body { font-size: 1.04rem; line-height: 1.72; }
+            .topbar { padding: 12px 14px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="progress"></div>
+
+    <header class="topbar">
+        <a class="brand" href="/">{{.SiteName}}</a>
+        <span class="spacer"></span>
+        <button id="save-btn" hidden aria-label="Save">Save</button>
+        <a class="orig" id="orig-link" href="#" target="_blank" rel="noopener">Original ↗</a>
+    </header>
+
+    <main class="reader">
+        <div id="status" class="status">
+            <div class="spinner"></div>
+            <div>Fetching article…</div>
+        </div>
+
+        <article id="article" hidden>
+            <span class="kicker" id="kicker" hidden></span>
+            <h1 class="title" id="title"></h1>
+            <div class="byline" id="byline"></div>
+            <div class="hero" id="hero" hidden><img id="hero-img" alt=""></div>
+            <div class="article-body" id="reader-body"></div>
+        </article>
+    </main>
+
+    <script src="/assets/Readability.js"></script>
+    <script src="/assets/purify.min.js"></script>
+    <script src="/assets/saved.js"></script>
+    <script src="/assets/reader.js"></script>
+</body>
+</html>

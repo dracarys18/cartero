@@ -50,7 +50,17 @@ func funcMap() htmltemplate.FuncMap {
 		},
 		"formatSource": utils.Readable,
 		"hueClass":     hueClass,
+		"readingTime":  readingTime,
 	}
+}
+
+func readingTime(content string) string {
+	words := len(strings.Fields(content))
+	mins := words / 225
+	if mins < 1 {
+		mins = 1
+	}
+	return fmt.Sprintf("%d min read", mins)
 }
 
 func (h *Handler) renderBytes(data map[string]interface{}) ([]byte, error) {

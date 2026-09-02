@@ -68,8 +68,8 @@ func NewRankFilter(embedder platforms.Embedder, cfg config.InterestConfig) *Rank
 	if cfg.MinScore <= 0 {
 		cfg.MinScore = 0.5
 	}
-	if cfg.Margin <= 0 {
-		cfg.Margin = 0.03
+	if cfg.Margin < 0 {
+		cfg.Margin = 0
 	}
 	return &RankFilter{embedder: embedder, cfg: cfg}
 }

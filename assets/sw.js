@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'cartero-v1';
+const CACHE_VERSION = 'cartero-v2';
 
 const PRECACHE_URLS = [
     '/?date=today',
@@ -41,6 +41,9 @@ self.addEventListener('fetch', function(event) {
 
     // Skip cross-origin requests (fonts, external links)
     if (url.origin !== self.location.origin) return;
+
+    // Never intercept the reader proxy — always hit the network directly.
+    if (url.pathname === '/proxy') return;
 
     if (isNavigationRequest(event.request)) {
         event.respondWith(networkFirstNavigation(event.request));

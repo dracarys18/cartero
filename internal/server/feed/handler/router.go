@@ -17,6 +17,8 @@ func (h *Handler) Routes() http.Handler {
 	r.Use(middleware.Timeout(30 * time.Second))
 
 	r.Get("/", h.Homepage)
+	r.Get("/read", h.ReaderShell)
+	r.Get("/proxy", h.Proxy)
 	r.Get("/search", h.Search)
 	r.Get("/feed.rss", h.RSSFeed)
 	r.Get("/feed.atom", h.AtomFeed)

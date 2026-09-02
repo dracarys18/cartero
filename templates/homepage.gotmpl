@@ -155,6 +155,16 @@
         .share-btn:hover { color: var(--accent); }
         .share-btn svg { width: 12px; height: 12px; fill: currentColor; }
         .share-btn.copied { color: var(--accent); }
+        .card-actions { display: inline-flex; align-items: center; gap: 9px; }
+        .orig { color: var(--ink-faint); font-size: .78rem; text-decoration: none; }
+        .orig:hover { color: var(--accent); }
+        .save-btn {
+            background: none; border: none; cursor: pointer; padding: 0;
+            color: var(--ink-faint); font-family: inherit;
+            font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+        }
+        .save-btn:hover { color: var(--accent); }
+        .save-btn.saved { color: var(--accent); }
         .story-excerpt { font-size: .9rem; line-height: 1.52; color: var(--ink-soft); }
 
         .pagination {
@@ -203,6 +213,7 @@
             <a href="/feed.atom">Atom</a>
             <a href="/feed.json">JSON</a>
             <a href="https://bsky.app/profile/news.karthihegde.dev" target="_blank" rel="noopener">Bluesky</a>
+            <a href="#saved" id="saved-nav" onclick="showSaved(); return false;">Saved</a>
         </nav>
     </div>
     <header class="masthead">
@@ -221,10 +232,10 @@
             <div class="stories">
                 {{range $e := .Entries}}
                 <article class="story">
-                    {{if $e.ImageURL}}<a class="story-thumb" href="{{$e.Link}}" target="_blank" rel="noopener"><img src="{{$e.ImageURL}}" alt="" loading="lazy" onerror="this.closest('.story-thumb').remove()"></a>{{end}}
+                    {{if $e.ImageURL}}<a class="story-thumb" href="/read?url={{$e.Link | urlquery}}&title={{$e.Title | urlquery}}"><img src="{{$e.ImageURL}}" alt="" loading="lazy" onerror="this.closest('.story-thumb').remove()"></a>{{end}}
                     {{if $e.MatchedKeywords}}<span class="kicker">{{$e.MatchedKeywords}}</span>{{end}}
-                    <h3 class="story-title"><a class="title-link" href="{{$e.Link}}" target="_blank" rel="noopener">{{$e.Title}}</a></h3>
-                    <div class="byline">{{formatSource $e.Source}} &nbsp;·&nbsp; {{timeAgo $e.CreatedAt}} &nbsp;·&nbsp; <button class="share-btn" data-title="{{$e.Title}}" data-url="{{$e.Link}}" onclick="shareStory(this)" aria-label="Share"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg><span>share</span></button></div>
+                    <h3 class="story-title"><a class="title-link" href="/read?url={{$e.Link | urlquery}}&title={{$e.Title | urlquery}}">{{$e.Title}}</a></h3>
+                    <div class="byline">{{formatSource $e.Source}} &nbsp;·&nbsp; {{timeAgo $e.CreatedAt}} &nbsp;·&nbsp; {{readingTime $e.Content}} &nbsp;·&nbsp; <span class="card-actions"><a class="orig" href="{{$e.Link}}" target="_blank" rel="noopener" title="Original">↗</a> <button class="save-btn" data-url="{{$e.Link}}" data-title="{{$e.Title}}" data-image="{{$e.ImageURL}}" data-source="{{$e.Source}}" data-excerpt="{{$e.Description}}" onclick="toggleSave(this)">save</button> <button class="share-btn" data-title="{{$e.Title}}" data-url="{{$e.Link}}" onclick="shareStory(this)" aria-label="Share"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg><span>share</span></button></span></div>
                     {{if $e.Description}}<p class="story-excerpt">{{$e.Description}}</p>{{end}}
                 </article>
                 {{end}}
@@ -240,6 +251,7 @@
             {{end}}
         </div>
         <div id="results" hidden></div>
+        <div id="saved" hidden></div>
     </main>
 
     <footer class="colophon">
@@ -251,6 +263,7 @@
         <div>set by machine · {{.Now.Format "Jan 2, 2006 · 15:04 MST"}}</div>
     </footer>
 
+    <script src="/assets/saved.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js'); });
@@ -282,17 +295,19 @@
             function safeURL(u) { try { const p = new URL(u, location.origin); return (p.protocol === 'http:' || p.protocol === 'https:') ? p.href : '#'; } catch (e) { return '#'; } }
 
             function card(r) {
-                const link = safeURL(r.link);
-                const thumb = r.image_url ? `<a class="story-thumb" href="${link}" target="_blank" rel="noopener"><img src="${safeURL(r.image_url)}" alt="" loading="lazy" onerror="this.closest('.story-thumb').remove()"></a>` : '';
+                const link = '/read?url=' + encodeURIComponent(r.link || '') + '&title=' + encodeURIComponent(r.title || '');
+                const orig = safeURL(r.link);
+                const thumb = r.image_url ? `<a class="story-thumb" href="${link}"><img src="${safeURL(r.image_url)}" alt="" loading="lazy" onerror="this.closest('.story-thumb').remove()"></a>` : '';
                 const kicker = r.matched_keywords ? `<span class="kicker">${esc(r.matched_keywords)}</span>` : '';
                 const excerpt = r.description ? `<p class="story-excerpt">${esc(r.description)}</p>` : '';
-                return `<article class="story">${thumb}${kicker}<h3 class="story-title"><a class="title-link" href="${link}" target="_blank" rel="noopener">${esc(r.title)}</a></h3><div class="byline">${esc(r.source)} &nbsp;·&nbsp; ${esc(r.age)}</div>${excerpt}</article>`;
+                return `<article class="story">${thumb}${kicker}<h3 class="story-title"><a class="title-link" href="${link}">${esc(r.title)}</a></h3><div class="byline">${esc(r.source)} &nbsp;·&nbsp; ${esc(r.age)} &nbsp;·&nbsp; <span class="card-actions"><a class="orig" href="${orig}" target="_blank" rel="noopener">↗</a> <button class="save-btn" data-url="${escAttr(r.link)}" data-title="${escAttr(r.title)}" data-image="${escAttr(r.image_url || '')}" data-source="${escAttr(r.source)}" data-excerpt="${escAttr(r.description || '')}" onclick="toggleSave(this)">save</button></span></div>${excerpt}</article>`;
             }
 
-            function showFront() { input.value = ''; results.hidden = true; head.hidden = true; front.hidden = false; }
+            function showFront() { input.value = ''; results.hidden = true; head.hidden = true; front.hidden = false; const sv = document.getElementById('saved'); if (sv) sv.hidden = true; }
 
             async function runSearch(q) {
                 front.hidden = true; results.hidden = false; results.innerHTML = '';
+                const sv = document.getElementById('saved'); if (sv) sv.hidden = true;
                 head.hidden = false; head.innerHTML = '<span>searching…</span>';
                 let data;
                 try {
@@ -304,6 +319,7 @@
                 results.innerHTML = data.results.length
                     ? '<div class="stories">' + data.results.map(card).join('') + '</div>'
                     : `<div class="empty">No results found for “${esc(data.query)}”.</div>`;
+                refreshSaveButtons();
             }
 
             form.addEventListener('submit', function (e) {
@@ -316,6 +332,82 @@
             const q0 = new URLSearchParams(location.search).get('q');
             if (q0) { input.value = q0; runSearch(q0); }
         })();
+
+        function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+        function escAttr(s) { return esc(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+        function safeURL(u) { try { const p = new URL(u, location.origin); return (p.protocol === 'http:' || p.protocol === 'https:') ? p.href : '#'; } catch (e) { return '#'; } }
+
+        function savedEntryFromBtn(btn) {
+            return {
+                url: btn.dataset.url || '',
+                title: btn.dataset.title || '',
+                image_url: btn.dataset.image || '',
+                siteName: btn.dataset.source || '',
+                excerpt: btn.dataset.excerpt || ''
+            };
+        }
+
+        function toggleSave(btn) {
+            if (!window.CarteroSaved) return;
+            window.CarteroSaved.toggleSaved(savedEntryFromBtn(btn));
+        }
+
+        function refreshSaveButtons() {
+            if (!window.CarteroSaved) return;
+            document.querySelectorAll('.save-btn[data-url]').forEach(function (b) {
+                const s = window.CarteroSaved.isSaved(b.dataset.url);
+                b.textContent = s ? 'saved' : 'save';
+                b.classList.toggle('saved', !!s);
+            });
+        }
+
+        function updateSavedCount() {
+            const n = window.CarteroSaved ? window.CarteroSaved.load().length : 0;
+            const el = document.getElementById('saved-nav');
+            if (el) el.textContent = 'Saved' + (n ? ' (' + n + ')' : '');
+        }
+
+        function savedCard(s) {
+            const link = '/read?url=' + encodeURIComponent(s.url || '') + '&title=' + encodeURIComponent(s.title || '');
+            const orig = safeURL(s.url);
+            const thumb = s.image_url ? '<a class="story-thumb" href="' + link + '"><img src="' + safeURL(s.image_url) + '" alt="" loading="lazy" onerror="this.closest(\'.story-thumb\').remove()"></a>' : '';
+            const excerpt = s.excerpt ? '<p class="story-excerpt">' + esc(s.excerpt) + '</p>' : '';
+            return '<article class="story">' + thumb +
+                '<h3 class="story-title"><a class="title-link" href="' + link + '">' + esc(s.title) + '</a></h3>' +
+                '<div class="byline">' + esc(s.siteName || '') + ' <span class="card-actions"><a class="orig" href="' + orig + '" target="_blank" rel="noopener">↗</a> <button class="save-btn saved" data-url="' + escAttr(s.url) + '" data-title="' + escAttr(s.title) + '" data-image="' + escAttr(s.image_url || '') + '" data-source="' + escAttr(s.siteName || '') + '" data-excerpt="' + escAttr(s.excerpt || '') + '" onclick="toggleSave(this)">saved</button></span></div>' + excerpt + '</article>';
+        }
+
+        function showSaved() {
+            const front = document.getElementById('front');
+            const results = document.getElementById('results');
+            const head = document.getElementById('results-head');
+            const saved = document.getElementById('saved');
+            if (front) front.hidden = true;
+            if (results) results.hidden = true;
+            if (head) head.hidden = true;
+            if (!saved) return;
+            saved.hidden = false;
+            const list = window.CarteroSaved ? window.CarteroSaved.load() : [];
+            if (!list.length) {
+                saved.innerHTML = '<div class="empty">no saved articles yet — click “save” on any story</div>';
+            } else {
+                saved.innerHTML = '<div class="results-head" style="display:flex;justify-content:space-between;align-items:baseline"><span>saved (' + list.length + ')</span><a href="#" onclick="clearAllSaved(); return false;" style="color:var(--accent);text-transform:uppercase;letter-spacing:.1em;font-size:.66rem;font-weight:600">clear all</a></div><div class="stories">' + list.map(savedCard).join('') + '</div>';
+            }
+            window.scrollTo(0, 0);
+        }
+
+        function clearAllSaved() {
+            if (window.CarteroSaved) window.CarteroSaved.clearSaved();
+            showSaved();
+        }
+
+        if (window.CarteroSaved) {
+            window.CarteroSaved.onChange(function () { updateSavedCount(); refreshSaveButtons(); });
+            updateSavedCount();
+            refreshSaveButtons();
+        }
+        if (location.hash === '#saved') { showSaved(); }
+        window.addEventListener('hashchange', function () { if (location.hash === '#saved') showSaved(); });
     </script>
 </body>
 </html>

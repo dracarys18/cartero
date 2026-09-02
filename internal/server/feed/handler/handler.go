@@ -25,6 +25,7 @@ type Handler struct {
 	entryStore storage.EntryStore
 	embedder   platforms.Embedder
 	tmpl       *template.Template
+	readerTmpl *template.Template
 	cache      *pageCache
 }
 
@@ -34,11 +35,17 @@ func New(config Config, entryStore storage.EntryStore, embedder platforms.Embedd
 		panic(err.Error())
 	}
 
+	readerTmpl := &template.Template{}
+	if err := readerTmpl.Load("templates/reader.gotmpl", template.HtmlTemplate, funcMap()); err != nil {
+		panic(err.Error())
+	}
+
 	return &Handler{
 		config:     config,
 		entryStore: entryStore,
 		embedder:   embedder,
 		tmpl:       tmpl,
+		readerTmpl: readerTmpl,
 		cache:      newPageCache(renderCacheTTL),
 	}
 }
