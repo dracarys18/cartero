@@ -47,6 +47,7 @@ services:
       - TZ=UTC
       - OLLAMA_HOST=http://host.docker.internal:11434
       - CARTERO_QUEUE_PREFIX=cartero
+      - TYPESAFE_API_KEY=${TYPESAFE_API_KEY}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     dns:

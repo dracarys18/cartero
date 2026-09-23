@@ -113,9 +113,24 @@ timeout_seconds = 8
 
 [interests]
 keywords_file = "https://gist.githubusercontent.com/you/id/raw/keywords.json"
-# Jev picks one interest (or "none") per article. Articles it answers "none"
-# for, or picks with confidence below this, are rejected and never re-evaluated.
-min_confidence = 0.5
+# Jev assigns each article a probability of matching none of the interests.
+# Articles at or above this are rejected and never re-evaluated. The article is
+# tagged with its most likely interest.
+off_topic_threshold = 0.4
+
+# Extra yes/no checks asked in the same Jev call. An article is rejected when
+# Jev's probability of "yes" is at or above threshold (default 0.7). Jev only
+# sees the title and a short summary, so questions about writing depth or
+# quality are unreliable.
+[[interests.reject_if]]
+name = "clickbait"
+question = "Is the title clickbait: does it tease, exaggerate or withhold what the article is about to bait clicks (e.g. 'You won't believe', 'This one trick', vague teasers) instead of plainly stating the subject?"
+threshold = 0.7
+
+[[interests.reject_if]]
+name = "advertisement"
+question = "Is this a sales pitch: content whose main purpose is getting readers to buy, subscribe to or sign up for a commercial product or service (landing page, sponsored post, webinar or event promo, customer case study)? Announcements of new AI models, software or library releases, and open-source projects are news, not sales pitches."
+threshold = 0.7
 
 [blocklist]
 domains_file = "https://gist.githubusercontent.com/you/id/raw/blocklist.txt"

@@ -41,26 +41,38 @@ func (e *ExtractText) Process(ctx context.Context, st types.StateAccessor, items
 		concurrency = defaultExtractConcurrency
 	}
 
-	batch.Run(ctx, items, concurrency, func(ctx context.Context, item *types.Item) {
-		e.extract(ctx, st, item)
+	keep := make([]bool, len(items))
+	idx := make([]int, len(items))
+	for i := range idx {
+		idx[i] = i
+	}
+
+	batch.Run(ctx, idx, concurrency, func(ctx context.Context, i int) {
+		keep[i] = e.extract(ctx, st, items[i])
 	})
 
-	return items, nil
+	out := make([]*types.Item, 0, len(items))
+	for i, item := range items {
+		if keep[i] {
+			out = append(out, item)
+		}
+	}
+	return out, nil
 }
 
-func (e *ExtractText) extract(ctx context.Context, st types.StateAccessor, item *types.Item) {
+func (e *ExtractText) extract(ctx context.Context, st types.StateAccessor, item *types.Item) bool {
 	logger := st.GetLogger()
-
-	u := item.GetURL()
-	if u == nil || u.String() == "" {
-		return
-	}
 
 	rejected := st.GetRejected()
 	if rejected != nil {
 		if skip, err := rejected.Has(ctx, item.ID); err == nil && skip {
-			return
+			return false
 		}
+	}
+
+	u := item.GetURL()
+	if u == nil || u.String() == "" {
+		return true
 	}
 
 	timeout := time.Duration(e.settings.TimeoutSeconds) * time.Second
@@ -74,10 +86,11 @@ func (e *ExtractText) extract(ctx context.Context, st types.StateAccessor, item 
 		if rejected != nil {
 			_ = rejected.Add(ctx, item.ID)
 		}
-		return
+		return true
 	}
 
 	if len(article.Text) >= e.settings.MinContentLength {
 		item.SetArticle(article)
 	}
+	return true
 }

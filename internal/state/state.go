@@ -324,11 +324,20 @@ func (s *State) createProcessor(cfg config.ProcessorConfig) filters.Processor {
 }
 
 func (s *State) createTarget(name string, cfg config.TargetConfig) types.Target {
+	pc := s.Registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
+	missingPlatform := func() types.Target {
+		s.Logger.Error("target requires an enabled platform", "target", name, "platform", cfg.Type)
+		return nil
+	}
+
 	switch cfg.Type {
 	case "discord":
 		discordCfg := cfg.Settings.DiscordTargetSettings
 		if discordCfg.ChannelID == "" {
 			return nil
+		}
+		if pc.Discord() == nil {
+			return missingPlatform()
 		}
 		return targets.NewDiscordTarget(name, discordCfg.ChannelID, discordCfg.ChannelType, s.Registry)
 
@@ -336,6 +345,9 @@ func (s *State) createTarget(name string, cfg config.TargetConfig) types.Target 
 		return targets.NewFeedTarget(name, s.Registry)
 
 	case "bluesky":
+		if pc.Bluesky() == nil {
+			return missingPlatform()
+		}
 		bskyCfg := cfg.Settings.BlueskyTargetSettings
 		return targets.NewBlueskyTarget(name, bskyCfg.Languages, s.Registry)
 
@@ -343,6 +355,9 @@ func (s *State) createTarget(name string, cfg config.TargetConfig) types.Target 
 		tgCfg := cfg.Settings.TelegramTargetSettings
 		if tgCfg.ChatID == 0 {
 			return nil
+		}
+		if pc.Telegram() == nil {
+			return missingPlatform()
 		}
 		return targets.NewTelegramTarget(name, tgCfg.ChatID, s.Registry)
 

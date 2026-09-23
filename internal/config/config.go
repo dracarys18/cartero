@@ -25,9 +25,16 @@ type Config struct {
 }
 
 type InterestConfig struct {
-	Keywords      []keywords.KeywordWithContext `toml:"keywords"`
-	KeywordsFile  string                        `toml:"keywords_file"`
-	MinConfidence float64                       `toml:"min_confidence"`
+	Keywords          []keywords.KeywordWithContext `toml:"keywords"`
+	KeywordsFile      string                        `toml:"keywords_file"`
+	OffTopicThreshold float64                       `toml:"off_topic_threshold"`
+	RejectIf          []RejectRule                  `toml:"reject_if"`
+}
+
+type RejectRule struct {
+	Name      string  `toml:"name"`
+	Question  string  `toml:"question"`
+	Threshold float64 `toml:"threshold"`
 }
 
 type BlocklistConfig struct {
@@ -320,6 +327,19 @@ func validateConfig(config *Config) error {
 
 	if len(config.Interests.Keywords) > 0 && !hasEnabledPlatform(config, "jev") {
 		return fmt.Errorf("interests require an enabled platform of type \"jev\"")
+	}
+
+	seen := make(map[string]bool, len(config.Interests.RejectIf))
+	for _, rule := range config.Interests.RejectIf {
+		switch {
+		case rule.Name == "" || rule.Question == "":
+			return fmt.Errorf("interests.reject_if: name and question are required")
+		case rule.Name == "interest" || seen[rule.Name]:
+			return fmt.Errorf("interests.reject_if: duplicate or reserved name %q", rule.Name)
+		case rule.Threshold < 0 || rule.Threshold > 1:
+			return fmt.Errorf("interests.reject_if %q: threshold must be between 0 and 1", rule.Name)
+		}
+		seen[rule.Name] = true
 	}
 
 	return nil
