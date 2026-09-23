@@ -4,7 +4,6 @@ import (
 	"context"
 	"embed"
 	"fmt"
-	"time"
 
 	"cartero/internal/components"
 	"cartero/internal/config"
@@ -30,7 +29,6 @@ type State struct {
 	Queue           *queue.Queue
 	RedisConn       *queue.RedisConnection
 	Blocklist       types.Blocklist
-	EmbedCache      types.EmbedCache
 	Rejected        types.Rejected
 	Logger          *slog.Logger
 	EmbeddedScripts embed.FS
@@ -71,17 +69,7 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 		s.Blocklist = bl
 	}
 
-	var cacheTTL time.Duration
-	for _, pc := range s.Config.Processors {
-		if pc.Type != names.EmbedText || !pc.Enabled {
-			continue
-		}
-		if ttl, err := time.ParseDuration(pc.Settings.CacheTTL); err == nil && ttl > 0 {
-			cacheTTL = ttl
-			s.EmbedCache = queue.NewEmbedCache(conn.Client(), s.Queue.Prefix(), ttl)
-		}
-	}
-	s.Rejected = queue.NewRejectedSet(conn.Client(), s.Queue.Prefix(), cacheTTL)
+	s.Rejected = queue.NewRejectedSet(conn.Client(), s.Queue.Prefix())
 
 	s.Registry = components.NewRegistry()
 
@@ -104,14 +92,13 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 		cfg := targetCfg.Settings.FeedTargetSettings
 
 		serverComp.Register(components.ServerConfig{
-			Name:              name,
-			Port:              cfg.Port,
-			FeedSize:          cfg.FeedSize,
-			MaxItems:          cfg.MaxItems,
-			SiteURL:           cfg.SiteURL,
-			SiteName:          cfg.SiteName,
-			SiteDescription:   cfg.SiteDescription,
-			SearchMaxDistance: cfg.SearchMaxDistance,
+			Name:            name,
+			Port:            cfg.Port,
+			FeedSize:        cfg.FeedSize,
+			MaxItems:        cfg.MaxItems,
+			SiteURL:         cfg.SiteURL,
+			SiteName:        cfg.SiteName,
+			SiteDescription: cfg.SiteDescription,
 		})
 	}
 
@@ -168,10 +155,6 @@ func (s *State) GetQueue() types.Queue {
 
 func (s *State) GetBlocklist() types.Blocklist {
 	return s.Blocklist
-}
-
-func (s *State) GetEmbedCache() types.EmbedCache {
-	return s.EmbedCache
 }
 
 func (s *State) GetRejected() types.Rejected {
@@ -258,10 +241,7 @@ func (s *State) buildFilterChain(ctx context.Context) *filters.Chain {
 	fs = append(fs, processors.NewExtractProcessor(s.Config.Processors[names.ExtractText].Settings.ExtractTextSettings))
 
 	pc := s.Registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
-	fs = append(fs,
-		filters.NewRankFilter(pc.Embedder(), s.Config.Interests),
-		filters.NewDiversifyFilter(),
-	)
+	fs = append(fs, filters.NewRankFilter(pc.Jev(), s.Config.Interests))
 
 	return filters.NewChain(fs...)
 }
@@ -337,12 +317,6 @@ func (s *State) createProcessor(cfg config.ProcessorConfig) filters.Processor {
 
 	case names.Dedupe:
 		return processors.NewDedupeProcessor(cfg.Type)
-
-	case names.EmbedDedupe:
-		return processors.NewEmbedDedupeProcessor(cfg.Type, cfg.Settings.DedupeSettings)
-
-	case names.EmbedText:
-		return processors.NewEmbedTextProcessor(cfg.Type, cfg.Settings.EmbedTextSettings)
 
 	default:
 		return nil

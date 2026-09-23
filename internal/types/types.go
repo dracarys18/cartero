@@ -25,7 +25,6 @@ type Item struct {
 	TextContent     *Article
 	MatchedKeywords string
 	Timestamp       time.Time
-	Embedding       [][]float32 `json:"-"`
 	mu              sync.RWMutex
 }
 
@@ -131,12 +130,6 @@ func (i *Item) SetMatchedKeywords(keywords string) {
 	i.MatchedKeywords = keywords
 }
 
-func (i *Item) GetEmbedding() [][]float32 {
-	i.mu.RLock()
-	defer i.mu.RUnlock()
-	return i.Embedding
-}
-
 func (i *Item) metaString(key string) string {
 	if i.Metadata == nil {
 		return ""
@@ -194,12 +187,6 @@ func (i *Item) GetImageURL() string {
 	return ""
 }
 
-func (i *Item) SetEmbedding(v [][]float32) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	i.Embedding = v
-}
-
 func (i *Item) SetScore(s float64) {
 	i.AddMetadata(scoreKey, s)
 }
@@ -239,11 +226,6 @@ type Blocklist interface {
 	Blocked(ctx context.Context, u *url.URL) bool
 }
 
-type EmbedCache interface {
-	Get(ctx context.Context, hash string) [][]float32
-	Set(ctx context.Context, hash string, embedding [][]float32)
-}
-
 type Rejected interface {
 	Add(ctx context.Context, id string) error
 	Has(ctx context.Context, id string) (bool, error)
@@ -257,6 +239,5 @@ type StateAccessor interface {
 	GetPipeline() any
 	GetQueue() Queue
 	GetBlocklist() Blocklist
-	GetEmbedCache() EmbedCache
 	GetRejected() Rejected
 }

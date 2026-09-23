@@ -25,10 +25,9 @@ type Config struct {
 }
 
 type InterestConfig struct {
-	Keywords     []keywords.KeywordWithContext `toml:"keywords"`
-	KeywordsFile string                        `toml:"keywords_file"`
-	MinScore     float64                       `toml:"min_score"`
-	Margin       float64                       `toml:"margin"`
+	Keywords      []keywords.KeywordWithContext `toml:"keywords"`
+	KeywordsFile  string                        `toml:"keywords_file"`
+	MinConfidence float64                       `toml:"min_confidence"`
 }
 
 type BlocklistConfig struct {
@@ -63,23 +62,19 @@ type PlatformConfig struct {
 
 type PlatformSettings struct {
 	DiscordPlatformSettings
-	OllamaPlatformSettings
 	BlueskyPlatformSettings
 	TelegramPlatformSettings
-	OpenAIPlatformSettings
-	RerankerPlatformSettings
+	JevPlatformSettings
 }
 
-type RerankerPlatformSettings struct {
-	RerankURL string `toml:"rerank_url"`
+type JevPlatformSettings struct {
+	BaseURL string `toml:"base_url"`
+	APIKey  string `toml:"api_key"`
+	Model   string `toml:"model"`
 }
 
 type DiscordPlatformSettings struct {
 	BotToken string `toml:"bot_token"`
-}
-
-type OllamaPlatformSettings struct {
-	EmbeddingModel string `toml:"embedding_model"`
 }
 
 type BlueskyPlatformSettings struct {
@@ -89,11 +84,6 @@ type BlueskyPlatformSettings struct {
 
 type TelegramPlatformSettings struct {
 	BotToken string `toml:"tg_bot_token"`
-}
-
-type OpenAIPlatformSettings struct {
-	BaseURL string `toml:"base_url"`
-	APIKey  string `toml:"api_key"`
 }
 
 type SourceConfig struct {
@@ -155,24 +145,14 @@ type ProcessorSettings struct {
 	ExtractFieldsSettings
 	TemplateSettings
 	ExtractTextSettings
-	EmbedTextSettings
 }
 
 type DedupeSettings struct {
-	EmbedThreshold float64 `toml:"embed_threshold"`
-	EmbedWindow    string  `toml:"embed_window"`
-	TTL            string  `toml:"ttl"`
+	TTL string `toml:"ttl"`
 }
 
 type ScoreFilterSettings struct {
 	MinScore int `toml:"min_score"`
-}
-
-type EmbedTextSettings struct {
-	ChunkSize   int    `toml:"chunk_size"`
-	MaxChunks   int    `toml:"max_chunks"`
-	Concurrency int    `toml:"concurrency"`
-	CacheTTL    string `toml:"cache_ttl"`
 }
 
 type PublishedAtFilterSettings struct {
@@ -219,13 +199,12 @@ type DiscordTargetSettings struct {
 }
 
 type FeedTargetSettings struct {
-	Port              string  `toml:"port"`
-	FeedSize          int     `toml:"feed_size"`
-	MaxItems          int     `toml:"max_items"`
-	SiteURL           string  `toml:"site_url"`
-	SiteName          string  `toml:"site_name"`
-	SiteDescription   string  `toml:"site_description"`
-	SearchMaxDistance float64 `toml:"search_max_distance"`
+	Port            string `toml:"port"`
+	FeedSize        int    `toml:"feed_size"`
+	MaxItems        int    `toml:"max_items"`
+	SiteURL         string `toml:"site_url"`
+	SiteName        string `toml:"site_name"`
+	SiteDescription string `toml:"site_description"`
 }
 
 type BlueskyTargetSettings struct {
@@ -339,7 +318,20 @@ func validateConfig(config *Config) error {
 		config.Redis.Addr = "localhost:6379"
 	}
 
+	if len(config.Interests.Keywords) > 0 && !hasEnabledPlatform(config, "jev") {
+		return fmt.Errorf("interests require an enabled platform of type \"jev\"")
+	}
+
 	return nil
+}
+
+func hasEnabledPlatform(config *Config, platformType string) bool {
+	for _, p := range config.Platforms {
+		if p.Enabled && p.Type == platformType {
+			return true
+		}
+	}
+	return false
 }
 
 func ParseDuration(d string, def time.Duration) time.Duration {

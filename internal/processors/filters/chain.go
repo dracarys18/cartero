@@ -10,8 +10,6 @@ import (
 const (
 	filterPublishedDedupe = "published_dedupe"
 	filterRank            = "rank"
-	filterRerank          = "rerank"
-	filterDiversify       = "diversify"
 	filterLimit           = "limit"
 )
 

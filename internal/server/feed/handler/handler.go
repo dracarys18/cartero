@@ -3,7 +3,6 @@ package handler
 import (
 	"time"
 
-	"cartero/internal/platforms"
 	"cartero/internal/storage"
 	"cartero/internal/template"
 )
@@ -11,25 +10,23 @@ import (
 const renderCacheTTL = 60 * time.Second
 
 type Config struct {
-	Name              string
-	FeedSize          int
-	MaxItems          int
-	SiteURL           string
-	SiteName          string
-	SiteDescription   string
-	SearchMaxDistance float64
+	Name            string
+	FeedSize        int
+	MaxItems        int
+	SiteURL         string
+	SiteName        string
+	SiteDescription string
 }
 
 type Handler struct {
 	config     Config
 	entryStore storage.EntryStore
-	embedder   platforms.Embedder
 	tmpl       *template.Template
 	readerTmpl *template.Template
 	cache      *pageCache
 }
 
-func New(config Config, entryStore storage.EntryStore, embedder platforms.Embedder) *Handler {
+func New(config Config, entryStore storage.EntryStore) *Handler {
 	tmpl := &template.Template{}
 	if err := tmpl.Load("templates/homepage.gotmpl", template.HtmlTemplate, funcMap()); err != nil {
 		panic(err.Error())
@@ -43,7 +40,6 @@ func New(config Config, entryStore storage.EntryStore, embedder platforms.Embedd
 	return &Handler{
 		config:     config,
 		entryStore: entryStore,
-		embedder:   embedder,
 		tmpl:       tmpl,
 		readerTmpl: readerTmpl,
 		cache:      newPageCache(renderCacheTTL),

@@ -6,19 +6,17 @@ import (
 	"net/http"
 	"time"
 
-	"cartero/internal/platforms"
 	"cartero/internal/server/feed/handler"
 	"cartero/internal/storage"
 )
 
 type Config struct {
-	Port              string
-	FeedSize          int
-	MaxItems          int
-	SiteURL           string
-	SiteName          string
-	SiteDescription   string
-	SearchMaxDistance float64
+	Port            string
+	FeedSize        int
+	MaxItems        int
+	SiteURL         string
+	SiteName        string
+	SiteDescription string
 }
 
 type Server struct {
@@ -29,7 +27,7 @@ type Server struct {
 	startCh chan error
 }
 
-func New(name string, config Config, entryStore storage.EntryStore, embedder platforms.Embedder) *Server {
+func New(name string, config Config, entryStore storage.EntryStore) *Server {
 	if config.Port == "" {
 		config.Port = "8080"
 	}
@@ -41,14 +39,13 @@ func New(name string, config Config, entryStore storage.EntryStore, embedder pla
 	}
 
 	h := handler.New(handler.Config{
-		Name:              name,
-		FeedSize:          config.FeedSize,
-		MaxItems:          config.MaxItems,
-		SiteURL:           config.SiteURL,
-		SiteName:          config.SiteName,
-		SiteDescription:   config.SiteDescription,
-		SearchMaxDistance: config.SearchMaxDistance,
-	}, entryStore, embedder)
+		Name:            name,
+		FeedSize:        config.FeedSize,
+		MaxItems:        config.MaxItems,
+		SiteURL:         config.SiteURL,
+		SiteName:        config.SiteName,
+		SiteDescription: config.SiteDescription,
+	}, entryStore)
 
 	return &Server{
 		name:    name,

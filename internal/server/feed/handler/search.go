@@ -39,19 +39,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	resp := searchResponse{Query: query, Results: []searchResult{}}
 
 	if query != "" {
-		var embedding []float32
-		if h.embedder != nil {
-			vecs, err := h.embedder.Embed(r.Context(), []string{query})
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			if len(vecs) > 0 {
-				embedding = vecs[0]
-			}
-		}
-
-		entries, err := h.entryStore.Search(r.Context(), query, embedding, searchLimit, h.config.SearchMaxDistance)
+		entries, err := h.entryStore.Search(r.Context(), query, searchLimit)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

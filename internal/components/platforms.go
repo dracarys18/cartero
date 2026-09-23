@@ -8,13 +8,12 @@ import (
 )
 
 type PlatformComponent struct {
-	config            map[string]config.PlatformConfig
-	discordPlatform   *platforms.DiscordPlatform
-	blueskyPlatform   *platforms.BlueskyPlatform
-	telegramPlatform  *platforms.TelegramPlatform
-	ollamaPlatforms   map[string]*platforms.OllamaPlatform
-	embeddingPlatform platforms.Embedder
-	rerankerPlatform  platforms.Reranker
+	config           map[string]config.PlatformConfig
+	discordPlatform  *platforms.DiscordPlatform
+	blueskyPlatform  *platforms.BlueskyPlatform
+	telegramPlatform *platforms.TelegramPlatform
+	ollamaPlatforms  map[string]*platforms.OllamaPlatform
+	jevPlatform      *platforms.JevPlatform
 }
 
 func NewPlatformComponent(config map[string]config.PlatformConfig) *PlatformComponent {
@@ -79,37 +78,15 @@ func (c *PlatformComponent) Initialize(ctx context.Context) error {
 		c.telegramPlatform = telegram
 	}
 
-	for _, cfg := range c.config {
-		if !cfg.Enabled {
+	for name, cfg := range c.config {
+		if !cfg.Enabled || cfg.Type != "jev" {
 			continue
 		}
-		model := cfg.Settings.EmbeddingModel
-		if model == "" {
-			continue
+		if cfg.Settings.APIKey == "" {
+			return fmt.Errorf("jev platform %s: api_key is required", name)
 		}
-		switch cfg.Type {
-		case "ollama":
-			c.embeddingPlatform = platforms.NewOllamaPlatform(model)
-		case "openai":
-			c.embeddingPlatform = platforms.NewOpenAIPlatform(
-				cfg.Settings.BaseURL,
-				cfg.Settings.APIKey,
-				model,
-			)
-		}
-		if c.embeddingPlatform != nil {
-			break
-		}
-	}
-
-	for _, cfg := range c.config {
-		if !cfg.Enabled || cfg.Type != "rerank" {
-			continue
-		}
-		if url := cfg.Settings.RerankURL; url != "" {
-			c.rerankerPlatform = platforms.NewTEIReranker(url)
-			break
-		}
+		c.jevPlatform = platforms.NewJevPlatform(cfg.Settings.BaseURL, cfg.Settings.APIKey, cfg.Settings.Model)
+		break
 	}
 
 	return nil
@@ -140,12 +117,8 @@ func (c *PlatformComponent) Telegram() *platforms.TelegramPlatform {
 	return c.telegramPlatform
 }
 
-func (c *PlatformComponent) Embedder() platforms.Embedder {
-	return c.embeddingPlatform
-}
-
-func (c *PlatformComponent) Reranker() platforms.Reranker {
-	return c.rerankerPlatform
+func (c *PlatformComponent) Jev() *platforms.JevPlatform {
+	return c.jevPlatform
 }
 
 func (c *PlatformComponent) OllamaPlatform(model string) *platforms.OllamaPlatform {

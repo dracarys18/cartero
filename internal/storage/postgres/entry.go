@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"net/url"
 	"time"
-
-	"github.com/pgvector/pgvector-go"
 )
 
 type entryStore struct {
@@ -47,46 +45,7 @@ func (s *entryStore) Store(ctx context.Context, item storage.Item) error {
 		return fmt.Errorf("failed to store entry: %w", err)
 	}
 
-	embeddings := item.GetEmbedding()
-	if len(embeddings) > 0 {
-		if err := s.SetEmbedding(ctx, item.GetID(), embeddings[0]); err != nil {
-			return fmt.Errorf("failed to store embedding: %w", err)
-		}
-		if err := s.setChunks(ctx, item.GetID(), embeddings); err != nil {
-			return fmt.Errorf("failed to store chunks: %w", err)
-		}
-	}
-
 	return nil
-}
-
-func (s *entryStore) setChunks(ctx context.Context, id string, embeddings [][]float32) error {
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	if _, err := tx.ExecContext(ctx, `DELETE FROM item_chunks WHERE item_id = $1`, id); err != nil {
-		return err
-	}
-
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO item_chunks (item_id, chunk_index, embedding) VALUES ($1, $2, $3)`)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = stmt.Close() }()
-
-	for idx, vec := range embeddings {
-		if len(vec) == 0 {
-			continue
-		}
-		if _, err := stmt.ExecContext(ctx, id, idx, pgvector.NewHalfVector(vec)); err != nil {
-			return err
-		}
-	}
-
-	return tx.Commit()
 }
 
 func (s *entryStore) Exists(ctx context.Context, id string) (bool, error) {
@@ -390,18 +349,7 @@ func (s *entryStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEn
 	return entries, nil
 }
 
-func (s *entryStore) Search(ctx context.Context, query string, embedding []float32, limit int, maxDistance float64) ([]storage.FeedEntry, error) {
-	entries, err := s.searchLexical(ctx, query, limit)
-	if err != nil {
-		return nil, err
-	}
-	if len(entries) > 0 || len(embedding) == 0 {
-		return entries, nil
-	}
-	return s.searchSemantic(ctx, embedding, limit, maxDistance)
-}
-
-func (s *entryStore) searchLexical(ctx context.Context, query string, limit int) ([]storage.FeedEntry, error) {
+func (s *entryStore) Search(ctx context.Context, query string, limit int) ([]storage.FeedEntry, error) {
 	q := `
 		SELECT fe.id, fe.title, fe.link, fe.description, fe.content, fe.author, fe.source, fe.image_url, fe.matched_keywords, fe.hash, fe.entry_timestamp, fe.published_at, fe.created_at
 		FROM feed_entries fe
@@ -417,63 +365,4 @@ func (s *entryStore) searchLexical(ctx context.Context, query string, limit int)
 	defer func() { _ = rows.Close() }()
 
 	return s.scanEntries(rows, limit)
-}
-
-func (s *entryStore) searchSemantic(ctx context.Context, embedding []float32, limit int, maxDistance float64) ([]storage.FeedEntry, error) {
-	vec := pgvector.NewHalfVector(embedding)
-
-	q := `
-		SELECT fe.id, fe.title, fe.link, fe.description, fe.content, fe.author, fe.source, fe.image_url, fe.matched_keywords, fe.hash, fe.entry_timestamp, fe.published_at, fe.created_at
-		FROM item_embeddings e
-		JOIN feed_entries fe ON fe.id = e.id
-		WHERE (e.embedding <=> $1) < $3
-		ORDER BY e.embedding <=> $1
-		LIMIT $2
-	`
-
-	rows, err := s.db.QueryContext(ctx, q, vec, limit, maxDistance)
-	if err != nil {
-		return nil, fmt.Errorf("semantic search failed: %w", err)
-	}
-	defer func() { _ = rows.Close() }()
-
-	return s.scanEntries(rows, limit)
-}
-
-func (s *entryStore) SetEmbedding(ctx context.Context, id string, embedding []float32) error {
-	query := `
-		INSERT INTO item_embeddings (id, embedding)
-		VALUES ($1, $2)
-		ON CONFLICT(id) DO NOTHING
-	`
-
-	_, err := s.db.ExecContext(ctx, query, id, pgvector.NewHalfVector(embedding))
-	if err != nil {
-		return fmt.Errorf("failed to store embedding: %w", err)
-	}
-
-	return nil
-}
-
-func (s *entryStore) FindNearestEmbedding(ctx context.Context, embedding []float32, threshold float64, since time.Time) (bool, error) {
-	vec := pgvector.NewHalfVector(embedding)
-
-	query := `
-		SELECT 1 - (embedding <=> $2) AS similarity
-		FROM item_embeddings
-		WHERE created_at >= $1
-		ORDER BY embedding <=> $2
-		LIMIT 1
-	`
-
-	var similarity float64
-	err := s.db.QueryRowContext(ctx, query, since, vec).Scan(&similarity)
-	if err == sql.ErrNoRows {
-		return false, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf("failed to search embeddings: %w", err)
-	}
-
-	return similarity >= threshold, nil
 }

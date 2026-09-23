@@ -4,20 +4,18 @@ import (
 	"context"
 	"fmt"
 
-	"cartero/internal/platforms"
 	"cartero/internal/server/feed"
 	"cartero/internal/storage"
 )
 
 type ServerConfig struct {
-	Name              string
-	Port              string
-	FeedSize          int
-	MaxItems          int
-	SiteURL           string
-	SiteName          string
-	SiteDescription   string
-	SearchMaxDistance float64
+	Name            string
+	Port            string
+	FeedSize        int
+	MaxItems        int
+	SiteURL         string
+	SiteName        string
+	SiteDescription string
 }
 
 type ServerComponent struct {
@@ -54,18 +52,15 @@ func (c *ServerComponent) Initialize(ctx context.Context) error {
 	storageComp := c.registry.Get(StorageComponentName).(*StorageComponent)
 	entryStore := storageComp.Store().Entries()
 
-	platformComp := c.registry.Get(PlatformComponentName).(*PlatformComponent)
-	embedder := platformComp.Embedder()
-
 	for _, cfg := range c.configs {
-		if err := c.startServer(ctx, cfg, entryStore, embedder); err != nil {
+		if err := c.startServer(ctx, cfg, entryStore); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (c *ServerComponent) startServer(ctx context.Context, cfg ServerConfig, entryStore storage.EntryStore, embedder platforms.Embedder) error {
+func (c *ServerComponent) startServer(ctx context.Context, cfg ServerConfig, entryStore storage.EntryStore) error {
 	if _, exists := c.servers[cfg.Name]; exists {
 		return nil
 	}
@@ -81,14 +76,13 @@ func (c *ServerComponent) startServer(ctx context.Context, cfg ServerConfig, ent
 	}
 
 	server := feed.New(cfg.Name, feed.Config{
-		Port:              cfg.Port,
-		FeedSize:          cfg.FeedSize,
-		MaxItems:          cfg.MaxItems,
-		SiteURL:           cfg.SiteURL,
-		SiteName:          cfg.SiteName,
-		SiteDescription:   cfg.SiteDescription,
-		SearchMaxDistance: cfg.SearchMaxDistance,
-	}, entryStore, embedder)
+		Port:            cfg.Port,
+		FeedSize:        cfg.FeedSize,
+		MaxItems:        cfg.MaxItems,
+		SiteURL:         cfg.SiteURL,
+		SiteName:        cfg.SiteName,
+		SiteDescription: cfg.SiteDescription,
+	}, entryStore)
 
 	if err := server.Start(ctx); err != nil {
 		return fmt.Errorf("servers: failed to start feed server %s: %w", cfg.Name, err)

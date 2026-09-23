@@ -4,23 +4,17 @@ interval = "10m"
 run_once = false
 
 [storage]
-# Postgres + pgvector is required (vector search + ranking).
+# Postgres with the pgvector extension is required by the existing migrations.
 type = "postgres"
 dsn  = "postgres://cartero:cartero@localhost:5432/cartero?sslmode=disable"
 
-[platforms.embedder]
-type = "openai"
+# Jev evaluates every article against [interests]; required when interests are set.
+[platforms.jev]
+type = "jev"
 enabled = true
-[platforms.embedder.settings]
-embedding_model = "mxbai-embed-large-v1"
-base_url = "http://your-embedder-host/v1"
-api_key = ""
-
-[platforms.reranker]
-type = "rerank"
-enabled = true
-[platforms.reranker.settings]
-rerank_url = "http://reranker:80"
+[platforms.jev.settings]
+api_key = "${TYPESAFE_API_KEY}"
+model = "jev-latest"
 
 [platforms.discord]
 type = "discord"
@@ -102,15 +96,6 @@ enabled = true
 [processors.dedupe.settings]
 ttl = "24h"
 
-# Semantic dedup: rejects items with embeddings too similar to existing ones
-# Must run after embed_text. Uses DedupeSettings for threshold/window.
-[processors.embed_dedupe]
-type = "embed_dedupe"
-enabled = false
-[processors.embed_dedupe.settings]
-embed_threshold = 0.9
-embed_window = "168h"
-
 [processors.score_filter]
 type = "filter_score"
 enabled = true
@@ -126,22 +111,11 @@ min_content_length = 100
 concurrency = 12
 timeout_seconds = 8
 
-[processors.embed]
-type = "embed_text"
-enabled = true
-[processors.embed.settings]
-chunk_size = 7000
-
 [interests]
 keywords_file = "https://gist.githubusercontent.com/you/id/raw/keywords.json"
-# Minimum cosine similarity between the article title and an interest for it
-# to be tagged/published at all. Lower it to publish more (with more wrong
-# tags); raise it to publish less (fewer, higher-confidence tags).
-min_score = 0.5
-# Minimum gap between the best and second-best category. Set to 0 to disable
-# (recommended for bge-m3: scores are compressed and categories overlap, so a
-# small margin rejects too many good articles).
-margin = 0
+# Jev picks one interest (or "none") per article. Articles it answers "none"
+# for, or picks with confidence below this, are rejected and never re-evaluated.
+min_confidence = 0.5
 
 [blocklist]
 domains_file = "https://gist.githubusercontent.com/you/id/raw/blocklist.txt"

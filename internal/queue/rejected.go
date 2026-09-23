@@ -2,7 +2,6 @@ package queue
 
 import (
 	"context"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -10,21 +9,14 @@ import (
 type RejectedSet struct {
 	client *redis.Client
 	key    string
-	ttl    time.Duration
 }
 
-func NewRejectedSet(client *redis.Client, prefix string, ttl time.Duration) *RejectedSet {
-	return &RejectedSet{client: client, key: prefix + ":rejected", ttl: ttl}
+func NewRejectedSet(client *redis.Client, prefix string) *RejectedSet {
+	return &RejectedSet{client: client, key: prefix + ":rejected"}
 }
 
 func (r *RejectedSet) Add(ctx context.Context, id string) error {
-	if err := r.client.SAdd(ctx, r.key, id).Err(); err != nil {
-		return err
-	}
-	if r.ttl > 0 {
-		return r.client.Expire(ctx, r.key, r.ttl).Err()
-	}
-	return nil
+	return r.client.SAdd(ctx, r.key, id).Err()
 }
 
 func (r *RejectedSet) Has(ctx context.Context, id string) (bool, error) {
