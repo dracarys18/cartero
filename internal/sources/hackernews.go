@@ -89,6 +89,10 @@ func (h *HackerNewsSource) Fetch(ctx context.Context, state types.StateAccessor)
 			continue
 		}
 
+		if story.Type == "job" {
+			continue
+		}
+
 		storyURL, _ := url.Parse(story.URL)
 
 		item := &types.Item{

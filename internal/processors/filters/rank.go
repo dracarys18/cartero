@@ -118,7 +118,7 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 
 	out := make([]*types.Item, 0, len(items))
 	var firstErr error
-	failed, inputTokens := 0, 0
+	failed := 0
 
 	for i, item := range items {
 		v := verdicts[i]
@@ -131,7 +131,6 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 			continue
 		}
 
-		inputTokens += v.resp.Usage.InputTokens
 		topic, offTopic := bestTopic(v.resp.Answers[jevQuestion])
 		if offTopic >= f.cfg.OffTopicThreshold {
 			reject(ctx, state, item, "off_topic", offTopic, topic)
@@ -148,8 +147,6 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 		item.SetMatchedKeywords(topic)
 		out = append(out, item)
 	}
-
-	logger.Info("rank: jev batch", "items", len(items), "failed", failed, "input_tokens", inputTokens)
 
 	if failed == len(items) {
 		return nil, fmt.Errorf("rank: jev failed for all %d items: %w", failed, firstErr)
