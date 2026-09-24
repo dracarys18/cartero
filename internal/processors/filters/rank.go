@@ -25,8 +25,8 @@ const (
 )
 
 const (
-	jevInstructions = "Which topic is this article primarily about? Judge by its main subject, not passing mentions."
-	jevNoMatchDesc  = "None of the other topics is the main subject, or it is general news, business, politics or marketing with no technical focus."
+	jevInstructions = "Which topic is this article about? Judge by its main subject, not passing mentions."
+	jevNoMatchDesc  = "The article is unrelated to all of the other topics, such as general news, politics, lifestyle or culture."
 )
 
 type RankFilter struct {
@@ -62,8 +62,14 @@ func NewRankFilter(jev *platforms.JevPlatform, cfg config.InterestConfig) *RankF
 	}
 }
 
+type topicSpec struct {
+	covers   []string
+	notFor   string
+	examples []string
+}
+
 func buildCriteria(kws []keywords.KeywordWithContext) map[string]any {
-	facets := make(map[string][]string)
+	topics := make(map[string]*topicSpec)
 	for _, kw := range kws {
 		label := kw.Keyword
 		if label == "" {
@@ -72,23 +78,52 @@ func buildCriteria(kws []keywords.KeywordWithContext) map[string]any {
 		if label == "" {
 			continue
 		}
-		if kw.Context != "" && kw.Context != label {
-			facets[label] = append(facets[label], kw.Context)
-		} else if _, ok := facets[label]; !ok {
-			facets[label] = nil
+		t, ok := topics[label]
+		if !ok {
+			t = &topicSpec{}
+			topics[label] = t
 		}
+		if kw.Context != "" && kw.Context != label {
+			t.covers = append(t.covers, kw.Context)
+		}
+		if kw.NotFor != "" {
+			t.notFor = kw.NotFor
+		}
+		t.examples = append(t.examples, kw.Examples...)
 	}
 
-	criteria := make(map[string]any, len(facets)+1)
-	for label, descs := range facets {
-		if len(descs) == 0 {
-			criteria[label] = nil
-			continue
-		}
-		criteria[label] = descs
+	criteria := make(map[string]any, len(topics)+1)
+	for label, t := range topics {
+		criteria[label] = t.description()
 	}
 	criteria[jevNoMatch] = jevNoMatchDesc
 	return criteria
+}
+
+func (t *topicSpec) description() any {
+	var covers any
+	switch len(t.covers) {
+	case 0:
+	case 1:
+		covers = t.covers[0]
+	default:
+		covers = t.covers
+	}
+	if t.notFor == "" && len(t.examples) == 0 {
+		return covers
+	}
+
+	desc := map[string]any{}
+	if covers != nil {
+		desc["covers"] = covers
+	}
+	if t.notFor != "" {
+		desc["not_for"] = t.notFor
+	}
+	if len(t.examples) > 0 {
+		desc["examples"] = t.examples
+	}
+	return desc
 }
 
 func (f *RankFilter) Name() string        { return filterRank }

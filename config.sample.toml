@@ -8,13 +8,23 @@ run_once = false
 type = "postgres"
 dsn  = "postgres://cartero:cartero@localhost:5432/cartero?sslmode=disable"
 
+# Small embedding model used only for semantic dedup (embed_text + embed_dedupe).
+# type = "ollama" uses OLLAMA_HOST; type = "openai" calls any OpenAI-compatible
+# /embeddings endpoint at base_url.
+[platforms.embedder]
+type = "ollama"
+enabled = true
+[platforms.embedder.settings]
+embedding_model = "all-minilm"
+
 # Jev evaluates every article against [interests]; required when interests are set.
 [platforms.jev]
 type = "jev"
 enabled = true
 [platforms.jev.settings]
 api_key = "${TYPESAFE_API_KEY}"
-model = "jev-latest"
+# Pin a version so thresholds keep meaning the same thing; jev-latest can move.
+model = "jev-1.13.0"
 
 [platforms.discord]
 type = "discord"
@@ -95,6 +105,19 @@ type = "dedupe"
 enabled = true
 [processors.dedupe.settings]
 ttl = "24h"
+
+# Semantic dedup: embeds titles and drops articles whose title is at least
+# embed_threshold similar to one published within embed_window, before Jev.
+[processors.embed_text]
+type = "embed_text"
+enabled = true
+
+[processors.embed_dedupe]
+type = "embed_dedupe"
+enabled = true
+[processors.embed_dedupe.settings]
+embed_threshold = 0.85
+embed_window = "168h"
 
 [processors.score_filter]
 type = "filter_score"

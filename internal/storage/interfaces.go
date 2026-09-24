@@ -23,6 +23,7 @@ type Item interface {
 	GetAuthor() string
 	GetImageURL() string
 	GetMatchedKeywords() string
+	GetEmbedding() (string, []float32)
 }
 
 type FeedEntry struct {
@@ -62,4 +63,6 @@ type EntryStore interface {
 	ListPublishedEntries(ctx context.Context, target string, limit int) ([]FeedEntry, error)
 	ListEntriesPaginated(ctx context.Context, page, perPage int, startDate, endDate time.Time) (*PaginationResult, error)
 	Search(ctx context.Context, query string, limit int) ([]FeedEntry, error)
+	SetEmbedding(ctx context.Context, id, model string, embedding []float32) error
+	FindSimilarEntry(ctx context.Context, model string, embedding []float32, threshold float64, since time.Time) (bool, error)
 }

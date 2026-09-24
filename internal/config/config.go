@@ -71,13 +71,18 @@ type PlatformSettings struct {
 	DiscordPlatformSettings
 	BlueskyPlatformSettings
 	TelegramPlatformSettings
-	JevPlatformSettings
+	APIPlatformSettings
+	EmbedderPlatformSettings
 }
 
-type JevPlatformSettings struct {
+type APIPlatformSettings struct {
 	BaseURL string `toml:"base_url"`
 	APIKey  string `toml:"api_key"`
 	Model   string `toml:"model"`
+}
+
+type EmbedderPlatformSettings struct {
+	EmbeddingModel string `toml:"embedding_model"`
 }
 
 type DiscordPlatformSettings struct {
@@ -155,7 +160,9 @@ type ProcessorSettings struct {
 }
 
 type DedupeSettings struct {
-	TTL string `toml:"ttl"`
+	EmbedThreshold float64 `toml:"embed_threshold"`
+	EmbedWindow    string  `toml:"embed_window"`
+	TTL            string  `toml:"ttl"`
 }
 
 type ScoreFilterSettings struct {

@@ -318,6 +318,12 @@ func (s *State) createProcessor(cfg config.ProcessorConfig) filters.Processor {
 	case names.Dedupe:
 		return processors.NewDedupeProcessor(cfg.Type)
 
+	case names.EmbedText:
+		return processors.NewEmbedTextProcessor(cfg.Type)
+
+	case names.EmbedDedupe:
+		return processors.NewEmbedDedupeProcessor(cfg.Type, cfg.Settings.DedupeSettings)
+
 	default:
 		return nil
 	}

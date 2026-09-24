@@ -7,6 +7,8 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -43,6 +45,12 @@ func (s *entryStore) Store(ctx context.Context, item storage.Item) error {
 	)
 	if err != nil {
 		return fmt.Errorf("failed to store entry: %w", err)
+	}
+
+	if model, embedding := item.GetEmbedding(); len(embedding) > 0 {
+		if err := s.SetEmbedding(ctx, item.GetID(), model, embedding); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -365,4 +373,49 @@ func (s *entryStore) Search(ctx context.Context, query string, limit int) ([]sto
 	defer func() { _ = rows.Close() }()
 
 	return s.scanEntries(rows, limit)
+}
+
+func (s *entryStore) SetEmbedding(ctx context.Context, id, model string, embedding []float32) error {
+	query := `
+		INSERT INTO entry_embeddings (id, model, embedding)
+		VALUES ($1, $2, $3::vector)
+		ON CONFLICT(id) DO UPDATE SET model = EXCLUDED.model, embedding = EXCLUDED.embedding
+	`
+	if _, err := s.db.ExecContext(ctx, query, id, model, vectorLiteral(embedding)); err != nil {
+		return fmt.Errorf("failed to store embedding: %w", err)
+	}
+	return nil
+}
+
+func (s *entryStore) FindSimilarEntry(ctx context.Context, model string, embedding []float32, threshold float64, since time.Time) (bool, error) {
+	query := `
+		SELECT 1 - (e.embedding <=> $1::vector)
+		FROM entry_embeddings e
+		JOIN feed_entries fe ON fe.id = e.id
+		WHERE e.model = $2 AND fe.created_at >= $3
+		ORDER BY e.embedding <=> $1::vector
+		LIMIT 1
+	`
+	var similarity float64
+	err := s.db.QueryRowContext(ctx, query, vectorLiteral(embedding), model, since).Scan(&similarity)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("failed to search embeddings: %w", err)
+	}
+	return similarity >= threshold, nil
+}
+
+func vectorLiteral(v []float32) string {
+	var b strings.Builder
+	b.WriteByte('[')
+	for i, f := range v {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(strconv.FormatFloat(float64(f), 'f', -1, 32))
+	}
+	b.WriteByte(']')
+	return b.String()
 }

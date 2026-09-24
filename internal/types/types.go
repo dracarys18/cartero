@@ -25,6 +25,8 @@ type Item struct {
 	TextContent     *Article
 	MatchedKeywords string
 	Timestamp       time.Time
+	Embedding       []float32 `json:"-"`
+	EmbeddingModel  string
 	mu              sync.RWMutex
 }
 
@@ -185,6 +187,19 @@ func (i *Item) GetImageURL() string {
 		return i.TextContent.Image
 	}
 	return ""
+}
+
+func (i *Item) SetEmbedding(model string, v []float32) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	i.EmbeddingModel = model
+	i.Embedding = v
+}
+
+func (i *Item) GetEmbedding() (string, []float32) {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+	return i.EmbeddingModel, i.Embedding
 }
 
 func (i *Item) SetScore(s float64) {

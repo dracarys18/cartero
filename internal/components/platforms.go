@@ -14,6 +14,7 @@ type PlatformComponent struct {
 	telegramPlatform *platforms.TelegramPlatform
 	ollamaPlatforms  map[string]*platforms.OllamaPlatform
 	jevPlatform      *platforms.JevPlatform
+	embedder         platforms.Embedder
 }
 
 func NewPlatformComponent(config map[string]config.PlatformConfig) *PlatformComponent {
@@ -78,6 +79,8 @@ func (c *PlatformComponent) Initialize(ctx context.Context) error {
 		c.telegramPlatform = telegram
 	}
 
+	c.embedder = platforms.NewEmbedder(c.config)
+
 	for name, cfg := range c.config {
 		if !cfg.Enabled || cfg.Type != "jev" {
 			continue
@@ -119,6 +122,10 @@ func (c *PlatformComponent) Telegram() *platforms.TelegramPlatform {
 
 func (c *PlatformComponent) Jev() *platforms.JevPlatform {
 	return c.jevPlatform
+}
+
+func (c *PlatformComponent) Embedder() platforms.Embedder {
+	return c.embedder
 }
 
 func (c *PlatformComponent) OllamaPlatform(model string) *platforms.OllamaPlatform {
