@@ -1,7 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-tz="{{.TZ}}" data-page="{{if .Archive}}archive{{else}}today{{end}}">
 <head>
     <meta charset="UTF-8">
+    <script>
+        (function () {
+            const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const root = document.documentElement;
+            if (!tz || root.dataset.tz === tz || document.cookie.split('; ').includes('tz=' + tz)) return;
+            document.cookie = 'tz=' + tz + '; path=/; max-age=31536000; samesite=lax';
+            if (root.dataset.page === 'archive') location.reload();
+        })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Title}}</title>
     <link rel="canonical" href="{{.Canonical}}">
@@ -44,6 +53,9 @@
             --field-bg:  #e4e2da;
             --field-bd:  #c7c4ba;
             --accent:    #8f2d1f;
+            --title:     #dc9e63;
+            --label:     #4a5f82;
+            --thumb-filter: saturate(.94) contrast(1.02);
         }
         @media (prefers-color-scheme: dark) {
             :root {
@@ -55,8 +67,9 @@
                 --field-bg:  #232120;
                 --field-bd:  #423e37;
                 --accent:    #e0876a;
+                --label:     #93a6c4;
+                --thumb-filter: saturate(.92) brightness(.86);
             }
-            .story-thumb img { filter: saturate(.92) brightness(.86); }
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         [hidden] { display: none !important; }
@@ -120,33 +133,146 @@
             color: var(--ink-soft);
         }
 
-        .kicker {
-            display: block; text-transform: uppercase; letter-spacing: .12em;
-            font-size: .66rem; font-weight: 600; color: var(--accent); margin-bottom: 6px;
+        .filters {
+            position: sticky; top: 0; z-index: 10;
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 12px;
+            padding: 11px 0;
+            background: color-mix(in srgb, var(--paper) 86%, transparent);
+            -webkit-backdrop-filter: saturate(1.4) blur(12px);
+            backdrop-filter: saturate(1.4) blur(12px);
+            border-bottom: 1px solid var(--rule);
+            view-transition-name: filters;
         }
+        .date-range { display: inline-flex; align-items: center; gap: 6px; font-size: .74rem; color: var(--ink-faint); }
+        .date-range input {
+            font: inherit; font-size: .74rem; font-weight: 600; color: var(--ink);
+            padding: 5px 10px; border: 1px solid var(--field-bd); border-radius: 999px;
+            background: transparent; color-scheme: light dark;
+        }
+        .date-range input:focus { outline: none; border-color: var(--ink-faint); }
+        .date-range button {
+            font: inherit; font-size: .72rem; font-weight: 700; padding: 6px 14px;
+            border: none; border-radius: 999px; background: var(--ink); color: var(--paper); cursor: pointer;
+        }
+        .filter-menus { display: flex; gap: 8px; margin-left: auto; }
+        .archive-link {
+            display: inline-flex; align-items: center; gap: 7px;
+            text-transform: uppercase; letter-spacing: .13em; font-size: .68rem; font-weight: 600;
+            color: var(--ink-soft); transition: color .15s;
+        }
+        .archive-link svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .archive-link:hover, .archive-link.is-active { color: var(--accent); }
+        .filter-menu { position: relative; }
+        .filter-menu summary {
+            list-style: none; cursor: pointer; user-select: none;
+            display: inline-flex; align-items: center; gap: 7px; max-width: 240px;
+            font-size: .74rem; font-weight: 600; padding: 6px 13px; border-radius: 999px;
+            border: 1px solid var(--field-bd); color: var(--ink);
+            transition: border-color .2s;
+        }
+        .filter-menu summary::-webkit-details-marker { display: none; }
+        .filter-menu summary::after {
+            content: ""; flex: none; width: 6px; height: 6px;
+            border-right: 1.5px solid var(--ink-faint); border-bottom: 1.5px solid var(--ink-faint);
+            transform: translateY(-2px) rotate(45deg); transition: transform .2s;
+        }
+        .filter-menu[open] summary::after { transform: translateY(1px) rotate(-135deg); }
+        .filter-menu summary:hover, .filter-menu[open] summary { border-color: var(--ink-faint); }
+        .filter-menu.is-set summary { border-color: var(--accent); }
+        .filter-name { color: var(--ink-faint); font-weight: 500; }
+        .filter-value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .filter-menu.is-set .filter-value { color: var(--accent); }
+        .menu {
+            position: absolute; right: 0; top: calc(100% + 8px); z-index: 20;
+            width: 270px; max-height: min(60vh, 420px); overflow-y: auto; padding: 6px;
+            background: var(--paper); border: 1px solid var(--field-bd); border-radius: 10px;
+            box-shadow: 0 14px 34px -14px rgba(0, 0, 0, .4);
+            animation: menu-in .16s ease-out;
+        }
+        .menu-search {
+            width: 100%; margin-bottom: 4px; padding: 7px 10px;
+            font: inherit; font-size: .8rem; color: var(--ink);
+            background: var(--field-bg); border: 1px solid var(--field-bd); border-radius: 6px; outline: none;
+        }
+        .menu-search:focus { border-color: var(--ink-faint); }
+        .menu-option {
+            display: flex; align-items: center; gap: 10px; cursor: pointer;
+            padding: 7px 10px; border-radius: 6px; font-size: .8rem; color: var(--ink-soft);
+        }
+        .menu-option:hover { background: var(--field-bg); color: var(--ink); }
+        .menu-option:has(input:checked) { color: var(--ink); font-weight: 600; }
+        .menu-option input { margin: 0; accent-color: var(--accent); }
+        .option-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .menu-actions {
+            position: sticky; bottom: -6px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin: 6px -6px -6px; padding: 8px 12px;
+            background: var(--paper); border-top: 1px solid var(--rule);
+        }
+        .menu-actions a { font-size: .72rem; font-weight: 600; color: var(--ink-faint); }
+        .menu-actions a:hover { color: var(--accent); }
+        .menu-actions button {
+            font: inherit; font-size: .72rem; font-weight: 700; padding: 6px 16px;
+            border: none; border-radius: 999px; background: var(--accent); color: var(--paper); cursor: pointer;
+        }
+        .menu .count { color: var(--ink-faint); font-size: .72rem; font-variant-numeric: tabular-nums; }
+        @keyframes menu-in { from { opacity: 0; transform: translateY(-4px) scale(.98); } }
+        .active-filters {
+            display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+            margin-top: 16px; font-size: .8rem; color: var(--ink-soft);
+        }
+        .pill {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 10px; border-radius: 999px;
+            font-size: .74rem; font-weight: 600; color: var(--accent);
+            background: color-mix(in srgb, var(--accent) 14%, transparent);
+            transition: background .2s;
+        }
+        .pill:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+        .clear-all { margin-left: auto; color: var(--accent); font-weight: 600; font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; }
+
+        .kicker {
+            display: inline-block; text-transform: uppercase; letter-spacing: .12em;
+            font-size: .66rem; font-weight: 600; color: var(--label); margin-bottom: 6px;
+        }
+        a.kicker:hover { text-decoration: underline; text-underline-offset: 3px; }
         .byline { font-style: normal; color: var(--ink-faint); }
+        .src-link { transition: color .15s; }
+        .src-link:hover { color: var(--accent); }
         .title-link:hover { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 
         .stories {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            margin-top: 30px;
-            border-top: 1px solid var(--rule);
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            column-gap: 40px;
+            margin-top: 18px;
         }
-        .story { padding: 17px 22px 20px; border-bottom: 1px solid var(--rule); border-left: 1px solid var(--rule); }
-        .story:nth-child(3n+1) { border-left: none; padding-left: 0; }
-        .story:nth-child(3n) { padding-right: 0; }
-        .story-thumb { display: block; margin-bottom: 12px; }
+        .story { display: flex; flex-direction: column; padding: 20px 0 22px; border-bottom: 1px solid var(--rule); }
+        .story .kicker { align-self: flex-start; }
+        .story-thumb {
+            position: relative; display: grid; place-items: center;
+            aspect-ratio: 3 / 2; margin-bottom: 12px; overflow: hidden; border-radius: 3px;
+            background: var(--field-bg);
+        }
         .story-thumb img {
-            width: 100%; aspect-ratio: 3 / 2; max-height: 340px; object-fit: cover;
-            filter: saturate(.94) contrast(1.02); background: var(--rule);
+            position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+            filter: var(--thumb-filter);
+            transition: transform .5s cubic-bezier(.2, .7, .2, 1);
+        }
+        .story:hover .story-thumb img { transform: scale(1.035); }
+        .thumb-label {
+            padding: 0 14px; text-align: center;
+            font-size: 1.05rem; font-weight: 800; letter-spacing: -.01em;
+            color: var(--ink-faint);
         }
         .story-title {
             font-family: "Manrope", sans-serif; font-weight: 700;
             font-size: 1.32rem; line-height: 1.15; letter-spacing: -.006em; margin-bottom: 6px;
-            color: #dc9e63;
+            color: var(--title);
         }
-        .story .byline { font-size: .8rem; margin-bottom: 8px; }
+        .story .byline { display: flex; flex-wrap: wrap; font-size: .8rem; margin-bottom: 8px; }
+        .story .byline > * { white-space: nowrap; }
+        .story .byline > * + *::before { content: "·"; margin: 0 .5em; }
         .share-btn {
             background: none; border: none; cursor: pointer; padding: 0;
             display: inline-flex; align-items: center; gap: 4px; vertical-align: baseline;
@@ -156,7 +282,7 @@
         .share-btn:hover { color: var(--accent); }
         .share-btn svg { width: 12px; height: 12px; fill: currentColor; }
         .share-btn.copied { color: var(--accent); }
-        .card-actions { display: inline-flex; align-items: center; gap: 9px; }
+        .card-actions { display: flex; align-items: center; gap: 14px; margin-top: auto; padding-top: 12px; }
         .orig { color: var(--ink-faint); font-size: .78rem; text-decoration: none; }
         .orig:hover { color: var(--accent); }
         .save-btn {
@@ -187,6 +313,7 @@
         .page-info { font-style: normal; text-transform: none; letter-spacing: 0; color: var(--ink-faint); font-weight: 400; }
 
         .empty { padding: 100px 0; text-align: center; font-style: normal; color: var(--ink-soft); }
+        .empty a { color: var(--accent); }
 
         .colophon {
             margin-top: 34px; padding-top: 16px; border-top: 1px solid var(--rule);
@@ -196,8 +323,27 @@
         .colophon a { color: var(--ink-soft); margin-right: 15px; }
         .colophon a:hover { color: var(--accent); }
 
+        @media (prefers-reduced-motion: no-preference) {
+            @view-transition { navigation: auto; }
+            ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .22s; }
+            @supports (animation-timeline: view()) {
+                .story { animation: story-in linear both; animation-timeline: view(); animation-range: entry 0% entry 35%; }
+            }
+        }
+        @keyframes story-in { from { opacity: 0; transform: translateY(14px); } }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
+        }
+
+        @media (min-width: 681px) and (max-width: 960px) {
+            .stories { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 32px; }
+        }
+
         @media (max-width: 680px) {
             body { padding: 18px 16px 56px; }
+            .filters { padding: 10px 0; }
+            .filter-menu { position: static; }
+            .menu { left: 0; right: 0; top: calc(100% + 4px); width: auto; }
             .topbar { justify-content: center; }
             .sections { flex-wrap: wrap; justify-content: center; gap: 12px 14px; }
             .masthead {
@@ -208,9 +354,9 @@
             .masthead .search { flex: 1; min-width: 180px; }
             .search input { flex: 1; width: auto; }
             .stories { grid-template-columns: 1fr; }
-            .stories .story { border-left: none; padding-left: 0; padding-right: 0; overflow: hidden; }
-            .story-thumb { float: right; width: 104px; margin: 2px 0 6px 14px; }
-            .story-thumb img { width: 104px; height: 104px; max-height: none; aspect-ratio: 1; }
+            .stories .story { display: block; overflow: hidden; }
+            .story-thumb { float: right; width: 104px; aspect-ratio: 1; margin: 2px 0 6px 14px; }
+            .thumb-label { font-size: .72rem; padding: 0 8px; }
             .pagination { flex-wrap: wrap; gap: 12px 18px; }
             .colophon { flex-direction: column; gap: 8px; align-items: flex-start; }
         }
@@ -237,29 +383,63 @@
         </div>
     </header>
 
+    <nav class="filters" id="filters" aria-label="Filter stories">
+        <a class="archive-link{{if .Archive}} is-active{{end}}" href="{{.ArchiveHref}}" title="{{if .Archive}}Back to today{{else}}Browse the archive{{end}}"{{if .Archive}} aria-current="page"{{end}}><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="3.5" width="19" height="5" rx="1"/><path d="M4.5 8.5v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-10"/><path d="M10 12.5h4"/></svg>Archive</a>
+        {{if .Archive}}
+        <form class="date-range" method="get" action="/archive">
+            {{range .DateHidden}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}
+            <input type="date" name="from" value="{{.From}}" max="{{.MaxDate}}" aria-label="From date">
+            <span aria-hidden="true">–</span>
+            <input type="date" name="to" value="{{.To}}" max="{{.MaxDate}}" aria-label="To date">
+            <button type="submit">Show</button>
+        </form>
+        {{end}}
+        <div class="filter-menus">
+            {{range $m := .Menus}}
+            <details class="filter-menu{{if $m.Set}} is-set{{end}}">
+                <summary><span class="filter-name">{{$m.Name}}</span><span class="filter-value">{{$m.Summary}}</span></summary>
+                <form class="menu" method="get" action="{{$m.Action}}">
+                    <input class="menu-search" type="search" placeholder="Filter…" aria-label="Filter {{$m.Name}} options" hidden>
+                    {{range $m.Hidden}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}
+                    {{range $m.Options}}<label class="menu-option"><input type="checkbox" name="{{$m.Param}}" value="{{.Value}}"{{if .Checked}} checked{{end}}><span class="option-label">{{.Label}}</span>{{if .Count}}<span class="count">{{.Count}}</span>{{end}}</label>{{end}}
+                    <div class="menu-actions"><a href="{{$m.ClearHref}}">Clear</a><button type="submit">Apply</button></div>
+                </form>
+            </details>
+            {{end}}
+        </div>
+    </nav>
+
     <main>
         <div class="results-head" id="results-head" hidden></div>
         <div id="front">
+            {{if or .Archive .Filtered}}
+            <div class="active-filters">
+                <span>{{.Total}} {{if eq .Total 1}}story{{else}}stories{{end}}{{if .Archive}} · {{.RangeLabel}}{{else}} today{{end}}</span>
+                {{range .Pills}}<a class="pill" href="{{.Href}}" aria-label="Remove filter: {{.Label}}">{{.Label}} <span aria-hidden="true">×</span></a>{{end}}
+                {{if .Filtered}}<a class="clear-all" href="{{.ClearHref}}">clear filters</a>{{end}}
+            </div>
+            {{end}}
             {{if .Entries}}
             <div class="stories">
                 {{range $e := .Entries}}
                 <article class="story">
-                    {{if $e.ImageURL}}<a class="story-thumb" href="/read?url={{$e.Link | urlquery}}&title={{$e.Title | urlquery}}"><img src="{{$e.ImageURL}}" alt="" loading="lazy" onerror="this.closest('.story-thumb').remove()"></a>{{end}}
-                    {{if $e.MatchedKeywords}}<span class="kicker">{{$e.MatchedKeywords}}</span>{{end}}
+                    <a class="story-thumb" href="/read?url={{$e.Link | urlquery}}&title={{$e.Title | urlquery}}" tabindex="-1" aria-hidden="true"><span class="thumb-label">{{formatSource $e.Source}}</span>{{if $e.ImageURL}}<img src="{{$e.ImageURL}}" alt="" loading="lazy" decoding="async" onerror="this.remove()">{{end}}</a>
+                    {{if $e.MatchedKeywords}}<a class="kicker" href="/?topic={{$e.MatchedKeywords | urlquery}}">{{$e.MatchedKeywords}}</a>{{end}}
                     <h3 class="story-title"><a class="title-link" href="/read?url={{$e.Link | urlquery}}&title={{$e.Title | urlquery}}">{{$e.Title}}</a></h3>
-                    <div class="byline">{{formatSource $e.Source}} &nbsp;·&nbsp; {{timeAgo $e.CreatedAt}}{{if $e.Content}} &nbsp;·&nbsp; {{readingTime $e.Content}}{{end}} &nbsp;·&nbsp; <span class="card-actions"><a class="orig" href="{{$e.Link}}" target="_blank" rel="noopener" title="Original">↗</a> <button class="save-btn" data-url="{{$e.Link}}" data-title="{{$e.Title}}" data-image="{{$e.ImageURL}}" data-source="{{$e.Source}}" data-excerpt="{{$e.Description}}" onclick="toggleSave(this)" aria-label="Save"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></button> <button class="share-btn" data-title="{{$e.Title}}" data-url="{{$e.Link}}" onclick="shareStory(this)" aria-label="Share"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg><span>share</span></button></span></div>
+                    <div class="byline"><a class="src-link" href="/?source={{$e.Source | urlquery}}">{{formatSource $e.Source}}</a><span>{{timeAgo $e.CreatedAt}}</span>{{if $e.Content}}<span>{{readingTime $e.Content}}</span>{{end}}</div>
                     {{if $e.Description}}<p class="story-excerpt">{{$e.Description}}</p>{{end}}
+                    <div class="card-actions"><a class="orig" href="{{$e.Link}}" target="_blank" rel="noopener" title="Original">↗</a><button class="save-btn" data-url="{{$e.Link}}" data-title="{{$e.Title}}" data-image="{{$e.ImageURL}}" data-source="{{$e.Source}}" data-excerpt="{{$e.Description}}" onclick="toggleSave(this)" aria-label="Save"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></button><button class="share-btn" data-title="{{$e.Title}}" data-url="{{$e.Link}}" onclick="shareStory(this)" aria-label="Share"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg><span>share</span></button></div>
                 </article>
                 {{end}}
             </div>
 
             <div class="pagination">
-                {{if .HasPrev}}<a href="/?page={{sub .Page 1}}">← Newer</a>{{else}}<span class="disabled">← Newer</span>{{end}}
+                {{if .HasPrev}}<a href="{{.PrevURL}}">← Newer</a>{{else}}<span class="disabled">← Newer</span>{{end}}
                 <span class="page-info">page {{.Page}} of {{.TotalPages}} · {{.Total}} stories</span>
-                {{if .HasNext}}<a href="/?page={{add .Page 1}}">Older →</a>{{else}}<span class="disabled">Older →</span>{{end}}
+                {{if .HasNext}}<a href="{{.NextURL}}">Older →</a>{{else}}<span class="disabled">Older →</span>{{end}}
             </div>
             {{else}}
-            <div class="empty">no stories yet</div>
+            <div class="empty">{{if .Filtered}}no stories match these filters · <a href="{{.ClearHref}}">clear filters</a>{{else if .Archive}}no stories in this date range{{else}}no stories yet today · <a href="/archive">browse the archive</a>{{end}}</div>
             {{end}}
         </div>
         <div id="results" hidden></div>
@@ -309,16 +489,17 @@
             function card(r) {
                 const link = '/read?url=' + encodeURIComponent(r.link || '') + '&title=' + encodeURIComponent(r.title || '');
                 const orig = safeURL(r.link);
-                const thumb = r.image_url ? `<a class="story-thumb" href="${link}"><img src="${safeURL(r.image_url)}" alt="" loading="lazy" onerror="this.closest('.story-thumb').remove()"></a>` : '';
-                const kicker = r.matched_keywords ? `<span class="kicker">${esc(r.matched_keywords)}</span>` : '';
+                const thumb = thumbHTML(link, r.source, r.image_url);
+                const kicker = r.matched_keywords ? `<a class="kicker" href="/?topic=${encodeURIComponent(r.matched_keywords)}">${esc(r.matched_keywords)}</a>` : '';
                 const excerpt = r.description ? `<p class="story-excerpt">${esc(r.description)}</p>` : '';
-                return `<article class="story">${thumb}${kicker}<h3 class="story-title"><a class="title-link" href="${link}">${esc(r.title)}</a></h3><div class="byline">${esc(r.source)} &nbsp;·&nbsp; ${esc(r.age)} &nbsp;·&nbsp; <span class="card-actions"><a class="orig" href="${orig}" target="_blank" rel="noopener">↗</a> <button class="save-btn" data-url="${escAttr(r.link)}" data-title="${escAttr(r.title)}" data-image="${escAttr(r.image_url || '')}" data-source="${escAttr(r.source)}" data-excerpt="${escAttr(r.description || '')}" onclick="toggleSave(this)" aria-label="Save"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></button></span></div>${excerpt}</article>`;
+                return `<article class="story">${thumb}${kicker}<h3 class="story-title"><a class="title-link" href="${link}">${esc(r.title)}</a></h3><div class="byline"><span>${esc(r.source)}</span><span>${esc(r.age)}</span></div>${excerpt}<div class="card-actions"><a class="orig" href="${orig}" target="_blank" rel="noopener">↗</a><button class="save-btn" data-url="${escAttr(r.link)}" data-title="${escAttr(r.title)}" data-image="${escAttr(r.image_url || '')}" data-source="${escAttr(r.source)}" data-excerpt="${escAttr(r.description || '')}" onclick="toggleSave(this)" aria-label="Save"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></button></div></article>`;
             }
 
-            function showFront() { input.value = ''; results.hidden = true; head.hidden = true; front.hidden = false; const sv = document.getElementById('saved'); if (sv) sv.hidden = true; }
+            const filters = document.getElementById('filters');
+            function showFront() { input.value = ''; results.hidden = true; head.hidden = true; front.hidden = false; filters.hidden = false; const sv = document.getElementById('saved'); if (sv) sv.hidden = true; }
 
             async function runSearch(q) {
-                front.hidden = true; results.hidden = false; results.innerHTML = '';
+                front.hidden = true; filters.hidden = true; results.hidden = false; results.innerHTML = '';
                 const sv = document.getElementById('saved'); if (sv) sv.hidden = true;
                 head.hidden = false; head.innerHTML = '<span>searching…</span>';
                 let data;
@@ -348,6 +529,11 @@
         function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
         function escAttr(s) { return esc(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
         function safeURL(u) { try { const p = new URL(u, location.origin); return (p.protocol === 'http:' || p.protocol === 'https:') ? p.href : '#'; } catch (e) { return '#'; } }
+
+        function thumbHTML(link, source, image) {
+            const img = image ? `<img src="${safeURL(image)}" alt="" loading="lazy" decoding="async" onerror="this.remove()">` : '';
+            return `<a class="story-thumb" href="${link}" tabindex="-1" aria-hidden="true"><span class="thumb-label">${esc(source)}</span>${img}</a>`;
+        }
 
         function savedEntryFromBtn(btn) {
             return {
@@ -386,11 +572,12 @@
         function savedCard(s) {
             const link = '/read?url=' + encodeURIComponent(s.url || '') + '&title=' + encodeURIComponent(s.title || '');
             const orig = safeURL(s.url);
-            const thumb = s.image_url ? '<a class="story-thumb" href="' + link + '"><img src="' + safeURL(s.image_url) + '" alt="" loading="lazy" onerror="this.closest(\'.story-thumb\').remove()"></a>' : '';
+            const thumb = thumbHTML(link, s.siteName, s.image_url);
             const excerpt = s.excerpt ? '<p class="story-excerpt">' + esc(s.excerpt) + '</p>' : '';
             return '<article class="story">' + thumb +
                 '<h3 class="story-title"><a class="title-link" href="' + link + '">' + esc(s.title) + '</a></h3>' +
-                '<div class="byline">' + esc(s.siteName || '') + ' <span class="card-actions"><a class="orig" href="' + orig + '" target="_blank" rel="noopener">↗</a> <button class="save-btn saved" data-url="' + escAttr(s.url) + '" data-title="' + escAttr(s.title) + '" data-image="' + escAttr(s.image_url || '') + '" data-source="' + escAttr(s.siteName || '') + '" data-excerpt="' + escAttr(s.excerpt || '') + '" onclick="toggleSave(this)" aria-label="Remove from saved"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></button></span></div>' + excerpt + '</article>';
+                '<div class="byline"><span>' + esc(s.siteName || '') + '</span></div>' + excerpt +
+                '<div class="card-actions"><a class="orig" href="' + orig + '" target="_blank" rel="noopener">↗</a><button class="save-btn saved" data-url="' + escAttr(s.url) + '" data-title="' + escAttr(s.title) + '" data-image="' + escAttr(s.image_url || '') + '" data-source="' + escAttr(s.siteName || '') + '" data-excerpt="' + escAttr(s.excerpt || '') + '" onclick="toggleSave(this)" aria-label="Remove from saved"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg></button></div></article>';
         }
 
         function showSaved() {
@@ -398,8 +585,10 @@
             const results = document.getElementById('results');
             const head = document.getElementById('results-head');
             const saved = document.getElementById('saved');
+            const filters = document.getElementById('filters');
             if (front) front.hidden = true;
             if (results) results.hidden = true;
+            if (filters) filters.hidden = true;
             if (head) head.hidden = true;
             if (!saved) return;
             saved.hidden = false;
@@ -422,6 +611,57 @@
             updateSavedCount();
             refreshSaveButtons();
         }
+
+        (function () {
+            const menus = Array.from(document.querySelectorAll('.filter-menu'));
+            const canHover = window.matchMedia('(hover: hover)').matches;
+
+            function close(menu, apply) {
+                if (!menu.open) return;
+                if (!apply) {
+                    menu.querySelector('form').reset();
+                    delete menu.dataset.dirty;
+                }
+                menu.removeAttribute('open');
+            }
+
+            menus.forEach(function (menu) {
+                const form = menu.querySelector('form');
+                const search = menu.querySelector('.menu-search');
+                const options = Array.from(menu.querySelectorAll('.menu-option'));
+                search.hidden = false;
+
+                menu.addEventListener('toggle', function () {
+                    if (!menu.open) {
+                        if (menu.dataset.dirty) form.requestSubmit();
+                        return;
+                    }
+                    menus.forEach(function (other) { if (other !== menu) close(other, true); });
+                    search.value = '';
+                    options.forEach(function (o) { o.hidden = false; });
+                    if (canHover) search.focus();
+                });
+
+                form.addEventListener('change', function (e) {
+                    if (e.target.type === 'checkbox') menu.dataset.dirty = '1';
+                });
+
+                search.addEventListener('input', function () {
+                    const q = search.value.trim().toLowerCase();
+                    options.forEach(function (o) {
+                        o.hidden = q !== '' && !o.querySelector('.option-label').textContent.toLowerCase().includes(q);
+                    });
+                });
+            });
+
+            document.addEventListener('click', function (e) {
+                menus.forEach(function (menu) { if (!menu.contains(e.target)) close(menu, true); });
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') menus.forEach(function (menu) { close(menu, false); });
+            });
+        })();
+
         if (location.hash === '#saved') { showSaved(); }
         window.addEventListener('hashchange', function () { if (location.hash === '#saved') showSaved(); });
     </script>

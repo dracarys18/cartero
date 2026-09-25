@@ -1,11 +1,15 @@
 package handler
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
 	"cartero/internal/storage"
+	utils "cartero/internal/utils/string"
 
 	"github.com/gorilla/feeds"
 )
@@ -69,25 +73,96 @@ func (h *Handler) AtomFeed(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprint(w, atom)
 }
 
+type jsonFeed struct {
+	Version     string         `json:"version"`
+	Title       string         `json:"title"`
+	HomePageURL string         `json:"home_page_url,omitempty"`
+	FeedURL     string         `json:"feed_url,omitempty"`
+	Items       []jsonFeedItem `json:"items"`
+}
+
+type jsonFeedItem struct {
+	ID            string          `json:"id"`
+	URL           string          `json:"url,omitempty"`
+	Title         string          `json:"title"`
+	Summary       string          `json:"summary,omitempty"`
+	ContentText   string          `json:"content_text,omitempty"`
+	Image         string          `json:"image,omitempty"`
+	DatePublished *time.Time      `json:"date_published,omitempty"`
+	Authors       []jsonAuthor    `json:"authors,omitempty"`
+	Tags          []string        `json:"tags,omitempty"`
+	Cartero       jsonCarteroMeta `json:"_cartero"`
+}
+
+type jsonAuthor struct {
+	Name string `json:"name"`
+}
+
+type jsonCarteroMeta struct {
+	Source         string    `json:"source"`
+	ReadingMinutes int       `json:"reading_minutes,omitempty"`
+	AddedAt        time.Time `json:"added_at"`
+}
+
 func (h *Handler) JSONFeed(w http.ResponseWriter, r *http.Request) {
-	entries, err := h.entryStore.ListPublishedEntries(r.Context(), h.config.Name, h.config.FeedSize)
+	entries, err := h.entryStore.ListPublishedEntries(r.Context(), h.config.Name, h.config.MaxItems)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = fmt.Fprintf(w, "Error: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	feed := h.buildFeed(entries)
-	jsonStr, err := feed.ToJSON()
+	feed := jsonFeed{
+		Version:     "https://jsonfeed.org/version/1.1",
+		Title:       h.config.SiteName,
+		HomePageURL: h.config.SiteURL,
+		Items:       make([]jsonFeedItem, 0, len(entries)),
+	}
+	if h.config.SiteURL != "" {
+		feed.FeedURL = h.config.SiteURL + "/feed.json"
+	}
+
+	for _, e := range entries {
+		item := jsonFeedItem{
+			ID:          e.ID,
+			URL:         e.Link,
+			Title:       e.Title,
+			Summary:     e.Description,
+			ContentText: e.Content,
+			Image:       e.ImageURL,
+			Cartero: jsonCarteroMeta{
+				Source:         utils.Readable(e.Source),
+				ReadingMinutes: readingMinutes(e.Content),
+				AddedAt:        e.CreatedAt,
+			},
+		}
+		if !e.PublishedAt.IsZero() {
+			item.DatePublished = &e.PublishedAt
+		}
+		if e.Author != "" {
+			item.Authors = []jsonAuthor{{Name: e.Author}}
+		}
+		if e.MatchedKeywords != "" {
+			item.Tags = []string{e.MatchedKeywords}
+		}
+		feed.Items = append(feed.Items, item)
+	}
+
+	body, err := json.Marshal(feed)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Header().Set("Content-Disposition", "inline")
-	w.Header().Set("Cache-Control", "public, max-age=3600")
-	_, _ = fmt.Fprint(w, jsonStr)
+	sum := sha256.Sum256(body)
+	etag := `"` + hex.EncodeToString(sum[:16]) + `"`
+	w.Header().Set("Content-Type", "application/feed+json; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=300")
+	w.Header().Set("ETag", etag)
+	if r.Header.Get("If-None-Match") == etag {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
+	_, _ = w.Write(body)
 }
 
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {

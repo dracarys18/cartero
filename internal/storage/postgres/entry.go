@@ -172,19 +172,21 @@ func (s *entryStore) ListPublishedEntries(ctx context.Context, target string, li
 	return s.scanEntries(rows, limit)
 }
 
-func (s *entryStore) ListEntriesPaginated(ctx context.Context, page, perPage int, startDate, endDate time.Time) (*storage.PaginationResult, error) {
+func (s *entryStore) ListEntriesPaginated(ctx context.Context, page, perPage int, filter storage.EntryFilter) (*storage.PaginationResult, error) {
 	offset := (page - 1) * perPage
 
 	query := `
 		SELECT id, title, link, description, content, author, source, image_url, matched_keywords, hash, entry_timestamp, published_at, created_at,
 		       COUNT(*) OVER() AS total_count
 		FROM feed_entries
-		WHERE created_at >= $1 AND created_at < $2
+		WHERE title <> '' AND created_at >= $1 AND created_at < $2
+		  AND (coalesce(cardinality($3::text[]), 0) = 0 OR matched_keywords = ANY($3::text[]))
+		  AND (coalesce(cardinality($4::text[]), 0) = 0 OR source = ANY($4::text[]))
 		ORDER BY created_at DESC
-		LIMIT $3 OFFSET $4
+		LIMIT $5 OFFSET $6
 	`
 
-	rows, err := s.db.QueryContext(ctx, query, startDate, endDate, perPage, offset)
+	rows, err := s.db.QueryContext(ctx, query, filter.Since, filter.Until, filter.Topics, filter.Sources, perPage, offset)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query entries: %w", err)
 	}
@@ -418,4 +420,49 @@ func vectorLiteral(v []float32) string {
 	}
 	b.WriteByte(']')
 	return b.String()
+}
+
+func (s *entryStore) ListFacets(ctx context.Context, filter storage.EntryFilter) ([]storage.Facet, []storage.Facet, error) {
+	topics, err := s.facet(ctx, `
+		SELECT matched_keywords, COUNT(*)
+		FROM feed_entries
+		WHERE title <> '' AND matched_keywords <> '' AND created_at >= $1 AND created_at < $2
+		  AND (coalesce(cardinality($3::text[]), 0) = 0 OR source = ANY($3::text[]))
+		GROUP BY 1
+		ORDER BY 2 DESC, 1
+	`, filter, filter.Sources)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sources, err := s.facet(ctx, `
+		SELECT source, COUNT(*)
+		FROM feed_entries
+		WHERE title <> '' AND created_at >= $1 AND created_at < $2
+		  AND (coalesce(cardinality($3::text[]), 0) = 0 OR matched_keywords = ANY($3::text[]))
+		GROUP BY 1
+		ORDER BY 2 DESC, 1
+	`, filter, filter.Topics)
+	if err != nil {
+		return nil, nil, err
+	}
+	return topics, sources, nil
+}
+
+func (s *entryStore) facet(ctx context.Context, query string, filter storage.EntryFilter, other []string) ([]storage.Facet, error) {
+	rows, err := s.db.QueryContext(ctx, query, filter.Since, filter.Until, other)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query facets: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var facets []storage.Facet
+	for rows.Next() {
+		var f storage.Facet
+		if err := rows.Scan(&f.Value, &f.Count); err != nil {
+			return nil, err
+		}
+		facets = append(facets, f)
+	}
+	return facets, rows.Err()
 }

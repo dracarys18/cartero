@@ -19,6 +19,16 @@
 
   var current = null;
 
+  var backLink = document.getElementById('back-link');
+  try {
+    if (history.length > 1 && new URL(document.referrer).origin === location.origin) {
+      backLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        history.back();
+      });
+    }
+  } catch (e) {}
+
   function safeUrl(u) {
     try {
       var p = new URL(u, location.origin);

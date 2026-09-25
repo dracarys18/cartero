@@ -42,6 +42,18 @@ type FeedEntry struct {
 	CreatedAt       time.Time
 }
 
+type EntryFilter struct {
+	Topics  []string
+	Sources []string
+	Since   time.Time
+	Until   time.Time
+}
+
+type Facet struct {
+	Value string
+	Count int
+}
+
 type PaginationResult struct {
 	Entries     []FeedEntry
 	Total       int
@@ -61,7 +73,8 @@ type EntryStore interface {
 	InsertEntry(ctx context.Context, id, title string, link *url.URL, description, content, author, source, imageURL, matchedKeywords string, publishedAt time.Time) error
 	ListRecentEntries(ctx context.Context, limit int) ([]FeedEntry, error)
 	ListPublishedEntries(ctx context.Context, target string, limit int) ([]FeedEntry, error)
-	ListEntriesPaginated(ctx context.Context, page, perPage int, startDate, endDate time.Time) (*PaginationResult, error)
+	ListEntriesPaginated(ctx context.Context, page, perPage int, filter EntryFilter) (*PaginationResult, error)
+	ListFacets(ctx context.Context, filter EntryFilter) (topics, sources []Facet, err error)
 	Search(ctx context.Context, query string, limit int) ([]FeedEntry, error)
 	SetEmbedding(ctx context.Context, id, model string, embedding []float32) error
 	FindSimilarEntry(ctx context.Context, model string, embedding []float32, threshold float64, since time.Time) (bool, error)

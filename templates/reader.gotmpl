@@ -78,6 +78,14 @@
             text-decoration: none; font-size: 1rem;
         }
         .topbar .spacer { flex: 1; }
+        .back-link {
+            position: absolute; top: 52px; right: 100%; margin-right: 12px; white-space: nowrap;
+            display: inline-flex; align-items: center; gap: 6px;
+            text-transform: uppercase; letter-spacing: .13em; font-size: .68rem; font-weight: 600;
+            color: var(--ink-soft); text-decoration: none; transition: color .15s;
+        }
+        .back-link svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .back-link:hover { color: var(--accent); }
         .topbar button, .topbar .orig {
             font-family: inherit; font-size: .72rem; font-weight: 600;
             text-transform: uppercase; letter-spacing: .08em;
@@ -93,6 +101,7 @@
         #save-btn.saved svg { fill: currentColor; }
 
         .reader {
+            position: relative;
             max-width: 720px;
             margin: 0 auto;
             padding: 40px 24px 96px;
@@ -172,6 +181,9 @@
         .status a { color: var(--accent); }
         .err { color: var(--accent); }
 
+        @media (max-width: 1000px) {
+            .back-link { position: static; display: flex; width: fit-content; margin: 0 0 20px; }
+        }
         @media (max-width: 680px) {
             .reader { padding: 24px 18px 72px; }
             h1.title { font-size: 1.62rem; }
@@ -191,6 +203,7 @@
     </header>
 
     <main class="reader">
+        <a class="back-link" id="back-link" href="/"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>Back</a>
         <div id="status" class="status">
             <div class="spinner"></div>
             <div>Fetching article…</div>

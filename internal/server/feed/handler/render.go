@@ -55,15 +55,19 @@ func funcMap() htmltemplate.FuncMap {
 }
 
 func readingTime(content string) string {
-	words := len(strings.Fields(content))
-	if words == 0 {
+	mins := readingMinutes(content)
+	if mins == 0 {
 		return ""
 	}
-	mins := (words + 224) / 225 // ceil
-	if mins < 1 {
-		mins = 1
-	}
 	return fmt.Sprintf("%d min read", mins)
+}
+
+func readingMinutes(content string) int {
+	words := len(strings.Fields(content))
+	if words == 0 {
+		return 0
+	}
+	return (words + 224) / 225
 }
 
 func (h *Handler) renderBytes(data map[string]interface{}) ([]byte, error) {
