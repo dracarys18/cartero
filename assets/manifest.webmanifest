@@ -3,7 +3,7 @@
   "name": "Cartero",
   "short_name": "Cartero",
   "description": "Content aggregation feed from Cartero",
-  "start_url": "/?source=pwa",
+  "start_url": "/?utm_source=pwa",
   "scope": "/",
   "display": "standalone",
   "background_color": "#161616",
