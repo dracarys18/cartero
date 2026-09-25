@@ -241,7 +241,10 @@ func (s *State) buildFilterChain(ctx context.Context) *filters.Chain {
 	fs = append(fs, processors.NewExtractProcessor(s.Config.Processors[names.ExtractText].Settings.ExtractTextSettings))
 
 	pc := s.Registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
-	fs = append(fs, filters.NewRankFilter(pc.Jev(), s.Config.Interests))
+	fs = append(fs,
+		filters.NewRankFilter(pc.Jev(), s.Config.Interests),
+		filters.NewDiversifyFilter(),
+	)
 
 	return filters.NewChain(fs...)
 }
