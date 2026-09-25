@@ -1,12 +1,17 @@
 package handler
 
 import (
+	"mime"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
+
+func init() {
+	_ = mime.AddExtensionType(".webmanifest", "application/manifest+json")
+}
 
 func (h *Handler) Routes() http.Handler {
 	r := chi.NewRouter()

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'cartero-v2';
+const CACHE_VERSION = 'cartero-v3';
 
 const PRECACHE_URLS = [
     '/?date=today',
