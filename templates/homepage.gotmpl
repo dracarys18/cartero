@@ -324,6 +324,7 @@
         }
         .colophon a { color: var(--ink-soft); margin-right: 15px; }
         .colophon a:hover { color: var(--accent); }
+        .colophon a.sponsor { color: var(--accent); }
 
         @media (prefers-reduced-motion: no-preference) {
             @view-transition { navigation: auto; }
@@ -453,6 +454,7 @@
             <a href="/feed.rss">RSS</a>
             <a href="/feed.atom">Atom</a>
             <a href="/feed.json">JSON</a>
+            <a class="sponsor" href="https://github.com/sponsors/dracarys18" rel="noopener">Sponsor ♥</a>
         </div>
         <div>set by machine · {{.Now.Format "Jan 2, 2006 · 15:04 MST"}}</div>
     </footer>
