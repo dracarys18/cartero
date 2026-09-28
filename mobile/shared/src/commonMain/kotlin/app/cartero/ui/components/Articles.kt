@@ -1,40 +1,53 @@
 package app.cartero.ui.components
 
-import org.jetbrains.compose.resources.DrawableResource
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.paging.PagingData
@@ -50,7 +63,9 @@ import app.cartero.resources.ic_bookmark_filled
 import app.cartero.resources.ic_check
 import app.cartero.resources.ic_mark_email_unread
 import coil3.compose.AsyncImage
-import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.roundToInt
+import kotlin.math.sign
 import org.jetbrains.compose.resources.painterResource
 
 sealed interface ListItem {
@@ -113,56 +128,65 @@ private fun SwipeableArticle(
     onToggleSaved: (Long) -> Unit,
     onToggleRead: (ArticleRow) -> Unit,
 ) {
-    val state = rememberSwipeToDismissBoxState()
-    val scope = rememberCoroutineScope()
-    SwipeToDismissBox(
-        state = state,
-        onDismiss = { value ->
-            when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> onToggleSaved(row.id)
-                SwipeToDismissBoxValue.EndToStart -> onToggleRead(row)
-                SwipeToDismissBoxValue.Settled -> Unit
-            }
-            scope.launch { state.reset() }
-        },
-        backgroundContent = { SwipeBackground(state.dismissDirection, row) },
-    ) {
-        ArticleCard(row, onClick = { onOpen(row.id) })
+    val threshold = with(LocalDensity.current) { SWIPE_THRESHOLD.toPx() }
+    val haptics = LocalHapticFeedback.current
+    val save by rememberUpdatedState { onToggleSaved(row.id) }
+    val read by rememberUpdatedState { onToggleRead(row) }
+    var offset by remember { mutableFloatStateOf(0f) }
+    val direction by remember { derivedStateOf { offset.sign } }
+    val armed by remember { derivedStateOf { abs(offset) > threshold } }
+
+    LaunchedEffect(armed) {
+        if (armed) haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+    }
+
+    Box(Modifier.height(IntrinsicSize.Min)) {
+        if (direction != 0f) SwipeBackground(started = direction > 0f, row = row)
+        ArticleCard(
+            row = row,
+            onClick = { onOpen(row.id) },
+            modifier = Modifier
+                .offset { IntOffset(offset.roundToInt(), 0) }
+                .draggable(
+                    orientation = Orientation.Horizontal,
+                    state = rememberDraggableState { delta -> offset += delta },
+                    onDragStopped = {
+                        when {
+                            offset > threshold -> save()
+                            offset < -threshold -> read()
+                        }
+                        animate(offset, 0f, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { value, _ ->
+                            offset = value
+                        }
+                    },
+                ),
+        )
     }
 }
 
 @Composable
-private fun SwipeBackground(direction: SwipeToDismissBoxValue, row: ArticleRow) {
+private fun SwipeBackground(started: Boolean, row: ArticleRow) {
     val colors = MaterialTheme.colorScheme
-    val (icon, container, content, alignment) = when (direction) {
-        SwipeToDismissBoxValue.StartToEnd -> SwipeStyle(
-            icon = if (row.savedAt == null) Res.drawable.ic_bookmark else Res.drawable.ic_bookmark_filled,
-            container = colors.primaryContainer,
-            content = colors.onPrimaryContainer,
-            alignment = Alignment.CenterStart,
-        )
-        SwipeToDismissBoxValue.EndToStart -> SwipeStyle(
-            icon = if (row.isRead) Res.drawable.ic_mark_email_unread else Res.drawable.ic_check,
-            container = colors.secondaryContainer,
-            content = colors.onSecondaryContainer,
-            alignment = Alignment.CenterEnd,
-        )
-        SwipeToDismissBoxValue.Settled -> return
+    val icon = when {
+        started && row.savedAt == null -> Res.drawable.ic_bookmark
+        started -> Res.drawable.ic_bookmark_filled
+        row.isRead -> Res.drawable.ic_mark_email_unread
+        else -> Res.drawable.ic_check
     }
     Box(
-        modifier = Modifier.fillMaxSize().background(container).padding(horizontal = 28.dp),
-        contentAlignment = alignment,
+        modifier = Modifier
+            .fillMaxSize()
+            .background(if (started) colors.primaryContainer else colors.secondaryContainer)
+            .padding(horizontal = 28.dp),
+        contentAlignment = if (started) Alignment.CenterStart else Alignment.CenterEnd,
     ) {
-        Icon(painterResource(icon), contentDescription = null, tint = content)
+        Icon(
+            painterResource(icon),
+            contentDescription = null,
+            tint = if (started) colors.onPrimaryContainer else colors.onSecondaryContainer,
+        )
     }
 }
-
-private data class SwipeStyle(
-    val icon: DrawableResource,
-    val container: Color,
-    val content: Color,
-    val alignment: Alignment,
-)
 
 @Composable
 fun ArticleCard(row: ArticleRow, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -238,4 +262,5 @@ private fun metaLine(row: ArticleRow, sourceColor: Color): AnnotatedString = bui
 }
 
 private val THUMBNAIL = 84.dp
+private val SWIPE_THRESHOLD = 96.dp
 private val ARTICLE_MIN_HEIGHT = 96.dp
