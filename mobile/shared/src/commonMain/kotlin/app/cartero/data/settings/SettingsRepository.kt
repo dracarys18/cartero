@@ -18,6 +18,7 @@ data class Settings(
     val readerScale: Float = 1f,
     val unreadOnly: Boolean = false,
     val inAppBrowser: Boolean = true,
+    val notificationsAsked: Boolean = false,
 )
 
 class SettingsRepository(private val store: DataStore<Preferences>) {
@@ -34,6 +35,7 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
             prefs[Keys.readerScale] = next.readerScale
             prefs[Keys.unreadOnly] = next.unreadOnly
             prefs[Keys.inAppBrowser] = next.inAppBrowser
+            prefs[Keys.notificationsAsked] = next.notificationsAsked
         }
     }
 
@@ -46,6 +48,7 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
             readerScale = this[Keys.readerScale] ?: defaults.readerScale,
             unreadOnly = this[Keys.unreadOnly] ?: defaults.unreadOnly,
             inAppBrowser = this[Keys.inAppBrowser] ?: defaults.inAppBrowser,
+            notificationsAsked = this[Keys.notificationsAsked] ?: defaults.notificationsAsked,
         )
     }
 
@@ -56,5 +59,6 @@ class SettingsRepository(private val store: DataStore<Preferences>) {
         val readerScale = floatPreferencesKey("reader_scale")
         val unreadOnly = booleanPreferencesKey("unread_only")
         val inAppBrowser = booleanPreferencesKey("in_app_browser")
+        val notificationsAsked = booleanPreferencesKey("notifications_asked")
     }
 }

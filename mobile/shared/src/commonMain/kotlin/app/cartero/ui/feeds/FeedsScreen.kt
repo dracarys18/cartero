@@ -332,7 +332,7 @@ private fun RenameDialog(feed: FeedWithStats, onRename: (String) -> Unit, onDism
 private fun feedIcon(feed: FeedWithStats): String? {
     if (feed.url == CarteroDatabase.DEFAULT_FEED_URL) return CARTERO_ICON
     val host = Html.webUrl(feed.siteUrl ?: feed.url)?.host ?: return null
-    return "https://www.google.com/s2/favicons?domain=$host&sz=64"
+    return "https://$host/favicon.ico"
 }
 
 private fun feedStatus(feed: FeedWithStats): String {

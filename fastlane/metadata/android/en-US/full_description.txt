@@ -1,0 +1,15 @@
+Cartero is a news reader for the Cartero feed, a hand-picked stream of stories on AI, systems, security and more. It also works with any RSS, Atom or JSON Feed.
+
+<b>Features</b>
+<ul>
+<li>A clean reader with full articles, proper typography, images, code blocks and tables</li>
+<li>Filter by topic and source, or show only what you haven't read</li>
+<li>Rules that notify you or save stories automatically by topic, source or keyword</li>
+<li>Saved stories are downloaded for offline reading</li>
+<li>RSS 2.0, Atom and JSON Feed, with OPML import and export. Paste a site address and the feed is found for you</li>
+<li>Swipe right to save, swipe left to mark as read</li>
+<li>Material You dark theme, and a side-by-side list and reader on tablets</li>
+</ul>
+
+<b>Private by design</b>
+No accounts, no ads and no analytics. Feeds are fetched straight from your device, and background sync runs on the schedule you choose.

@@ -1,0 +1,3 @@
+First F-Droid release.
+Feed icons now load directly from each site instead of a third-party service.
+Smoother swipe actions in the story list.

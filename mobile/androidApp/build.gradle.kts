@@ -14,8 +14,8 @@ android {
         applicationId = "app.cartero"
         minSdk = 33
         targetSdk = 37
-        versionCode = providers.gradleProperty("versionCode").orNull?.toInt() ?: 1
-        versionName = providers.gradleProperty("versionName").orNull ?: "1.0"
+        versionCode = providers.gradleProperty("versionCode").get().toInt()
+        versionName = providers.gradleProperty("versionName").get()
         ndk {
             abiFilters += "arm64-v8a"
         }
@@ -42,7 +42,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 

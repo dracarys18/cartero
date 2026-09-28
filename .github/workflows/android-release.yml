@@ -27,13 +27,15 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Derive version
+      - name: Check version matches tag
         id: version
         run: |
-          name="${GITHUB_REF_NAME#v}"
-          IFS=. read -r major minor patch <<< "${name%%-*}"
+          name=$(sed -n 's/^versionName=//p' gradle.properties)
+          if [ "$name" != "${GITHUB_REF_NAME#v}" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match versionName $name in mobile/gradle.properties"
+            exit 1
+          fi
           echo "name=$name" >> "$GITHUB_OUTPUT"
-          echo "code=$((major * 10000 + minor * 100 + ${patch:-0}))" >> "$GITHUB_OUTPUT"
 
       - name: Decode keystore
         run: echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
@@ -41,10 +43,7 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
 
       - name: Build release APK
-        run: >
-          ./gradlew :androidApp:assembleRelease
-          -PversionName=${{ steps.version.outputs.name }}
-          -PversionCode=${{ steps.version.outputs.code }}
+        run: ./gradlew :androidApp:assembleRelease
         env:
           CARTERO_KEYSTORE: ${{ runner.temp }}/release.jks
           CARTERO_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
