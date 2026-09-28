@@ -32,11 +32,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -280,13 +282,24 @@ private fun RuleEditorSheet(
     var action by rememberSaveable { mutableStateOf(RuleAction.Notify) }
     var field by rememberSaveable { mutableStateOf(RuleField.Topic) }
     var value by rememberSaveable { mutableStateOf("") }
-    val suggestions = when (field) {
+    val options = when (field) {
         RuleField.Topic -> topics
         RuleField.Source -> sources
         RuleField.Keyword -> emptyList()
     }
+    val query = value.trim()
+    val exact = remember(options, query) { options.firstOrNull { it.value.equals(query, ignoreCase = true) } }
+    val suggestions = remember(options, query, exact) {
+        exact?.let(::listOf) ?: options.filter { it.value.contains(query, ignoreCase = true) }
+    }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberBottomSheetState(
+            initialValue = SheetValue.Hidden,
+            enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
+        ),
+    ) {
         Column(
             modifier = Modifier
                 .verticalScroll(rememberScrollState())
@@ -317,7 +330,7 @@ private fun RuleEditorSheet(
                 ) {
                     suggestions.forEach { option ->
                         FilterChip(
-                            selected = option.value == value,
+                            selected = option == exact,
                             onClick = { value = option.value },
                             label = { Text(option.value) },
                         )
@@ -332,7 +345,7 @@ private fun RuleEditorSheet(
             ) { Text(if (it == RuleAction.Notify) "Notify me" else "Save it") }
             Button(
                 onClick = {
-                    onCreate(action, field, value)
+                    onCreate(action, field, exact?.value ?: query)
                     onDismiss()
                 },
                 enabled = value.isNotBlank(),

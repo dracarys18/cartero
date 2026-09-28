@@ -30,8 +30,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -239,12 +241,14 @@ fun ArticleCard(row: ArticleRow, onClick: () -> Unit, modifier: Modifier = Modif
                 )
             }
         }
-        if (row.imageUrl != null) {
+        var imageFailed by rememberSaveable(row.imageUrl) { mutableStateOf(false) }
+        if (row.imageUrl != null && !imageFailed) {
             AsyncImage(
                 model = row.imageUrl,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 alpha = if (row.isRead) 0.7f else 1f,
+                onError = { imageFailed = true },
                 modifier = Modifier
                     .size(THUMBNAIL)
                     .clip(RoundedCornerShape(16.dp))

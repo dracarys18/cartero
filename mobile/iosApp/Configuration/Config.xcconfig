@@ -1,5 +1,7 @@
 TEAM_ID=
-BUNDLE_ID=app.cartero
+BUNDLE_ID=app.cartero.ios
 APP_NAME=Cartero
+MARKETING_VERSION=0.0.0
+CURRENT_PROJECT_VERSION=0
 
 #include? "Local.xcconfig"

@@ -1,6 +1,5 @@
 package app.cartero.ui.theme
 
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
@@ -8,14 +7,11 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-@Composable
-expect fun platformColorScheme(): ColorScheme
-
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun CarteroTheme(content: @Composable () -> Unit) {
     MaterialExpressiveTheme(
-        colorScheme = platformColorScheme(),
+        colorScheme = CarteroDarkColors,
         motionScheme = MotionScheme.expressive(),
         typography = rememberCarteroTypography(),
         content = content,

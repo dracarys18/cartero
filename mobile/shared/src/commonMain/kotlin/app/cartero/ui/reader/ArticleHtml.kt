@@ -64,6 +64,7 @@ object ArticleHtml {
         return buildString {
             append("<!DOCTYPE html><html><head><meta charset=\"utf-8\">")
             append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">")
+            if (base.isNotEmpty()) append("<base href=\"").append(base.escape()).append("\">")
             append("<style>").append(palette.variables()).append(CSS).append("</style></head>")
             append("<body><main class=\"reader\">")
 

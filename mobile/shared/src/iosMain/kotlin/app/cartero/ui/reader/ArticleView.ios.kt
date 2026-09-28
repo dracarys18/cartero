@@ -74,7 +74,7 @@ actual fun ArticleView(
             view.pageZoom = textZoom / 100.0
             if (loaded.html != html) {
                 loaded.html = html
-                view.loadHTMLString(html, baseURL = baseUrl?.let { NSURL.URLWithString(it) })
+                view.loadHTMLString(html, baseURL = NSURL.URLWithString(FONT_ORIGIN))
             }
         },
         modifier = modifier,
