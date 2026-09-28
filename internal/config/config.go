@@ -21,17 +21,36 @@ type Config struct {
 	Processors map[string]ProcessorConfig `toml:"processors"`
 	Targets    map[string]TargetConfig    `toml:"targets"`
 	Interests  InterestConfig             `toml:"interests"`
+	Prompts    Prompts                    `toml:"prompts"`
 	Blocklist  BlocklistConfig            `toml:"blocklist"`
 }
 
 type InterestConfig struct {
-	Keywords          []keywords.KeywordWithContext `toml:"keywords"`
-	KeywordsFile      string                        `toml:"keywords_file"`
-	OffTopicThreshold float64                       `toml:"off_topic_threshold"`
-	RejectIf          []RejectRule                  `toml:"reject_if"`
+	Keywords             []keywords.KeywordWithContext `toml:"keywords"`
+	KeywordsFile         string                        `toml:"keywords_file"`
+	OffTopicThreshold    float64                       `toml:"off_topic_threshold"`
+	MinQuality           float64                       `toml:"min_quality"`
+	MinQualityIncomplete float64                       `toml:"min_quality_incomplete"`
 }
 
-type RejectRule struct {
+type Prompts struct {
+	Topic   TopicPrompts   `toml:"topic"`
+	Quality QualityPrompts `toml:"quality"`
+	Flags   []FlagPrompt   `toml:"flags"`
+}
+
+type TopicPrompts struct {
+	Instructions string `toml:"instructions"`
+	None         string `toml:"none"`
+}
+
+type QualityPrompts struct {
+	Instructions string   `toml:"instructions"`
+	Incomplete   string   `toml:"incomplete"`
+	Levels       []string `toml:"levels"`
+}
+
+type FlagPrompt struct {
 	Name      string  `toml:"name"`
 	Question  string  `toml:"question"`
 	Threshold float64 `toml:"threshold"`
@@ -277,6 +296,37 @@ func loadInterests(config *Config) error {
 	return nil
 }
 
+func validatePrompts(p *Prompts) error {
+	for i := range p.Flags {
+		if p.Flags[i].Threshold == 0 {
+			p.Flags[i].Threshold = 0.7
+		}
+	}
+
+	switch {
+	case p.Topic.Instructions == "" || p.Topic.None == "":
+		return fmt.Errorf("topic.instructions and topic.none are required")
+	case p.Quality.Instructions == "":
+		return fmt.Errorf("quality.instructions is required")
+	case len(p.Quality.Levels) < 2 || len(p.Quality.Levels) > 10:
+		return fmt.Errorf("quality.levels must have 2 to 10 entries, got %d", len(p.Quality.Levels))
+	}
+
+	seen := map[string]bool{"interest": true, "quality": true}
+	for _, flag := range p.Flags {
+		switch {
+		case flag.Name == "" || flag.Question == "":
+			return fmt.Errorf("flags: name and question are required")
+		case seen[flag.Name]:
+			return fmt.Errorf("flags: duplicate or reserved name %q", flag.Name)
+		case flag.Threshold < 0 || flag.Threshold > 1:
+			return fmt.Errorf("flags %q: threshold must be between 0 and 1", flag.Name)
+		}
+		seen[flag.Name] = true
+	}
+	return nil
+}
+
 func loadBlocklist(config *Config) error {
 	if config.Blocklist.DomainsFile == "" {
 		return nil
@@ -332,21 +382,25 @@ func validateConfig(config *Config) error {
 		config.Redis.Addr = "localhost:6379"
 	}
 
-	if len(config.Interests.Keywords) > 0 && !hasEnabledPlatform(config, "jev") {
-		return fmt.Errorf("interests require an enabled platform of type \"jev\"")
+	if config.Interests.OffTopicThreshold <= 0 {
+		config.Interests.OffTopicThreshold = 0.4
 	}
 
-	seen := make(map[string]bool, len(config.Interests.RejectIf))
-	for _, rule := range config.Interests.RejectIf {
-		switch {
-		case rule.Name == "" || rule.Question == "":
-			return fmt.Errorf("interests.reject_if: name and question are required")
-		case rule.Name == "interest" || seen[rule.Name]:
-			return fmt.Errorf("interests.reject_if: duplicate or reserved name %q", rule.Name)
-		case rule.Threshold < 0 || rule.Threshold > 1:
-			return fmt.Errorf("interests.reject_if %q: threshold must be between 0 and 1", rule.Name)
+	if config.Interests.MinQuality <= 0 {
+		config.Interests.MinQuality = 2.0
+	}
+
+	if config.Interests.MinQualityIncomplete <= 0 {
+		config.Interests.MinQualityIncomplete = 1.4
+	}
+
+	if len(config.Interests.Keywords) > 0 {
+		if !hasEnabledPlatform(config, "jev") {
+			return fmt.Errorf("interests require an enabled platform of type \"jev\"")
 		}
-		seen[rule.Name] = true
+		if err := validatePrompts(&config.Prompts); err != nil {
+			return fmt.Errorf("prompts: %w", err)
+		}
 	}
 
 	return nil

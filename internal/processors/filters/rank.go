@@ -14,49 +14,43 @@ import (
 	strutils "cartero/internal/utils/string"
 )
 
+const interestKey = "_interest"
+
 const (
-	interestKey            = "_interest"
-	jevQuestion            = "interest"
-	jevNoMatch             = "none"
-	jevConcurrency         = 8
-	jevMaxSummaryBytes     = 1000
-	defaultOffTopic        = 0.4
-	defaultRejectThreshold = 0.7
+	topicQuestion   = "interest"
+	qualityQuestion = "quality"
+	noTopic         = "none"
 )
 
 const (
-	jevInstructions = "Which topic is this article about? Judge by its main subject, not passing mentions."
-	jevNoMatchDesc  = "The article is unrelated to all of the other topics, such as general news, politics, lifestyle or culture."
+	evalConcurrency = 8
+	maxSummaryBytes = 1000
+	maxContentBytes = 12000
+	minContentBytes = 1500
 )
 
 type RankFilter struct {
 	jev       *platforms.JevPlatform
 	cfg       config.InterestConfig
-	rules     []config.RejectRule
+	prompts   config.Prompts
 	questions map[string]platforms.JevQuestion
 	enabled   bool
 }
 
-func NewRankFilter(jev *platforms.JevPlatform, cfg config.InterestConfig) *RankFilter {
-	if cfg.OffTopicThreshold <= 0 {
-		cfg.OffTopicThreshold = defaultOffTopic
+func NewRankFilter(jev *platforms.JevPlatform, cfg config.InterestConfig, prompts config.Prompts) *RankFilter {
+	criteria := buildCriteria(cfg.Keywords, prompts.Topic.None)
+	questions := map[string]platforms.JevQuestion{
+		topicQuestion:   platforms.JevChoice(prompts.Topic.Instructions, criteria),
+		qualityQuestion: platforms.JevScore(prompts.Quality.Instructions, prompts.Quality.Levels),
 	}
-	criteria := buildCriteria(cfg.Keywords)
-	questions := map[string]platforms.JevQuestion{jevQuestion: platforms.JevChoice(jevInstructions, criteria)}
-
-	rules := make([]config.RejectRule, len(cfg.RejectIf))
-	for i, rule := range cfg.RejectIf {
-		if rule.Threshold <= 0 {
-			rule.Threshold = defaultRejectThreshold
-		}
-		rules[i] = rule
-		questions[rule.Name] = platforms.JevNoul(rule.Question)
+	for _, flag := range prompts.Flags {
+		questions[flag.Name] = platforms.JevNoul(flag.Question)
 	}
 
 	return &RankFilter{
 		jev:       jev,
 		cfg:       cfg,
-		rules:     rules,
+		prompts:   prompts,
 		questions: questions,
 		enabled:   jev != nil && len(criteria) > 1,
 	}
@@ -68,7 +62,7 @@ type topicSpec struct {
 	examples []string
 }
 
-func buildCriteria(kws []keywords.KeywordWithContext) map[string]any {
+func buildCriteria(kws []keywords.KeywordWithContext, none string) map[string]any {
 	topics := make(map[string]*topicSpec)
 	for _, kw := range kws {
 		label := kw.Keyword
@@ -96,7 +90,7 @@ func buildCriteria(kws []keywords.KeywordWithContext) map[string]any {
 	for label, t := range topics {
 		criteria[label] = t.description()
 	}
-	criteria[jevNoMatch] = jevNoMatchDesc
+	criteria[noTopic] = none
 	return criteria
 }
 
@@ -146,7 +140,7 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 		idx[i] = i
 	}
 
-	batch.Run(ctx, idx, jevConcurrency, func(ctx context.Context, i int) {
+	batch.Run(ctx, idx, evalConcurrency, func(ctx context.Context, i int) {
 		resp, err := f.evaluate(ctx, items[i])
 		verdicts[i] = verdict{resp: resp, err: err}
 	})
@@ -166,18 +160,24 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 			continue
 		}
 
-		topic, offTopic := bestTopic(v.resp.Answers[jevQuestion])
+		topic, offTopic := bestTopic(v.resp.Answers[topicQuestion])
 		if offTopic >= f.cfg.OffTopicThreshold {
 			reject(ctx, state, item, "off_topic", offTopic, topic)
 			continue
 		}
 
-		if rule, p, flagged := f.flagged(v.resp.Answers); flagged {
-			reject(ctx, state, item, rule, p, topic)
+		if name, p, flagged := f.flagged(v.resp.Answers); flagged {
+			reject(ctx, state, item, name, p, topic)
 			continue
 		}
 
-		item.SetScore(1 - offTopic)
+		quality := v.resp.Answers[qualityQuestion].Score
+		if quality < f.minQuality(item) {
+			reject(ctx, state, item, "low_quality", quality, topic)
+			continue
+		}
+
+		item.SetScore(quality)
 		item.AddMetadata(interestKey, topic)
 		item.SetMatchedKeywords(topic)
 		out = append(out, item)
@@ -196,7 +196,7 @@ func (f *RankFilter) Process(ctx context.Context, state types.StateAccessor, ite
 }
 
 func (f *RankFilter) evaluate(ctx context.Context, item *types.Item) (*platforms.JevResponse, error) {
-	resp, err := f.jev.SystemOne(ctx, articleState(item), f.questions)
+	resp, err := f.jev.SystemOne(ctx, f.articleState(item), f.questions)
 	if err != nil {
 		return nil, err
 	}
@@ -209,14 +209,14 @@ func (f *RankFilter) evaluate(ctx context.Context, item *types.Item) (*platforms
 }
 
 func bestTopic(answer platforms.JevAnswer) (string, float64) {
-	offTopic, ok := answer.Probabilities[jevNoMatch]
-	if !ok && answer.Choice == jevNoMatch {
+	offTopic, ok := answer.Probabilities[noTopic]
+	if !ok && answer.Choice == noTopic {
 		offTopic = 1
 	}
 
 	topic, best := answer.Choice, -1.0
 	for label, p := range answer.Probabilities {
-		if label != jevNoMatch && p > best {
+		if label != noTopic && p > best {
 			topic, best = label, p
 		}
 	}
@@ -224,32 +224,47 @@ func bestTopic(answer platforms.JevAnswer) (string, float64) {
 }
 
 func (f *RankFilter) flagged(answers map[string]platforms.JevAnswer) (string, float64, bool) {
-	for _, rule := range f.rules {
-		if p := answers[rule.Name].Noul; p >= rule.Threshold {
-			return rule.Name, p, true
+	for _, flag := range f.prompts.Flags {
+		if p := answers[flag.Name].Noul; p >= flag.Threshold {
+			return flag.Name, p, true
 		}
 	}
 	return "", 0, false
 }
 
-func articleState(item *types.Item) map[string]any {
+func (f *RankFilter) articleState(item *types.Item) map[string]any {
 	st := map[string]any{"title": item.GetTitle()}
 	if host := item.GetLink().Host; host != "" {
 		st["site"] = host
 	}
 
 	summary := item.GetDescription()
-	if article := item.GetArticle(); article != nil {
-		if article.Description != "" {
-			summary = article.Description
-		} else if summary == "" {
-			summary = article.Text
-		}
+	article := item.GetArticle()
+	if article != nil && article.Description != "" {
+		summary = article.Description
 	}
 	if summary != "" {
-		st["summary"] = strutils.Truncate(summary, jevMaxSummaryBytes)
+		st["summary"] = strutils.Truncate(summary, maxSummaryBytes)
+	}
+	if article != nil && article.Text != "" {
+		st["content"] = strutils.Truncate(article.Text, maxContentBytes)
+	}
+	if contentIncomplete(item) {
+		st["content_status"] = f.prompts.Quality.Incomplete
 	}
 	return st
+}
+
+func contentIncomplete(item *types.Item) bool {
+	article := item.GetArticle()
+	return article == nil || len(article.Text) < minContentBytes
+}
+
+func (f *RankFilter) minQuality(item *types.Item) float64 {
+	if contentIncomplete(item) {
+		return f.cfg.MinQualityIncomplete
+	}
+	return f.cfg.MinQuality
 }
 
 func reject(ctx context.Context, state types.StateAccessor, item *types.Item, reason string, score float64, label string) {

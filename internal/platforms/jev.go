@@ -58,10 +58,15 @@ func JevNoul(instructions any) JevQuestion {
 	return JevQuestion{Type: "noul", Instructions: instructions}
 }
 
+func JevScore(instructions any, criteria []string) JevQuestion {
+	return JevQuestion{Type: "score", Instructions: instructions, Criteria: criteria}
+}
+
 type JevAnswer struct {
 	Type          string             `json:"type"`
 	Choice        string             `json:"choice"`
 	Noul          float64            `json:"noul"`
+	Score         float64            `json:"score"`
 	Confidence    float64            `json:"confidence"`
 	Probabilities map[string]float64 `json:"probabilities"`
 }

@@ -15,7 +15,7 @@ dsn  = "postgres://cartero:cartero@localhost:5432/cartero?sslmode=disable"
 type = "ollama"
 enabled = true
 [platforms.embedder.settings]
-embedding_model = "all-minilm"
+embedding_model = "qwen3-embedding:0.6b"
 
 # Jev evaluates every article against [interests]; required when interests are set.
 [platforms.jev]
@@ -116,7 +116,7 @@ enabled = true
 type = "embed_dedupe"
 enabled = true
 [processors.embed_dedupe.settings]
-embed_threshold = 0.85
+embed_threshold = 0.8
 embed_window = "168h"
 
 [processors.score_filter]
@@ -140,17 +140,41 @@ keywords_file = "https://gist.githubusercontent.com/you/id/raw/keywords.json"
 # Articles at or above this are rejected and never re-evaluated. The article is
 # tagged with its most likely interest.
 off_topic_threshold = 0.4
+# Jev rates each article's substance from 0 (worthless) to 4 (exceptional) using
+# the article text. Articles below this score are rejected as low_quality.
+min_quality = 2.0
+# Lower bar for articles whose text could not be fetched, since Jev then only
+# sees the title and summary.
+min_quality_incomplete = 1.4
 
-# Extra yes/no checks asked in the same Jev call. An article is rejected when
-# Jev's probability of "yes" is at or above threshold (default 0.7). Jev only
-# sees the title and a short summary, so questions about writing depth or
-# quality are unreliable.
-[[interests.reject_if]]
+# Questions Jev answers for every article: the topic, a 0-4 quality score from
+# the levels below (lowest first), and yes/no flags that reject at threshold.
+[prompts.topic]
+instructions = "Which topic is this article about? Judge by its main subject, not passing mentions."
+none = "The article is unrelated to all of the other topics, such as general news, politics, lifestyle or culture."
+
+[prompts.quality]
+instructions = """
+How valuable is this to an experienced software engineer who reads for depth rather than news? \
+Judge the substance, not how popular its topic is. \
+For a software project or tool, judge how useful and technically interesting the project is, not how long its description is. \
+If content_status is incomplete, rate what the title and summary suggest instead of treating the article as empty.\
+"""
+incomplete = "incomplete: the article text could not be fully retrieved"
+levels = [
+  "Worthless: spam, marketing or a sales pitch, SEO filler, AI-generated fluff, or no real content.",
+  "Thin: a news blurb, rebrand or product announcement, link roundup, listicle, or opinion with little evidence or technical detail.",
+  "Decent: a clear article with some useful information or perspective, or a working open-source project or tool with a clear description of what it does.",
+  "Substantive: original insight, real technical depth, data, or hands-on experience an experienced engineer would learn from, or a notable project with real technical substance.",
+  "Exceptional: an in-depth investigation, definitive deep-dive, novel result, or standout project worth saving and sharing.",
+]
+
+[[prompts.flags]]
 name = "clickbait"
 question = "Is the title clickbait: does it tease, exaggerate or withhold what the article is about to bait clicks (e.g. 'You won't believe', 'This one trick', vague teasers) instead of plainly stating the subject?"
 threshold = 0.7
 
-[[interests.reject_if]]
+[[prompts.flags]]
 name = "advertisement"
 question = "Is this a sales pitch: content whose main purpose is getting readers to buy, subscribe to or sign up for a commercial product or service (landing page, sponsored post, webinar or event promo, customer case study)? Announcements of new AI models, software or library releases, and open-source projects are news, not sales pitches."
 threshold = 0.7

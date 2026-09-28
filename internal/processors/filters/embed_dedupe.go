@@ -19,7 +19,7 @@ type EmbedDedupeProcessor struct {
 func NewEmbedDedupeProcessor(name string, settings config.DedupeSettings) *EmbedDedupeProcessor {
 	threshold := settings.EmbedThreshold
 	if threshold == 0 {
-		threshold = 0.9
+		threshold = 0.8
 	}
 	return &EmbedDedupeProcessor{
 		name:      name,

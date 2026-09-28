@@ -242,7 +242,7 @@ func (s *State) buildFilterChain(ctx context.Context) *filters.Chain {
 
 	pc := s.Registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
 	fs = append(fs,
-		filters.NewRankFilter(pc.Jev(), s.Config.Interests),
+		filters.NewRankFilter(pc.Jev(), s.Config.Interests, s.Config.Prompts),
 		filters.NewDiversifyFilter(),
 	)
 
