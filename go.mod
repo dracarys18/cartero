@@ -13,7 +13,6 @@ require (
 	github.com/enetx/surf v1.0.201
 	github.com/go-chi/chi/v5 v5.3.1
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
-	github.com/gorilla/feeds v1.2.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/markusmobius/go-trafilatura v1.12.2
 	github.com/microcosm-cc/bluemonday v1.0.27
@@ -21,6 +20,7 @@ require (
 	github.com/ollama/ollama v0.31.2
 	github.com/pressly/goose/v3 v3.27.2
 	github.com/redis/go-redis/v9 v9.21.0
+	github.com/yuin/goldmark v1.8.6
 	github.com/yuin/gopher-lua v1.1.2
 	golang.org/x/net v0.57.0
 	golang.org/x/text v0.40.0
