@@ -1,0 +1,60 @@
+name: Android Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    name: Build and attach APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Derive version
+        id: version
+        run: |
+          name="${GITHUB_REF_NAME#v}"
+          IFS=. read -r major minor patch <<< "${name%%-*}"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "code=$((major * 10000 + minor * 100 + ${patch:-0}))" >> "$GITHUB_OUTPUT"
+
+      - name: Decode keystore
+        run: echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+
+      - name: Build release APK
+        run: >
+          ./gradlew :androidApp:assembleRelease
+          -PversionName=${{ steps.version.outputs.name }}
+          -PversionCode=${{ steps.version.outputs.code }}
+        env:
+          CARTERO_KEYSTORE: ${{ runner.temp }}/release.jks
+          CARTERO_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          CARTERO_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          CARTERO_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Attach APK to release
+        run: |
+          apk="cartero-${{ steps.version.outputs.name }}.apk"
+          cp androidApp/build/outputs/apk/release/androidApp-release.apk "$apk"
+          gh release upload "$GITHUB_REF_NAME" "$apk" --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
