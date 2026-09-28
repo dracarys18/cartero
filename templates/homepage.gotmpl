@@ -119,6 +119,7 @@
         }
         .sections a { color: var(--ink-soft); }
         .sections a:hover { color: var(--accent); }
+        .sections a.sponsor { color: var(--accent); font-weight: 700; }
         .masthead {
             display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px;
             padding: 13px 0 11px; border-bottom: 3px double var(--ink);
@@ -324,7 +325,6 @@
         }
         .colophon a { color: var(--ink-soft); margin-right: 15px; }
         .colophon a:hover { color: var(--accent); }
-        .colophon a.sponsor { color: var(--accent); }
 
         @media (prefers-reduced-motion: no-preference) {
             @view-transition { navigation: auto; }
@@ -372,6 +372,7 @@
             <a href="/feed.atom">Atom</a>
             <a href="/feed.json">JSON</a>
             <a href="https://bsky.app/profile/news.karthihegde.dev" target="_blank" rel="noopener">Bluesky</a>
+            <a class="sponsor" href="https://github.com/sponsors/dracarys18" target="_blank" rel="noopener">Sponsor ♥</a>
         </nav>
     </div>
     <header class="masthead">
@@ -454,7 +455,6 @@
             <a href="/feed.rss">RSS</a>
             <a href="/feed.atom">Atom</a>
             <a href="/feed.json">JSON</a>
-            <a class="sponsor" href="https://github.com/sponsors/dracarys18" rel="noopener">Sponsor ♥</a>
         </div>
         <div>set by machine · {{.Now.Format "Jan 2, 2006 · 15:04 MST"}}</div>
     </footer>
