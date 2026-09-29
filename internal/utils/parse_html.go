@@ -13,6 +13,7 @@ import (
 	strutils "cartero/internal/utils/string"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
+	"github.com/JohannesKaufmann/html-to-markdown/plugin"
 	"github.com/enetx/g"
 	"github.com/enetx/surf"
 	"github.com/markusmobius/go-trafilatura"
@@ -61,7 +62,9 @@ func GetArticle(ctx context.Context, u *url.URL, timeout time.Duration, resolver
 	if err := html.Render(&buf, result.ContentNode); err != nil {
 		return nil, fmt.Errorf("failed to render content: %w", err)
 	}
-	markdown, err := md.NewConverter(u.Hostname(), true, nil).ConvertString(buf.String())
+	converter := md.NewConverter(u.Hostname(), true, nil)
+	converter.Use(plugin.GitHubFlavored())
+	markdown, err := converter.ConvertString(buf.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert content to markdown: %w", err)
 	}
@@ -79,11 +82,14 @@ func promoteCodeBlocks(n *html.Node) {
 		promoteCodeBlocks(c)
 		c = next
 	}
-	if n.DataAtom != atom.Code || n.Parent == nil || n.Parent.DataAtom == atom.Pre || !strings.Contains(textOf(n), "\n") {
+	if n.Data != "code" || !strings.Contains(textOf(n), "\n") {
+		return
+	}
+	if p := n.Parent; p == nil || p.Data == "pre" || p.Data == "code" {
 		return
 	}
 	target := n
-	if p := n.Parent; p.DataAtom == atom.P && p.Parent != nil && soleContent(p, n) {
+	if p := n.Parent; p.Data == "p" && p.Parent != nil && soleContent(p, n) {
 		target = p
 	}
 	pre := &html.Node{Type: html.ElementNode, Data: "pre", DataAtom: atom.Pre}
