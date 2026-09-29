@@ -9,6 +9,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfoV2
+import androidx.compose.material3.adaptive.layout.PaneExpansionAnchor
+import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
+import androidx.compose.material3.adaptive.layout.rememberPaneExpansionState
 import androidx.compose.material3.adaptive.navigation3.ListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigation3.rememberListDetailSceneStrategy
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem
@@ -66,9 +69,20 @@ fun AppNavigation(request: AppRequest?, onRequestHandled: () -> Unit) {
     }
 
     val currentTab = backStack.lastOrNull { it is TabRoute } ?: FeedRoute
-    val suiteType = NavigationSuiteScaffoldDefaults.navigationSuiteType(currentWindowAdaptiveInfoV2())
+    val windowInfo = currentWindowAdaptiveInfoV2()
+    val suiteType = NavigationSuiteScaffoldDefaults.navigationSuiteType(windowInfo)
     val suiteState = rememberNavigationSuiteScaffoldState()
-    val showSuite = backStack.last() is TabRoute || suiteType !in BottomBars
+    val motion = rememberNavMotion()
+
+    val directive = calculatePaneScaffoldDirective(windowInfo)
+    val canSplit = directive.maxHorizontalPartitions > 1
+    var readerExpanded by rememberSaveable { mutableStateOf(false) }
+    val fullScreenReader = canSplit && readerExpanded && backStack.last() is ReaderRoute
+    val splitAnchor = PaneExpansionAnchor.Offset.fromStart(directive.defaultPanePreferredWidth)
+    val paneExpansion = rememberPaneExpansionState(anchors = listOf(FullScreenAnchor, splitAnchor), initialAnchoredIndex = 1)
+    LaunchedEffect(fullScreenReader) { paneExpansion.animateTo(if (fullScreenReader) FullScreenAnchor else splitAnchor) }
+
+    val showSuite = !fullScreenReader && (backStack.last() is TabRoute || suiteType !in BottomBars)
     LaunchedEffect(showSuite) { if (showSuite) suiteState.show() else suiteState.hide() }
 
     NavigationSuiteScaffold(
@@ -94,7 +108,12 @@ fun AppNavigation(request: AppRequest?, onRequestHandled: () -> Unit) {
                 rememberSaveableStateHolderNavEntryDecorator<NavKey>(),
                 rememberViewModelStoreNavEntryDecorator<NavKey>(),
             ),
-            sceneStrategies = listOf(rememberListDetailSceneStrategy<NavKey>()),
+            sceneStrategies = listOf(
+                rememberListDetailSceneStrategy<NavKey>(directive = directive, paneExpansionState = paneExpansion),
+            ),
+            transitionSpec = { motion.tabSwitch() },
+            popTransitionSpec = { motion.tabSwitch() },
+            predictivePopTransitionSpec = { motion.tabSwitch() },
             entryProvider = entryProvider {
                 entry<FeedRoute>(metadata = ListDetailSceneStrategy.listPane(detailPlaceholder = { DetailPlaceholder() })) {
                     FeedScreen(
@@ -106,16 +125,22 @@ fun AppNavigation(request: AppRequest?, onRequestHandled: () -> Unit) {
                 entry<SavedRoute>(metadata = ListDetailSceneStrategy.listPane(detailPlaceholder = { DetailPlaceholder() })) {
                     SavedScreen(onOpenArticle = { backStack.openArticle(it) })
                 }
-                entry<RulesRoute> {
+                entry<RulesRoute>(metadata = motion.pushed) {
                     RulesScreen(onBack = { backStack.removeLastOrNull() })
                 }
                 entry<FeedsRoute> {
                     FeedsScreen(pendingUrl = pendingFeedUrl, onPendingUrlConsumed = { pendingFeedUrl = null })
                 }
-                entry<ReaderRoute>(metadata = ListDetailSceneStrategy.detailPane()) { route ->
-                    ReaderScreen(articleId = route.articleId, onBack = { backStack.removeLastOrNull() })
+                entry<ReaderRoute>(metadata = ListDetailSceneStrategy.detailPane() + motion.pushed) { route ->
+                    ReaderScreen(
+                        articleId = route.articleId,
+                        onBack = { backStack.removeLastOrNull() },
+                        expanded = fullScreenReader,
+                        onToggleExpanded = if (canSplit) ({ readerExpanded = !readerExpanded }) else null,
+                        immersive = !canSplit || fullScreenReader,
+                    )
                 }
-                entry<SettingsRoute> {
+                entry<SettingsRoute>(metadata = motion.pushed) {
                     SettingsScreen(
                         onBack = { backStack.removeLastOrNull() },
                         onOpenRules = { backStack.add(RulesRoute) },
@@ -142,6 +167,8 @@ private fun DetailPlaceholder() {
         Text("Pick a story to read", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.outline)
     }
 }
+
+private val FullScreenAnchor = PaneExpansionAnchor.Proportion(0f)
 
 private val BottomBars = setOf(
     NavigationSuiteType.ShortNavigationBarCompact,

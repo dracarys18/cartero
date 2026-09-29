@@ -1,11 +1,16 @@
 package app.cartero.ui.platform
 
 import android.Manifest
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -52,3 +57,15 @@ actual fun rememberOpmlExport(opml: suspend () -> String, onResult: (Boolean) ->
 private const val OPML_MIME = "text/x-opml"
 private const val OPML_FILE = "cartero.opml"
 private val OPML_TYPES = arrayOf(OPML_MIME, "text/xml", "application/xml", "*/*")
+
+@Composable
+actual fun SystemBarsHidden(hidden: Boolean) {
+    val controller = LocalView.current.windowInsetsController ?: return
+    SideEffect {
+        controller.systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        if (hidden) controller.hide(WindowInsets.Type.systemBars()) else controller.show(WindowInsets.Type.systemBars())
+    }
+    DisposableEffect(controller) {
+        onDispose { controller.show(WindowInsets.Type.systemBars()) }
+    }
+}

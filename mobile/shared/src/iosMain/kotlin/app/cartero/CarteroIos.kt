@@ -8,7 +8,10 @@ import app.cartero.platform.IosActions
 import app.cartero.platform.IosServices
 import app.cartero.ui.CarteroRoot
 import app.cartero.ui.navigation.AppRequest
+import app.cartero.ui.reader.ReaderWebViews
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -35,6 +38,9 @@ object CarteroIos {
 
     private val requests = MutableStateFlow<AppRequest?>(null)
     private val notifications = NotificationDelegate { requests.value = AppRequest.OpenArticle(it) }
+    private val main = MainScope()
+    private val systemBarsHidden = MutableStateFlow(false)
+    private var systemBarsObserver: Job? = null
 
     fun start() {
         UNUserNotificationCenter.currentNotificationCenter().delegate = notifications
@@ -47,11 +53,21 @@ object CarteroIos {
                 .distinctUntilChanged()
                 .collect(::scheduleSync)
         }
+        main.launch { ReaderWebViews.prepare() }
     }
 
     fun mainViewController(): UIViewController = ComposeUIViewController {
         val request by requests.collectAsStateWithLifecycle()
         CarteroRoot(graph, IosActions, request, onRequestHandled = { requests.value = null })
+    }
+
+    fun observeSystemBars(onChange: (Boolean) -> Unit) {
+        systemBarsObserver?.cancel()
+        systemBarsObserver = main.launch { systemBarsHidden.collect(onChange) }
+    }
+
+    internal fun setSystemBarsHidden(hidden: Boolean) {
+        systemBarsHidden.value = hidden
     }
 
     @OptIn(ExperimentalForeignApi::class)

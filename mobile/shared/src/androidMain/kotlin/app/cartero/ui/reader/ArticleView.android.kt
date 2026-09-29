@@ -2,19 +2,24 @@ package app.cartero.ui.reader
 
 import android.content.Context
 import android.graphics.Color
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.viewinterop.AndroidView
 import app.cartero.resources.Res
 import app.cartero.ui.LocalGraph
 import kotlinx.coroutines.runBlocking
 import coil3.disk.DiskCache
+import kotlin.math.roundToInt
 import java.io.FilterInputStream
 import java.io.InputStream
 import java.net.URLConnection
@@ -26,13 +31,20 @@ actual fun ArticleView(
     html: String,
     baseUrl: String?,
     textZoom: Int,
+    topInset: Dp,
+    initialScroll: Float,
     onLink: (String) -> Unit,
     onScroll: (progress: Float, delta: Int) -> Unit,
+    onTap: () -> Unit,
+    onLoaded: () -> Unit,
     modifier: Modifier,
 ) {
     val imageCache = LocalGraph.current.imageLoader.diskCache
     val link by rememberUpdatedState(onLink)
     val scroll by rememberUpdatedState(onScroll)
+    val tap by rememberUpdatedState(onTap)
+    val loaded by rememberUpdatedState(onLoaded)
+    val page = remember(html, topInset) { ArticleHtml.withTopInset(html, topInset.value.roundToInt()) }
 
     AndroidView(
         factory = { context ->
@@ -42,15 +54,30 @@ actual fun ArticleView(
                 settings.javaScriptEnabled = false
                 settings.allowFileAccess = false
                 settings.allowContentAccess = false
-                webViewClient = ReaderClient(imageCache) { link(it) }
-                setOnScrollChangeListener { _, _, y, _, oldY -> scroll(progress, y - oldY) }
+                webViewClient = ReaderClient(
+                    imageCache,
+                    onLink = { link(it) },
+                    onFirstLoad = { restore(initialScroll) },
+                    onLoaded = { loaded() },
+                )
+                setOnScrollChangeListener { _, _, y, _, oldY -> if (ready) scroll(progress, y - oldY) }
+                val taps = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
+                    override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                        if (hitTestResult.type != WebView.HitTestResult.SRC_ANCHOR_TYPE) tap()
+                        return false
+                    }
+                })
+                setOnTouchListener { _, event ->
+                    taps.onTouchEvent(event)
+                    false
+                }
             }
         },
         update = { view ->
             view.settings.textZoom = textZoom
-            if (view.tag != html) {
-                view.tag = html
-                view.loadDataWithBaseURL(baseUrl, html, "text/html", "utf-8", null)
+            if (view.tag != page) {
+                view.tag = page
+                view.loadDataWithBaseURL(baseUrl, page, "text/html", "utf-8", null)
             }
         },
         onRelease = { it.destroy() },
@@ -59,17 +86,39 @@ actual fun ArticleView(
 }
 
 private class ReaderWebView(context: Context) : WebView(context) {
+    private val range: Int get() = computeVerticalScrollRange() - computeVerticalScrollExtent()
+
     val progress: Float
-        get() {
-            val range = computeVerticalScrollRange() - computeVerticalScrollExtent()
-            return if (range <= 0) 1f else (scrollY.toFloat() / range).coerceIn(0f, 1f)
-        }
+        get() = if (range <= 0) 1f else (scrollY.toFloat() / range).coerceIn(0f, 1f)
+
+    var ready = false
+        private set
+
+    fun restore(fraction: Float) {
+        postVisualStateCallback(0, object : VisualStateCallback() {
+            override fun onComplete(requestId: Long) {
+                if (fraction > 0f) scrollTo(0, (range * fraction).toInt())
+                ready = true
+            }
+        })
+    }
 }
 
 private class ReaderClient(
     private val imageCache: DiskCache?,
     private val onLink: (String) -> Unit,
+    private val onFirstLoad: () -> Unit,
+    private val onLoaded: () -> Unit,
 ) : WebViewClient() {
+    private var finished = false
+
+    override fun onPageFinished(view: WebView, url: String?) {
+        onLoaded()
+        if (finished) return
+        finished = true
+        onFirstLoad()
+    }
+
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
         onLink(request.url.toString())
         return true

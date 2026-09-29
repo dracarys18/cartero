@@ -11,9 +11,18 @@ struct ComposeView: UIViewControllerRepresentable {
 }
 
 struct ContentView: View {
+    @State private var barsHidden = false
+
     var body: some View {
         ComposeView()
             .ignoresSafeArea()
             .preferredColorScheme(.dark)
+            .statusBarHidden(barsHidden)
+            .persistentSystemOverlays(barsHidden ? .hidden : .automatic)
+            .onAppear {
+                CarteroIos.shared.observeSystemBars { hidden in
+                    withAnimation(.easeInOut(duration: 0.2)) { barsHidden = hidden.boolValue }
+                }
+            }
     }
 }

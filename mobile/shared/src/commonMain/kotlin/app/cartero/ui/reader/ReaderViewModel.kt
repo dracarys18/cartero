@@ -18,6 +18,8 @@ class ReaderViewModel(private val articleId: Long, private val graph: AppGraph) 
     val article: StateFlow<ArticleEntity?> = graph.articles.article(articleId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    var scrollFraction = 0f
+
     private val fetching = MutableStateFlow(false)
     val loadingFullText: StateFlow<Boolean> = fetching.asStateFlow()
 

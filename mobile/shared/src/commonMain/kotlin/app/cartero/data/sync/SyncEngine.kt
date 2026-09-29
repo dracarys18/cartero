@@ -134,7 +134,7 @@ class SyncEngine(
                 .distinctBy { it.guid }
         }
         if (articles.isEmpty()) return emptyList()
-        val ids = db.articles().store(articles)
+        val ids = db.articles().store(articles, now)
         return articles.zip(ids) { article, id -> article.copy(id = id) }.filter { it.id != -1L }
     }
 

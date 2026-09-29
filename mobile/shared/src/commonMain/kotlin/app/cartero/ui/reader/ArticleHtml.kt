@@ -90,6 +90,12 @@ object ArticleHtml {
         }
     }
 
+    fun withTopInset(html: String, px: Int): String =
+        html.replaceFirst("</head>", "<style>body{padding-top:${px}px}</style></head>")
+
+    fun withTextScale(html: String, percent: Int): String =
+        html.replaceFirst("</head>", "<style>html{font-size:$percent%}</style></head>")
+
     private fun StringBuilder.byline(text: String, cls: String? = null) {
         append("<span class=\"dot\">·</span><span")
         if (cls != null) append(" class=\"").append(cls).append('"')

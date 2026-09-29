@@ -10,3 +10,6 @@ expect fun rememberOpmlImport(onOpml: (String) -> Unit): () -> Unit
 
 @Composable
 expect fun rememberOpmlExport(opml: suspend () -> String, onResult: (Boolean) -> Unit): () -> Unit
+
+@Composable
+expect fun SystemBarsHidden(hidden: Boolean)

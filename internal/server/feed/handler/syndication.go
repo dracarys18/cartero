@@ -182,8 +182,8 @@ func (h *Handler) encodeRSS(entries []storage.FeedEntry) ([]byte, error) {
 		if content := renderHTML(e.Content); content != "" {
 			item.Content = &cdata{Value: content}
 		}
-		if !e.PublishedAt.IsZero() {
-			item.PubDate = e.PublishedAt.UTC().Format(time.RFC1123Z)
+		if !e.CreatedAt.IsZero() {
+			item.PubDate = e.CreatedAt.UTC().Format(time.RFC1123Z)
 		}
 		if e.MatchedKeywords != "" {
 			item.Categories = append(item.Categories, rssCategory{Domain: topicDomain, Value: e.MatchedKeywords})
@@ -213,15 +213,11 @@ func (h *Handler) encodeAtom(entries []storage.FeedEntry) ([]byte, error) {
 	updated := time.Now().UTC()
 	out := make([]atomEntry, 0, len(entries))
 	for _, e := range entries {
-		published := e.PublishedAt
-		if published.IsZero() {
-			published = e.CreatedAt
-		}
 		entry := atomEntry{
 			Title:      e.Title,
 			ID:         "urn:cartero:" + e.ID,
 			Link:       atomLink{Href: e.Link, Rel: "alternate"},
-			Published:  published.UTC().Format(time.RFC3339),
+			Published:  e.CreatedAt.UTC().Format(time.RFC3339),
 			Updated:    e.CreatedAt.UTC().Format(time.RFC3339),
 			Categories: []atomCategory{{Term: utils.Readable(e.Source), Scheme: sourceDomain}},
 			Media:      imageMedia(e.ImageURL),
@@ -281,8 +277,8 @@ func (h *Handler) encodeJSON(entries []storage.FeedEntry) ([]byte, error) {
 				AddedAt:        e.CreatedAt,
 			},
 		}
-		if !e.PublishedAt.IsZero() {
-			item.DatePublished = &e.PublishedAt
+		if !e.CreatedAt.IsZero() {
+			item.DatePublished = &e.CreatedAt
 		}
 		if e.Author != "" {
 			item.Authors = []jsonAuthor{{Name: e.Author}}

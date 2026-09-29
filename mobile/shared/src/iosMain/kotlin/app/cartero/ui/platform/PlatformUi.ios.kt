@@ -1,10 +1,13 @@
 package app.cartero.ui.platform
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import app.cartero.CarteroIos
 import app.cartero.platform.topViewController
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -88,4 +91,12 @@ private class PickerDelegate(
     }
 
     override fun documentPickerWasCancelled(controller: UIDocumentPickerViewController) = onCancel()
+}
+
+@Composable
+actual fun SystemBarsHidden(hidden: Boolean) {
+    SideEffect { CarteroIos.setSystemBarsHidden(hidden) }
+    DisposableEffect(Unit) {
+        onDispose { CarteroIos.setSystemBarsHidden(false) }
+    }
 }

@@ -68,11 +68,13 @@ interface ArticleDao {
             topic = :topic,
             source = :source,
             imageUrl = COALESCE(:imageUrl, imageUrl),
+            publishedAt = COALESCE(:publishedAt, publishedAt),
             content = CASE WHEN fullText THEN content ELSE :content END,
             readingMinutes = CASE WHEN fullText THEN readingMinutes ELSE :readingMinutes END
         WHERE feedId = :feedId AND guid = :guid AND (
             title IS NOT :title OR summary IS NOT :summary OR topic IS NOT :topic OR source IS NOT :source
             OR (:imageUrl IS NOT NULL AND imageUrl IS NOT :imageUrl)
+            OR (:publishedAt IS NOT NULL AND publishedAt IS NOT :publishedAt)
             OR (fullText = 0 AND content IS NOT :content)
         )
         """,
@@ -84,13 +86,14 @@ interface ArticleDao {
         summary: String,
         content: String?,
         imageUrl: String?,
+        publishedAt: Long?,
         source: String,
         topic: String?,
         readingMinutes: Int,
     )
 
     @Transaction
-    suspend fun store(articles: List<ArticleEntity>): List<Long> {
+    suspend fun store(articles: List<ArticleEntity>, now: Long): List<Long> {
         val ids = insert(articles)
         articles.forEachIndexed { index, article ->
             if (ids[index] == -1L) {
@@ -101,6 +104,7 @@ interface ArticleDao {
                     summary = article.summary,
                     content = article.content,
                     imageUrl = article.imageUrl,
+                    publishedAt = article.publishedAt.takeIf { it < now },
                     source = article.source,
                     topic = article.topic,
                     readingMinutes = article.readingMinutes,
