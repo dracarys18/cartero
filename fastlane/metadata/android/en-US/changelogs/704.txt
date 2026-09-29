@@ -1,0 +1,1 @@
+Articles are now read straight from the original site, like the website reader, so tables and code blocks display correctly.

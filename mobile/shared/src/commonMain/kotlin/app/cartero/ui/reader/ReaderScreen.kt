@@ -80,7 +80,6 @@ fun ReaderScreen(
     var textSheet by rememberSaveable { mutableStateOf(false) }
     var progress by remember { mutableFloatStateOf(0f) }
     var chromeVisible by remember { mutableStateOf(true) }
-    var pageShown by remember { mutableStateOf(false) }
     SystemBarsHidden(immersive && !chromeVisible)
 
     val chromeHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() +
@@ -90,16 +89,16 @@ fun ReaderScreen(
 
     val current = article
     val html by produceState<String?>(null, current, palette, loading) {
-        value = current?.let {
-            withContext(Dispatchers.Default) {
-                val needsFullText = it.needsFullText()
-                ArticleHtml.build(it, palette, needsFullText, fetchingFullText = loading && needsFullText)
-            }
+        value = if (current == null || loading) {
+            null
+        } else {
+            withContext(Dispatchers.Default) { ArticleHtml.build(current, palette, current.needsFullText()) }
         }
     }
+    val page = html
+    var pageShown by remember(page == null) { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize().background(colors.surface)) {
-        val page = html
         if (current != null && page != null) {
             ArticleView(
                 html = page,

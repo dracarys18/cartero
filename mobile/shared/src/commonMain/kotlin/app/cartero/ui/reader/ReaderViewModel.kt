@@ -20,19 +20,20 @@ class ReaderViewModel(private val articleId: Long, private val graph: AppGraph) 
 
     var scrollFraction = 0f
 
-    private val fetching = MutableStateFlow(false)
+    private val fetching = MutableStateFlow(true)
     val loadingFullText: StateFlow<Boolean> = fetching.asStateFlow()
 
     init {
         viewModelScope.launch {
             graph.articles.setRead(articleId, true)
             val current = graph.articles.article(articleId).filterNotNull().first()
-            if (current.needsFullText()) fetchFullText(current)
+            if (current.needsFullText()) fetchFullText(current) else fetching.value = false
         }
     }
 
     fun loadFullText() {
         val current = article.value ?: return
+        if (fetching.value) return
         viewModelScope.launch { fetchFullText(current) }
     }
 
@@ -44,11 +45,10 @@ class ReaderViewModel(private val articleId: Long, private val graph: AppGraph) 
         viewModelScope.launch { graph.settings.update { it.copy(readerScale = scale) } }
     }
 
-    private suspend fun fetchFullText(article: ArticleEntity) {
-        if (fetching.value) return
+    private suspend fun fetchFullText(current: ArticleEntity) {
         fetching.value = true
         try {
-            graph.articles.loadFullText(article)
+            if (graph.articles.loadFullText(current)) article.first { it?.fullText == true }
         } finally {
             fetching.value = false
         }

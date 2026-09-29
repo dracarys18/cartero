@@ -18,7 +18,9 @@ class ContentLoader(
 ) {
     suspend fun fullText(article: ArticleEntity): Extracted? {
         val url = article.url ?: return null
-        val extracted = extractor.extract(url) ?: return null
+        val extracted = extractor.extract(url)
+            ?.takeIf { it.textLength >= Html.text(article.content).length }
+            ?: return null
         dao.setFullText(article.id, extracted.html, Html.readingMinutes(extracted.html), extracted.image)
         return extracted
     }
@@ -45,7 +47,4 @@ class ContentLoader(
     }
 }
 
-private const val FULL_TEXT_MIN_CHARS = 1500
-
-fun ArticleEntity.needsFullText(): Boolean =
-    !fullText && url != null && Html.text(content, FULL_TEXT_MIN_CHARS).length < FULL_TEXT_MIN_CHARS
+fun ArticleEntity.needsFullText(): Boolean = !fullText && url != null
