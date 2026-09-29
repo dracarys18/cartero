@@ -31,6 +31,7 @@ class AppGraph(private val platform: PlatformServices) {
             install(HttpTimeout) {
                 connectTimeoutMillis = 15_000
                 socketTimeoutMillis = 20_000
+                requestTimeoutMillis = 60_000
             }
         }
     }

@@ -15,9 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FloatingToolbarDefaults
@@ -25,7 +23,6 @@ import androidx.compose.material3.HorizontalFloatingToolbar
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -83,7 +80,7 @@ fun ReaderScreen(
     var textSheet by rememberSaveable { mutableStateOf(false) }
     var progress by remember { mutableFloatStateOf(0f) }
     var chromeVisible by remember { mutableStateOf(true) }
-    var pageLoaded by remember { mutableStateOf(false) }
+    var pageShown by remember { mutableStateOf(false) }
     SystemBarsHidden(immersive && !chromeVisible)
 
     val chromeHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() +
@@ -92,9 +89,12 @@ fun ReaderScreen(
     SideEffect { if (chromeHeight > contentTop) contentTop = chromeHeight }
 
     val current = article
-    val html by produceState<String?>(null, current, palette) {
+    val html by produceState<String?>(null, current, palette, loading) {
         value = current?.let {
-            withContext(Dispatchers.Default) { ArticleHtml.build(it, palette, it.needsFullText()) }
+            withContext(Dispatchers.Default) {
+                val needsFullText = it.needsFullText()
+                ArticleHtml.build(it, palette, needsFullText, fetchingFullText = loading && needsFullText)
+            }
         }
     }
 
@@ -116,12 +116,12 @@ fun ReaderScreen(
                     if (abs(delta) > SCROLL_SLOP) chromeVisible = delta < 0 || fraction < 0.02f
                 },
                 onTap = { chromeVisible = !chromeVisible },
-                onLoaded = { pageLoaded = true },
+                onShown = { pageShown = true },
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        if (!pageLoaded) {
-            LoadingIndicator(Modifier.align(Alignment.Center))
+        AnimatedVisibility(visible = !pageShown, enter = fadeIn(), exit = fadeOut()) {
+            ArticleSkeleton(top = contentTop)
         }
 
         AnimatedVisibility(
@@ -156,10 +156,6 @@ fun ReaderScreen(
                     drawStopIndicator = {},
                 )
             }
-        }
-
-        if (loading) {
-            ContainedLoadingIndicator(Modifier.align(Alignment.TopCenter).padding(top = contentTop + 16.dp).size(48.dp))
         }
 
         AnimatedVisibility(

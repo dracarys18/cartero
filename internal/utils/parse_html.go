@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"cartero/internal/types"
@@ -16,6 +17,7 @@ import (
 	"github.com/enetx/surf"
 	"github.com/markusmobius/go-trafilatura"
 	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 )
 
 func GetArticle(ctx context.Context, u *url.URL, timeout time.Duration, resolver string) (*types.Article, error) {
@@ -53,6 +55,8 @@ func GetArticle(ctx context.Context, u *url.URL, timeout time.Duration, resolver
 		return nil, fmt.Errorf("failed to extract content: %w", err)
 	}
 
+	promoteCodeBlocks(result.ContentNode)
+
 	var buf bytes.Buffer
 	if err := html.Render(&buf, result.ContentNode); err != nil {
 		return nil, fmt.Errorf("failed to render content: %w", err)
@@ -67,4 +71,41 @@ func GetArticle(ctx context.Context, u *url.URL, timeout time.Duration, resolver
 		Image:       result.Metadata.Image,
 		Description: strutils.Clean(result.Metadata.Description),
 	}, nil
+}
+
+func promoteCodeBlocks(n *html.Node) {
+	for c := n.FirstChild; c != nil; {
+		next := c.NextSibling
+		promoteCodeBlocks(c)
+		c = next
+	}
+	if n.DataAtom != atom.Code || n.Parent == nil || n.Parent.DataAtom == atom.Pre || !strings.Contains(textOf(n), "\n") {
+		return
+	}
+	target := n
+	if p := n.Parent; p.DataAtom == atom.P && p.Parent != nil && soleContent(p, n) {
+		target = p
+	}
+	pre := &html.Node{Type: html.ElementNode, Data: "pre", DataAtom: atom.Pre}
+	target.Parent.InsertBefore(pre, target)
+	target.Parent.RemoveChild(target)
+	if target != n {
+		n.Parent.RemoveChild(n)
+	}
+	pre.AppendChild(n)
+}
+
+func soleContent(parent, child *html.Node) bool {
+	return strings.TrimSpace(textOf(parent)) == strings.TrimSpace(textOf(child))
+}
+
+func textOf(n *html.Node) string {
+	if n.Type == html.TextNode {
+		return n.Data
+	}
+	var b strings.Builder
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		b.WriteString(textOf(c))
+	}
+	return b.String()
 }

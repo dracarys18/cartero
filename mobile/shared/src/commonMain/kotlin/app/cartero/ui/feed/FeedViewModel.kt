@@ -11,12 +11,14 @@ import app.cartero.data.db.Facet
 import app.cartero.ui.components.ListItem
 import app.cartero.ui.components.withDayHeaders
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -42,14 +44,14 @@ class FeedViewModel(private val graph: AppGraph) : ViewModel() {
     val sources: StateFlow<List<Facet>> = graph.articles.sources.stateIn(viewModelScope, WHILE_SUBSCRIBED, emptyList())
     val unreadCount: StateFlow<Int> = graph.articles.unreadCount.stateIn(viewModelScope, WHILE_SUBSCRIBED, 0)
     val feedCount: StateFlow<Int?> = graph.feeds.count.stateIn(viewModelScope, WHILE_SUBSCRIBED, null)
-    val syncing: StateFlow<Boolean> = graph.sync.syncing
 
     init {
         graph.scope.launch { graph.sync.syncIfStale() }
     }
 
-    fun refresh() {
-        graph.scope.launch { graph.sync.syncAll() }
+    fun refresh(): Job = graph.scope.launch {
+        graph.sync.syncAll()
+        graph.sync.syncing.first { !it }
     }
 
     fun setTopics(topics: Set<String>) = selection.update { it.copy(topics = topics) }

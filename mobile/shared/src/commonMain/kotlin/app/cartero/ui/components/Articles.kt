@@ -64,6 +64,7 @@ import app.cartero.resources.ic_bookmark
 import app.cartero.resources.ic_bookmark_filled
 import app.cartero.resources.ic_check
 import app.cartero.resources.ic_mark_email_unread
+import app.cartero.ui.theme.TopicColor
 import coil3.compose.AsyncImage
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -209,7 +210,7 @@ fun ArticleCard(row: ArticleRow, onClick: () -> Unit, modifier: Modifier = Modif
                 Text(
                     text = row.topic.uppercase(),
                     style = typography.labelSmall.copy(letterSpacing = 1.1.sp, fontWeight = FontWeight.Bold),
-                    color = colors.primary,
+                    color = TopicColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )

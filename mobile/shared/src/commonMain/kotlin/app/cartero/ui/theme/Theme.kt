@@ -18,6 +18,8 @@ fun CarteroTheme(content: @Composable () -> Unit) {
     )
 }
 
+val TopicColor = Color(0xFF5CB3FF)
+
 val CarteroDarkColors = darkColorScheme(
     primary = Color(0xFFA9BCDD),
     onPrimary = Color(0xFF1B2E4B),
@@ -32,22 +34,22 @@ val CarteroDarkColors = darkColorScheme(
     onTertiary = Color(0xFF4A1408),
     tertiaryContainer = Color(0xFF6E2A1C),
     onTertiaryContainer = Color(0xFFFFDAD2),
-    background = Color(0xFF191817),
-    onBackground = Color(0xFFEBE8E0),
-    surface = Color(0xFF191817),
-    onSurface = Color(0xFFEBE8E0),
-    surfaceVariant = Color(0xFF423E37),
-    onSurfaceVariant = Color(0xFFB0ACA2),
+    background = Color(0xFF000000),
+    onBackground = Color(0xFFE3DED4),
+    surface = Color(0xFF000000),
+    onSurface = Color(0xFFE3DED4),
+    surfaceVariant = Color(0xFF2A2826),
+    onSurfaceVariant = Color(0xFFA39E94),
     surfaceTint = Color(0xFFA9BCDD),
-    inverseSurface = Color(0xFFEBE8E0),
-    inverseOnSurface = Color(0xFF2C2A28),
-    outline = Color(0xFF827E74),
-    outlineVariant = Color(0xFF33302A),
-    surfaceBright = Color(0xFF3A3835),
-    surfaceDim = Color(0xFF151413),
-    surfaceContainerLowest = Color(0xFF121110),
-    surfaceContainerLow = Color(0xFF1E1D1B),
-    surfaceContainer = Color(0xFF232120),
-    surfaceContainerHigh = Color(0xFF2C2A28),
-    surfaceContainerHighest = Color(0xFF373432),
+    inverseSurface = Color(0xFFE3DED4),
+    inverseOnSurface = Color(0xFF1C1B1A),
+    outline = Color(0xFF7A756C),
+    outlineVariant = Color(0xFF2A2826),
+    surfaceBright = Color(0xFF2E2D2B),
+    surfaceDim = Color(0xFF000000),
+    surfaceContainerLowest = Color(0xFF000000),
+    surfaceContainerLow = Color(0xFF0F0F0E),
+    surfaceContainer = Color(0xFF141413),
+    surfaceContainerHigh = Color(0xFF1C1B1A),
+    surfaceContainerHighest = Color(0xFF262523),
 )

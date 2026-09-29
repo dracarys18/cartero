@@ -14,6 +14,6 @@ expect fun ArticleView(
     onLink: (String) -> Unit,
     onScroll: (progress: Float, delta: Int) -> Unit,
     onTap: () -> Unit,
-    onLoaded: () -> Unit,
+    onShown: () -> Unit,
     modifier: Modifier = Modifier,
 )

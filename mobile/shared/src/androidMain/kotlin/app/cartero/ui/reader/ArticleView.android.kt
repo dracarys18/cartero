@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Color
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -36,14 +37,14 @@ actual fun ArticleView(
     onLink: (String) -> Unit,
     onScroll: (progress: Float, delta: Int) -> Unit,
     onTap: () -> Unit,
-    onLoaded: () -> Unit,
+    onShown: () -> Unit,
     modifier: Modifier,
 ) {
     val imageCache = LocalGraph.current.imageLoader.diskCache
     val link by rememberUpdatedState(onLink)
     val scroll by rememberUpdatedState(onScroll)
     val tap by rememberUpdatedState(onTap)
-    val loaded by rememberUpdatedState(onLoaded)
+    val shown by rememberUpdatedState(onShown)
     val page = remember(html, topInset) { ArticleHtml.withTopInset(html, topInset.value.roundToInt()) }
 
     AndroidView(
@@ -57,8 +58,10 @@ actual fun ArticleView(
                 webViewClient = ReaderClient(
                     imageCache,
                     onLink = { link(it) },
-                    onFirstLoad = { restore(initialScroll) },
-                    onLoaded = { loaded() },
+                    onVisible = {
+                        restore(initialScroll)
+                        shown()
+                    },
                 )
                 setOnScrollChangeListener { _, _, y, _, oldY -> if (ready) scroll(progress, y - oldY) }
                 val taps = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
@@ -107,16 +110,20 @@ private class ReaderWebView(context: Context) : WebView(context) {
 private class ReaderClient(
     private val imageCache: DiskCache?,
     private val onLink: (String) -> Unit,
-    private val onFirstLoad: () -> Unit,
-    private val onLoaded: () -> Unit,
+    private val onVisible: () -> Unit,
 ) : WebViewClient() {
-    private var finished = false
+    private var visible = false
 
-    override fun onPageFinished(view: WebView, url: String?) {
-        onLoaded()
-        if (finished) return
-        finished = true
-        onFirstLoad()
+    override fun onPageCommitVisible(view: WebView, url: String?) = showOnce()
+
+    override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
+        if (request.isForMainFrame) showOnce()
+    }
+
+    private fun showOnce() {
+        if (visible) return
+        visible = true
+        onVisible()
     }
 
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {

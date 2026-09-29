@@ -62,13 +62,13 @@ actual fun ArticleView(
     onLink: (String) -> Unit,
     onScroll: (progress: Float, delta: Int) -> Unit,
     onTap: () -> Unit,
-    onLoaded: () -> Unit,
+    onShown: () -> Unit,
     modifier: Modifier,
 ) {
     val link by rememberUpdatedState(onLink)
     val scroll by rememberUpdatedState(onScroll)
     val tap by rememberUpdatedState(onTap)
-    val finished by rememberUpdatedState(onLoaded)
+    val shown by rememberUpdatedState(onShown)
     val surface = MaterialTheme.colorScheme.surface
     val background = remember(surface) {
         UIColor.colorWithRed(surface.red.toDouble(), surface.green.toDouble(), surface.blue.toDouble(), 1.0)
@@ -78,12 +78,17 @@ actual fun ArticleView(
     val navigation = remember {
         NavigationDelegate(
             onLink = { link(it) },
-            onFinish = { view, finishedNavigation ->
-                if (finishedNavigation == loaded.navigation) {
+            onCommit = { view, navigation ->
+                if (navigation == loaded.navigation) {
                     if (!scrolling.ready) scrolling.start(view.scrollView, initialScroll)
-                    finished()
+                    shown()
                 }
             },
+            onFinish = { view, navigation ->
+                if (navigation == loaded.navigation) scrolling.settle(view.scrollView)
+            },
+            onFail = { navigation -> if (navigation == loaded.navigation) shown() },
+            onCrash = { view -> loaded.page?.let { loaded.load(view, it) } },
         )
     }
     val tapping = remember { TapHandler { tap() } }
@@ -110,10 +115,7 @@ actual fun ArticleView(
                 loaded.html = html
                 loaded.padding = padding
                 loaded.textZoom = textZoom
-                loaded.navigation = view.loadHTMLString(
-                    ArticleHtml.withTextScale(ArticleHtml.withTopInset(html, padding), textZoom),
-                    baseURL = NSURL.URLWithString(FONT_ORIGIN),
-                )
+                loaded.load(view, ArticleHtml.withTextScale(ArticleHtml.withTopInset(html, padding), textZoom))
             } else {
                 if (loaded.padding != padding) {
                     loaded.padding = padding
@@ -165,15 +167,41 @@ private class LoadedPage {
     var html: String? = null
     var padding = 0
     var textZoom = 100
+    var page: String? = null
+        private set
     var navigation: WKNavigation? = null
+        private set
+
+    fun load(view: WKWebView, page: String) {
+        this.page = page
+        navigation = view.loadHTMLString(page, baseURL = NSURL.URLWithString(FONT_ORIGIN))
+    }
 }
 
 private class NavigationDelegate(
     private val onLink: (String) -> Unit,
+    private val onCommit: (WKWebView, WKNavigation?) -> Unit,
     private val onFinish: (WKWebView, WKNavigation?) -> Unit,
+    private val onFail: (WKNavigation?) -> Unit,
+    private val onCrash: (WKWebView) -> Unit,
 ) : NSObject(), WKNavigationDelegateProtocol {
     @ObjCSignatureOverride
-    override fun webView(webView: WKWebView, didFinishNavigation: WKNavigation?) = onFinish(webView, didFinishNavigation)
+    override fun webView(webView: WKWebView, didCommitNavigation: WKNavigation?) =
+        onCommit(webView, didCommitNavigation)
+
+    @ObjCSignatureOverride
+    override fun webView(webView: WKWebView, didFinishNavigation: WKNavigation?) =
+        onFinish(webView, didFinishNavigation)
+
+    @ObjCSignatureOverride
+    override fun webView(webView: WKWebView, didFailNavigation: WKNavigation?, withError: NSError) =
+        onFail(didFailNavigation)
+
+    @ObjCSignatureOverride
+    override fun webView(webView: WKWebView, didFailProvisionalNavigation: WKNavigation?, withError: NSError) =
+        onFail(didFailProvisionalNavigation)
+
+    override fun webViewWebContentProcessDidTerminate(webView: WKWebView) = onCrash(webView)
 
     override fun webView(
         webView: WKWebView,
@@ -194,14 +222,21 @@ private class ScrollDelegate(private val onScroll: (Float, Int) -> Unit) : NSObj
     private var last = 0.0
     private var width = 0.0
     private var settled = 0f
+    private var restored = false
     var ready = false
         private set
 
     fun start(scrollView: UIScrollView, fraction: Float) {
         settled = fraction
         width = scrollView.bounds.useContents { size.width }
-        if (fraction > 0f) scrollView.scrollToFraction(fraction)
         ready = true
+    }
+
+    fun settle(scrollView: UIScrollView) {
+        if (restored) return
+        restored = true
+        val byUser = scrollView.tracking || scrollView.dragging || scrollView.decelerating
+        if (settled > 0f && !byUser) scrollView.scrollToFraction(settled)
     }
 
     override fun scrollViewDidScroll(scrollView: UIScrollView) {

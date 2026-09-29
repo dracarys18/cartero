@@ -8,6 +8,7 @@ import app.cartero.data.db.ArticleEntity
 import app.cartero.data.feed.Html
 import app.cartero.ui.components.fullDate
 import app.cartero.ui.components.localDate
+import app.cartero.ui.theme.TopicColor
 import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.safety.Safelist
 
@@ -22,6 +23,7 @@ data class ReaderPalette(
     val inkFaint: String,
     val rule: String,
     val accent: String,
+    val topic: String,
     val codeBackground: String,
     val fieldBackground: String,
 )
@@ -33,6 +35,7 @@ fun ColorScheme.readerPalette() = ReaderPalette(
     inkFaint = outline.css(),
     rule = outlineVariant.css(),
     accent = primary.css(),
+    topic = TopicColor.css(),
     codeBackground = surfaceContainerHighest.css(),
     fieldBackground = surfaceContainer.css(),
 )
@@ -50,7 +53,12 @@ object ArticleHtml {
         .addAttributes("code", "class")
         .addAttributes("pre", "class")
 
-    fun build(article: ArticleEntity, palette: ReaderPalette, needsFullText: Boolean): String {
+    fun build(
+        article: ArticleEntity,
+        palette: ReaderPalette,
+        needsFullText: Boolean,
+        fetchingFullText: Boolean,
+    ): String {
         val base = article.url.orEmpty()
         val clean = Ksoup.clean(bodyHtml = asHtml(article.content.orEmpty()), safelist = safelist, baseUri = base)
         val body = Ksoup.parseBodyFragment(clean, base).body()
@@ -82,9 +90,14 @@ object ArticleHtml {
             }
 
             append("<article class=\"article-body\">").append(body.html()).append("</article>")
+            if (fetchingFullText) {
+                append("<div class=\"pending\">")
+                PENDING_LINES.forEach { append("<span style=\"width:").append(it).append("%\"></span>") }
+                append("</div>")
+            }
 
             append("<footer class=\"footer\">")
-            if (needsFullText) append("<a href=\"$FULL_TEXT_ACTION\">Load full article</a>")
+            if (needsFullText && !fetchingFullText) append("<a href=\"$FULL_TEXT_ACTION\">Load full article</a>")
             article.url?.let { append("<a href=\"").append(it.escape()).append("\">Read on ").append(article.source.escape()).append(" ↗</a>") }
             append("</footer></main></body></html>")
         }
@@ -113,9 +126,10 @@ object ArticleHtml {
 
     private fun ReaderPalette.variables() =
         ":root{--paper:$paper;--ink:$ink;--ink-soft:$inkSoft;--ink-faint:$inkFaint;--rule:$rule;" +
-            "--accent:$accent;--code-bg:$codeBackground;--field-bg:$fieldBackground}"
+            "--accent:$accent;--topic:$topic;--code-bg:$codeBackground;--field-bg:$fieldBackground}"
 
     private const val MIN_IMAGE_WIDTH = 48
+    private val PENDING_LINES = listOf(100, 97, 100, 92, 99, 64, 100, 95, 88, 100, 71)
 
     private val CSS = """
         @font-face{font-family:Manrope;src:url(${FONT_ORIGIN}manrope_regular.ttf);font-weight:400}
@@ -131,7 +145,7 @@ object ArticleHtml {
         body{background:var(--paper);color:var(--ink);font-family:Manrope,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
         a{color:var(--accent)}
         .reader{max-width:720px;margin:0 auto;padding:8px 20px 160px}
-        .kicker{display:block;text-transform:uppercase;letter-spacing:.13em;font-size:.7rem;font-weight:700;color:var(--accent);margin-bottom:12px}
+        .kicker{display:block;text-transform:uppercase;letter-spacing:.13em;font-size:.7rem;font-weight:700;color:var(--topic);margin-bottom:12px}
         h1.title{font-weight:800;font-size:1.72rem;line-height:1.14;letter-spacing:-.02em;color:var(--ink);margin-bottom:14px;overflow-wrap:anywhere;hyphens:auto}
         .byline{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;color:var(--ink-faint);font-size:.84rem;padding-bottom:16px;margin-bottom:22px;border-bottom:1px solid var(--rule)}
         .byline .source{color:var(--ink);font-weight:700}
@@ -159,6 +173,9 @@ object ArticleHtml {
         .article-body table{display:block;overflow-x:auto;border-collapse:collapse;margin:1.4em 0;font-size:.9rem}
         .article-body th,.article-body td{border:1px solid var(--rule);padding:8px 10px;text-align:left}
         .article-body th{font-family:Manrope,sans-serif;background:var(--field-bg)}
+        .pending{display:flex;flex-direction:column;gap:15px;margin-top:6px}
+        .pending span{display:block;height:14px;border-radius:6px;background:linear-gradient(90deg,var(--field-bg) 30%,var(--code-bg) 50%,var(--field-bg) 70%);background-size:300% 100%;animation:shimmer 1.2s linear infinite}
+        @keyframes shimmer{from{background-position:100% 0}to{background-position:0 0}}
         .footer{display:flex;flex-wrap:wrap;gap:16px;margin-top:36px;padding-top:18px;border-top:1px solid var(--rule)}
         .footer a{font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;text-decoration:none}
     """.trimIndent().replace("\n", "")

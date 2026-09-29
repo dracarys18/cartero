@@ -1,8 +1,11 @@
 package app.cartero.ui.feed
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,19 +18,23 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -47,6 +54,7 @@ import app.cartero.ui.components.EmptyState
 import app.cartero.ui.components.MultiSelectSheet
 import app.cartero.ui.components.articleItems
 import app.cartero.ui.graphViewModel
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -59,12 +67,13 @@ fun FeedScreen(onOpenArticle: (Long) -> Unit, onOpenSettings: () -> Unit, onAddF
     val sources by viewModel.sources.collectAsStateWithLifecycle()
     val unread by viewModel.unreadCount.collectAsStateWithLifecycle()
     val feedCount by viewModel.feedCount.collectAsStateWithLifecycle()
-    val syncing by viewModel.syncing.collectAsStateWithLifecycle()
 
     var picker by rememberSaveable { mutableStateOf<Picker?>(null) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val listState = rememberLazyListState()
     val pullState = rememberPullToRefreshState()
+    val scope = rememberCoroutineScope()
+    var refreshing by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -85,22 +94,25 @@ fun FeedScreen(onOpenArticle: (Long) -> Unit, onOpenSettings: () -> Unit, onAddF
         },
     ) { padding ->
         PullToRefreshBox(
-            isRefreshing = syncing,
-            onRefresh = viewModel::refresh,
+            isRefreshing = refreshing,
+            onRefresh = {
+                refreshing = true
+                scope.launch {
+                    viewModel.refresh().join()
+                    refreshing = false
+                }
+            },
             state = pullState,
             modifier = Modifier.padding(padding),
-            indicator = {
-                PullToRefreshDefaults.LoadingIndicator(
-                    state = pullState,
-                    isRefreshing = syncing,
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
-            },
+            indicator = { RefreshWave(pullState, refreshing, Modifier.align(Alignment.TopCenter)) },
         ) {
             LazyColumn(
                 state = listState,
                 contentPadding = PaddingValues(bottom = 24.dp),
-                modifier = Modifier.fillMaxSize().testTag("feed_list"),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { translationY = pullState.reveal * REFRESH_GAP.toPx() }
+                    .testTag("feed_list"),
             ) {
                 item(key = "filters", contentType = "filters") {
                     FilterRow(
@@ -217,3 +229,27 @@ private fun DropdownChip(label: String, selected: Set<String>, onClick: () -> Un
         },
     )
 }
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun RefreshWave(state: PullToRefreshState, refreshing: Boolean, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(REFRESH_GAP)
+            .padding(horizontal = 20.dp)
+            .graphicsLayer { alpha = state.reveal },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (refreshing) {
+            LinearWavyProgressIndicator(Modifier.fillMaxWidth())
+        } else {
+            LinearWavyProgressIndicator(progress = { state.reveal }, modifier = Modifier.fillMaxWidth())
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+private val PullToRefreshState.reveal: Float get() = distanceFraction.coerceIn(0f, 1f)
+
+private val REFRESH_GAP = 36.dp

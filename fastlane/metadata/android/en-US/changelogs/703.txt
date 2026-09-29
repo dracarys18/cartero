@@ -1,0 +1,5 @@
+Pure black theme with softer text for comfortable reading.
+Topic labels now stand out in a vivid blue.
+Stories open with a shimmer preview instead of a loading spinner.
+Pull to refresh slides the list down with a wave instead of covering it.
+Full article downloads no longer hang on slow sites.
