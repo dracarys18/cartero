@@ -52,6 +52,8 @@ object ArticleHtml {
         .addAttributes("source", "srcset", "sizes", "type", "media")
         .addAttributes("code", "class")
         .addAttributes("pre", "class")
+        .addAttributes("th", "align")
+        .addAttributes("td", "align")
 
     fun build(article: ArticleEntity, palette: ReaderPalette, needsFullText: Boolean): String {
         val base = article.url.orEmpty()
@@ -159,9 +161,12 @@ object ArticleHtml {
         .article-body pre{background:var(--code-bg);border-radius:12px;padding:14px 16px;margin:1.4em 0;overflow-x:auto;line-height:1.5}
         .article-body pre code{background:none;padding:0;font-size:.84rem}
         .article-body hr{border:none;border-top:1px solid var(--rule);margin:2em 0}
-        .article-body table{display:block;overflow-x:auto;border-collapse:collapse;margin:1.4em 0;font-size:.9rem}
-        .article-body th,.article-body td{border:1px solid var(--rule);padding:8px 10px;text-align:left}
-        .article-body th{font-family:Manrope,sans-serif;background:var(--field-bg)}
+        .article-body table{display:block;overflow-x:auto;border-collapse:collapse;margin:1.4em 0;font-family:Manrope,sans-serif;font-size:.86rem;line-height:1.45;font-variant-numeric:tabular-nums}
+        .article-body th,.article-body td{border:1px solid var(--rule);padding:8px 12px;text-align:left;vertical-align:top;overflow-wrap:normal;hyphens:manual}
+        .article-body th[align=center],.article-body td[align=center]{text-align:center}
+        .article-body th[align=right],.article-body td[align=right]{text-align:right}
+        .article-body tbody tr:nth-child(even) td{background:var(--field-bg)}
+        .article-body th{font-weight:700;background:var(--code-bg)}
         .footer{display:flex;flex-wrap:wrap;gap:16px;margin-top:36px;padding-top:18px;border-top:1px solid var(--rule)}
         .footer a{font-size:.74rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;text-decoration:none}
     """.trimIndent().replace("\n", "")
