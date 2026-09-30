@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.room3.RoomDatabase
 import app.cartero.data.db.CarteroDatabase
 import app.cartero.data.db.RuleEntity
+import app.cartero.data.devices.PeerNetwork
 import app.cartero.notify.Notifier
 import coil3.ImageLoader
 import coil3.PlatformContext
@@ -16,6 +17,8 @@ interface PlatformServices {
     val database: RoomDatabase.Builder<CarteroDatabase>
     val dataStore: DataStore<Preferences>
     val httpEngine: HttpClientEngine
+    val peers: PeerNetwork
+    val deviceName: String
     fun notifier(imageLoader: ImageLoader): Notifier
 }
 

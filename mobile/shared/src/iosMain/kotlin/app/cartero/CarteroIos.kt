@@ -3,9 +3,11 @@ package app.cartero
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.cartero.data.devices.DeviceSync
 import app.cartero.notify.IosNotifier
 import app.cartero.platform.IosActions
 import app.cartero.platform.IosServices
+import app.cartero.platform.IrohBridge
 import app.cartero.ui.CarteroRoot
 import app.cartero.ui.navigation.AppRequest
 import app.cartero.ui.reader.ReaderWebViews
@@ -34,7 +36,9 @@ import platform.darwin.NSObject
 object CarteroIos {
     const val SYNC_TASK = "app.cartero.sync"
 
-    val graph: AppGraph by lazy { AppGraph(IosServices()) }
+    private lateinit var iroh: IrohBridge
+
+    val graph: AppGraph by lazy { AppGraph(IosServices(iroh)) }
 
     private val requests = MutableStateFlow<AppRequest?>(null)
     private val notifications = NotificationDelegate { requests.value = AppRequest.OpenArticle(it) }
@@ -42,7 +46,8 @@ object CarteroIos {
     private val systemBarsHidden = MutableStateFlow(false)
     private var systemBarsObserver: Job? = null
 
-    fun start() {
+    fun start(iroh: IrohBridge) {
+        this.iroh = iroh
         UNUserNotificationCenter.currentNotificationCenter().delegate = notifications
         BGTaskScheduler.sharedScheduler.registerForTaskWithIdentifier(SYNC_TASK, usingQueue = null) { task ->
             (task as? BGAppRefreshTask)?.let(::runSync)
@@ -59,6 +64,10 @@ object CarteroIos {
     fun mainViewController(): UIViewController = ComposeUIViewController {
         val request by requests.collectAsStateWithLifecycle()
         CarteroRoot(graph, IosActions, request, onRequestHandled = { requests.value = null })
+    }
+
+    fun openUrl(url: String) {
+        if (url.startsWith(DeviceSync.LINK_URL_PREFIX)) requests.value = AppRequest.LinkDevice(url)
     }
 
     fun observeSystemBars(onChange: (Boolean) -> Unit) {

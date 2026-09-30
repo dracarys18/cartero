@@ -3,6 +3,7 @@ package app.cartero.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import app.cartero.AppGraph
 import app.cartero.platform.LocalPlatformActions
 import app.cartero.platform.PlatformActions
@@ -26,6 +27,10 @@ fun CarteroRoot(
     }
     LaunchedEffect(Unit) {
         if (!graph.notifier.enabled && !graph.settings.current().notificationsAsked) requestNotifications()
+    }
+    LifecycleResumeEffect(Unit) {
+        graph.devices.resume()
+        onPauseOrDispose {}
     }
     CompositionLocalProvider(LocalGraph provides graph, LocalPlatformActions provides actions) {
         CarteroTheme {

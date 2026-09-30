@@ -35,6 +35,9 @@ data class ReaderRoute(val articleId: Long) : NavKey
 @Serializable
 data object SettingsRoute : NavKey
 
+@Serializable
+data object DevicesRoute : NavKey
+
 enum class Tab(
     val route: TabRoute,
     val label: String,
@@ -55,6 +58,7 @@ val NavigationState = SavedStateConfiguration {
             subclass(RulesRoute::class)
             subclass(ReaderRoute::class)
             subclass(SettingsRoute::class)
+            subclass(DevicesRoute::class)
         }
     }
 }

@@ -80,6 +80,21 @@ data class ArticleRow(
     val savedAt: Long?,
 )
 
+data class SavedRow(
+    val url: String,
+    val guid: String,
+    val feedUrl: String,
+    val title: String,
+    val summary: String,
+    val imageUrl: String?,
+    val author: String?,
+    val source: String,
+    val topic: String?,
+    val publishedAt: Long,
+    val readingMinutes: Int,
+    val savedAt: Long,
+)
+
 data class Facet(val value: String, val count: Int)
 
 data class FeedWithStats(

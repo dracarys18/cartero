@@ -132,6 +132,23 @@ interface ArticleDao {
     @Query("UPDATE articles SET savedAt = :now WHERE id IN (:ids) AND savedAt IS NULL")
     suspend fun save(ids: List<Long>, now: Long)
 
+    @Query(
+        """
+        SELECT a.url AS url, a.guid AS guid, f.url AS feedUrl, a.title AS title, a.summary AS summary,
+            a.imageUrl AS imageUrl, a.author AS author, a.source AS source, a.topic AS topic,
+            a.publishedAt AS publishedAt, a.readingMinutes AS readingMinutes, a.savedAt AS savedAt
+        FROM articles a JOIN feeds f ON f.id = a.feedId
+        WHERE a.savedAt IS NOT NULL AND a.url IS NOT NULL
+        """,
+    )
+    suspend fun savedRows(): List<SavedRow>
+
+    @Query("SELECT * FROM articles WHERE url = :url ORDER BY id LIMIT 1")
+    suspend fun byUrl(url: String): ArticleEntity?
+
+    @Query("UPDATE articles SET savedAt = :savedAt WHERE url = :url")
+    suspend fun setSavedAt(url: String, savedAt: Long?)
+
     @Query("UPDATE articles SET content = :content, fullText = 1, readingMinutes = :minutes, imageUrl = COALESCE(imageUrl, :image) WHERE id = :id")
     suspend fun setFullText(id: Long, content: String, minutes: Int, image: String?)
 

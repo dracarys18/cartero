@@ -59,6 +59,9 @@ android {
             "/META-INF/{AL2.0,LGPL2.1}",
             "/kotlin/**",
             "DebugProbesKt.bin",
+            "/darwin-*/**",
+            "/linux-*/**",
+            "/win32-*/**",
         )
     }
 

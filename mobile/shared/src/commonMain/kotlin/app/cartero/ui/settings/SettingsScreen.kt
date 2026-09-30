@@ -31,6 +31,7 @@ import app.cartero.resources.ic_arrow_back
 import app.cartero.resources.ic_bolt
 import app.cartero.resources.ic_favorite
 import app.cartero.resources.ic_info
+import app.cartero.resources.ic_sync
 import app.cartero.ui.LocalGraph
 import app.cartero.ui.components.ConnectedToggleGroup
 import app.cartero.platform.LocalPlatformActions
@@ -40,7 +41,7 @@ import org.jetbrains.compose.resources.painterResource
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onOpenRules: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onOpenRules: () -> Unit, onOpenDevices: () -> Unit) {
     val repository = LocalGraph.current.settings
     val settings by repository.settings.collectAsStateWithLifecycle(Settings())
     val scope = rememberCoroutineScope()
@@ -90,6 +91,14 @@ fun SettingsScreen(onBack: () -> Unit, onOpenRules: () -> Unit) {
                 onClick = onOpenRules,
             )
 
+            section("Devices")
+            link(
+                icon = Res.drawable.ic_sync,
+                title = "Linked devices",
+                summary = "Sync saved stories with your other devices",
+                onClick = onOpenDevices,
+            )
+
             section("Reading")
             toggle(
                 title = "Open links in app",
@@ -117,7 +126,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenRules: () -> Unit) {
     }
 }
 
-private fun LazyListScope.section(title: String) {
+internal fun LazyListScope.section(title: String) {
     item(key = "section:$title") {
         Text(
             title,

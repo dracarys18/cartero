@@ -1,0 +1,1 @@
+Sync your saved stories between devices. Open Settings, then Linked devices, show the QR code on one device and scan it on the other. Devices sync directly with each other, with no account, while both have Cartero open.

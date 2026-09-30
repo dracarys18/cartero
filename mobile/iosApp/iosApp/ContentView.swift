@@ -19,6 +19,7 @@ struct ContentView: View {
             .preferredColorScheme(.dark)
             .statusBarHidden(barsHidden)
             .persistentSystemOverlays(barsHidden ? .hidden : .automatic)
+            .onOpenURL { CarteroIos.shared.openUrl(url: $0.absoluteString) }
             .onAppear {
                 CarteroIos.shared.observeSystemBars { hidden in
                     withAnimation(.easeInOut(duration: 0.2)) { barsHidden = hidden.boolValue }

@@ -8,6 +8,7 @@ import app.cartero.data.db.ArticleDao
 import app.cartero.data.db.ArticleEntity
 import app.cartero.data.db.ArticleRow
 import app.cartero.data.db.Facet
+import app.cartero.data.devices.DeviceSync
 import app.cartero.data.sync.ContentLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -24,6 +25,7 @@ data class FeedFilter(
 class ArticleRepository(
     private val dao: ArticleDao,
     private val content: ContentLoader,
+    private val devices: DeviceSync,
     private val scope: CoroutineScope,
 ) {
     val topics: Flow<List<Facet>> = dao.topics()
@@ -57,11 +59,13 @@ class ArticleRepository(
 
     suspend fun toggleSaved(id: Long) {
         dao.toggleSaved(id, nowMillis())
+        devices.savedChanged(id)
         prefetchIfSaved(id)
     }
 
     suspend fun save(id: Long) {
         dao.save(listOf(id), nowMillis())
+        devices.savedChanged(id)
         prefetchIfSaved(id)
     }
 

@@ -3,12 +3,14 @@ package app.cartero.platform
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.os.Build
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.room3.Room
 import androidx.room3.RoomDatabase
 import app.cartero.data.db.CarteroDatabase
+import app.cartero.data.devices.PeerNetwork
 import app.cartero.notify.AndroidNotifier
 import app.cartero.notify.NotificationIcons
 import app.cartero.notify.Notifier
@@ -34,6 +36,10 @@ class AndroidServices(
     )
 
     override val httpEngine: HttpClientEngine = Android.create()
+
+    override val peers: PeerNetwork = IrohPeers(app)
+
+    override val deviceName: String = Build.MODEL
 
     override fun notifier(imageLoader: ImageLoader): Notifier =
         AndroidNotifier(app, imageLoader, icons, launcher, receiver)

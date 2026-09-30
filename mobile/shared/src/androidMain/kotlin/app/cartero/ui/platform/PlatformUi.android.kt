@@ -11,6 +11,8 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -19,6 +21,20 @@ import kotlinx.coroutines.withContext
 actual fun rememberNotificationPermission(onResult: (Boolean) -> Unit): () -> Unit {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission(), onResult)
     return { launcher.launch(Manifest.permission.POST_NOTIFICATIONS) }
+}
+
+@Composable
+actual fun rememberQrScanner(onScanned: (String) -> Unit): () -> Unit {
+    val launcher = rememberLauncherForActivityResult(ScanContract()) { result -> result.contents?.let(onScanned) }
+    return {
+        launcher.launch(
+            ScanOptions()
+                .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                .setPrompt("Scan the code on your other device")
+                .setBeepEnabled(false)
+                .setOrientationLocked(false),
+        )
+    }
 }
 
 @Composable

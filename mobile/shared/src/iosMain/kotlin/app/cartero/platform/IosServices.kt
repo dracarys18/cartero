@@ -7,6 +7,7 @@ import androidx.room3.Room
 import androidx.room3.RoomDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import app.cartero.data.db.CarteroDatabase
+import app.cartero.data.devices.PeerNetwork
 import app.cartero.notify.IosNotifier
 import app.cartero.notify.Notifier
 import coil3.ImageLoader
@@ -18,8 +19,9 @@ import okio.Path.Companion.toPath
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDomainMask
+import platform.UIKit.UIDevice
 
-class IosServices : PlatformServices {
+class IosServices(bridge: IrohBridge) : PlatformServices {
     override val context: PlatformContext = PlatformContext.INSTANCE
 
     override val database: RoomDatabase.Builder<CarteroDatabase> =
@@ -31,6 +33,10 @@ class IosServices : PlatformServices {
     )
 
     override val httpEngine: HttpClientEngine = Darwin.create()
+
+    override val peers: PeerNetwork = IosPeers(bridge)
+
+    override val deviceName: String = UIDevice.currentDevice.model
 
     override fun notifier(imageLoader: ImageLoader): Notifier = IosNotifier()
 }

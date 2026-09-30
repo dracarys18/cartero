@@ -37,6 +37,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import app.cartero.resources.Res
 import app.cartero.resources.ic_article
+import app.cartero.ui.devices.DevicesScreen
 import app.cartero.ui.feed.FeedScreen
 import app.cartero.ui.feeds.FeedsScreen
 import app.cartero.ui.reader.ReaderScreen
@@ -48,6 +49,7 @@ import org.jetbrains.compose.resources.painterResource
 sealed interface AppRequest {
     data class OpenArticle(val id: Long) : AppRequest
     data class AddFeed(val url: String) : AppRequest
+    data class LinkDevice(val code: String) : AppRequest
 }
 
 @OptIn(ExperimentalMaterial3AdaptiveApi::class)
@@ -55,6 +57,7 @@ sealed interface AppRequest {
 fun AppNavigation(request: AppRequest?, onRequestHandled: () -> Unit) {
     val backStack = rememberNavBackStack(NavigationState, FeedRoute)
     var pendingFeedUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingLinkCode by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(request) {
         when (request) {
@@ -62,6 +65,10 @@ fun AppNavigation(request: AppRequest?, onRequestHandled: () -> Unit) {
             is AppRequest.AddFeed -> {
                 backStack.selectTab(FeedsRoute)
                 pendingFeedUrl = request.url
+            }
+            is AppRequest.LinkDevice -> {
+                if (backStack.last() != DevicesRoute) backStack.add(DevicesRoute)
+                pendingLinkCode = request.code
             }
             null -> return@LaunchedEffect
         }
@@ -144,6 +151,14 @@ fun AppNavigation(request: AppRequest?, onRequestHandled: () -> Unit) {
                     SettingsScreen(
                         onBack = { backStack.removeLastOrNull() },
                         onOpenRules = { backStack.add(RulesRoute) },
+                        onOpenDevices = { backStack.add(DevicesRoute) },
+                    )
+                }
+                entry<DevicesRoute>(metadata = motion.pushed) {
+                    DevicesScreen(
+                        pendingCode = pendingLinkCode,
+                        onPendingCodeConsumed = { pendingLinkCode = null },
+                        onBack = { backStack.removeLastOrNull() },
                     )
                 }
             },

@@ -52,12 +52,15 @@ kotlin {
             implementation(libs.serialization.json)
             implementation(libs.coroutines.core)
             implementation(libs.datetime)
+            implementation(libs.qrose)
         }
         androidMain.dependencies {
             implementation(libs.ktor.client.android)
             implementation(libs.activity.compose)
             implementation(libs.browser)
             implementation(libs.coroutines.android)
+            implementation(libs.iroh.android)
+            implementation(libs.zxing.android)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

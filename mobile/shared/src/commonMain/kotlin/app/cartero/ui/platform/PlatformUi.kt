@@ -12,4 +12,7 @@ expect fun rememberOpmlImport(onOpml: (String) -> Unit): () -> Unit
 expect fun rememberOpmlExport(opml: suspend () -> String, onResult: (Boolean) -> Unit): () -> Unit
 
 @Composable
+expect fun rememberQrScanner(onScanned: (String) -> Unit): () -> Unit
+
+@Composable
 expect fun SystemBarsHidden(hidden: Boolean)

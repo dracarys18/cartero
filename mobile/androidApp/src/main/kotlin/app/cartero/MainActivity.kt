@@ -58,6 +58,7 @@ class MainActivity : ComponentActivity() {
         val request = when (intent.action) {
             AndroidNotifier.ACTION_OPEN -> intent.getLongExtra(AndroidNotifier.EXTRA_ARTICLE_ID, -1).takeIf { it >= 0 }?.let(AppRequest::OpenArticle)
             Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)?.let(::firstUrl)?.let(AppRequest::AddFeed)
+            Intent.ACTION_VIEW -> intent.dataString?.let(AppRequest::LinkDevice)
             else -> null
         }
         if (request != null) requests.value = request

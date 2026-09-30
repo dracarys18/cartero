@@ -4,6 +4,8 @@ import app.cartero.data.ArticleRepository
 import app.cartero.data.FeedRepository
 import app.cartero.data.RuleRepository
 import app.cartero.data.db.CarteroDatabase
+import app.cartero.data.devices.DeviceStore
+import app.cartero.data.devices.DeviceSync
 import app.cartero.data.feed.FeedFetcher
 import app.cartero.data.reader.ArticleExtractor
 import app.cartero.data.settings.SettingsRepository
@@ -50,7 +52,18 @@ class AppGraph(private val platform: PlatformServices) {
     private val content by lazy { ContentLoader(platform.context, database.articles(), ArticleExtractor(http), imageLoader) }
 
     val sync by lazy { SyncEngine(database, FeedFetcher(http), settings, notifier, content) }
-    val articles by lazy { ArticleRepository(database.articles(), content, scope) }
+    val devices by lazy {
+        DeviceSync(
+            network = platform.peers,
+            store = DeviceStore(platform.dataStore),
+            articles = database.articles(),
+            feeds = database.feeds(),
+            content = content,
+            deviceName = platform.deviceName,
+            scope = scope,
+        )
+    }
+    val articles by lazy { ArticleRepository(database.articles(), content, devices, scope) }
     val feeds by lazy { FeedRepository(database.feeds(), sync, scope) }
     val rules by lazy { RuleRepository(database.rules(), database.articles(), notifier, content, scope) }
 

@@ -2,3 +2,7 @@
 -dontwarn com.google.re2j.**
 -repackageclasses
 -allowaccessmodification
+-keep class com.sun.jna.** { *; }
+-keep class * implements com.sun.jna.** { *; }
+-keep class computer.iroh.** { *; }
+-dontwarn java.awt.**
