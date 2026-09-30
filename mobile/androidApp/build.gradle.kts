@@ -51,6 +51,7 @@ android {
     }
 
     packaging {
+        jniLibs.useLegacyPackaging = true
         resources.excludes += listOf(
             "/META-INF/androidx/**",
             "/META-INF/*.version",

@@ -55,7 +55,7 @@ kotlin {
             implementation(libs.qrose)
         }
         androidMain.dependencies {
-            implementation(libs.ktor.client.android)
+            implementation(libs.ktor.client.okhttp)
             implementation(libs.activity.compose)
             implementation(libs.browser)
             implementation(libs.coroutines.android)

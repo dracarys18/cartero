@@ -17,7 +17,7 @@ import app.cartero.notify.Notifier
 import coil3.ImageLoader
 import coil3.PlatformContext
 import io.ktor.client.engine.HttpClientEngine
-import io.ktor.client.engine.android.Android
+import io.ktor.client.engine.okhttp.OkHttp
 import okio.Path.Companion.toPath
 
 class AndroidServices(
@@ -35,7 +35,7 @@ class AndroidServices(
         produceFile = { app.filesDir.resolve("datastore/settings.preferences_pb").absolutePath.toPath() },
     )
 
-    override val httpEngine: HttpClientEngine = Android.create()
+    override val httpEngine: HttpClientEngine = OkHttp.create()
 
     override val peers: PeerNetwork = IrohPeers(app)
 
