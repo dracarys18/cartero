@@ -1,6 +1,9 @@
 package app.cartero.platform
 
 import app.cartero.data.db.RuleEntity
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.useContents
+import platform.CoreGraphics.CGRectMake
 import platform.Foundation.NSBundle
 import platform.Foundation.NSURL
 import platform.SafariServices.SFSafariViewController
@@ -11,6 +14,7 @@ import platform.UIKit.UIApplicationOpenSettingsURLString
 import platform.UIKit.UIViewController
 import platform.UIKit.UIWindow
 import platform.UIKit.UIWindowScene
+import platform.UIKit.popoverPresentationController
 
 object IosActions : PlatformActions {
     override val appVersion: String =
@@ -25,10 +29,18 @@ object IosActions : PlatformActions {
         }
     }
 
+    @OptIn(ExperimentalForeignApi::class)
     override fun share(title: String, url: String) {
+        val presenter = topViewController() ?: return
         val items = listOfNotNull(NSURL.URLWithString(url) ?: url)
         val sheet = UIActivityViewController(activityItems = items, applicationActivities = null)
-        topViewController()?.presentViewController(sheet, animated = true, completion = null)
+        sheet.popoverPresentationController?.let { popover ->
+            val view = presenter.view
+            popover.sourceView = view
+            popover.sourceRect = view.bounds.useContents { CGRectMake(size.width / 2, size.height / 2, 0.0, 0.0) }
+            popover.permittedArrowDirections = 0uL
+        }
+        presenter.presentViewController(sheet, animated = true, completion = null)
     }
 
     override fun openNotificationSettings(rule: RuleEntity?) {
