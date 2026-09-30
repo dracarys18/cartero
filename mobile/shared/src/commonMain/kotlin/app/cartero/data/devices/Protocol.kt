@@ -1,5 +1,7 @@
 package app.cartero.data.devices
 
+import app.cartero.data.db.RuleAction
+import app.cartero.data.db.RuleField
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -22,6 +24,15 @@ data class SavedStory(
 data class SavedChange(val url: String, val at: Long, val story: SavedStory? = null)
 
 @Serializable
+data class RuleChange(
+    val action: RuleAction,
+    val field: RuleField,
+    val value: String,
+    val at: Long,
+    val enabled: Boolean? = null,
+)
+
+@Serializable
 sealed interface DeviceMessage {
     @Serializable
     @SerialName("link")
@@ -33,7 +44,7 @@ sealed interface DeviceMessage {
 
     @Serializable
     @SerialName("sync")
-    data class Sync(val changes: List<SavedChange>) : DeviceMessage
+    data class Sync(val changes: List<SavedChange>, val rules: List<RuleChange> = emptyList()) : DeviceMessage
 }
 
 internal val DeviceJson = Json { ignoreUnknownKeys = true }

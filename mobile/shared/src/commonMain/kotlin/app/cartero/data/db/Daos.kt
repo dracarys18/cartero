@@ -203,6 +203,9 @@ interface RuleDao {
     @Query("SELECT * FROM rules ORDER BY action, field, value COLLATE NOCASE")
     fun observe(): Flow<List<RuleEntity>>
 
+    @Query("SELECT * FROM rules")
+    suspend fun all(): List<RuleEntity>
+
     @Query("SELECT * FROM rules WHERE enabled = 1")
     suspend fun enabled(): List<RuleEntity>
 

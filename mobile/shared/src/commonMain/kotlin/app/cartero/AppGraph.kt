@@ -58,6 +58,8 @@ class AppGraph(private val platform: PlatformServices) {
             store = DeviceStore(platform.dataStore),
             articles = database.articles(),
             feeds = database.feeds(),
+            rules = database.rules(),
+            notifier = notifier,
             content = content,
             deviceName = platform.deviceName,
             scope = scope,
@@ -65,7 +67,7 @@ class AppGraph(private val platform: PlatformServices) {
     }
     val articles by lazy { ArticleRepository(database.articles(), content, devices, scope) }
     val feeds by lazy { FeedRepository(database.feeds(), sync, scope) }
-    val rules by lazy { RuleRepository(database.rules(), database.articles(), notifier, content, scope) }
+    val rules by lazy { RuleRepository(database.rules(), database.articles(), notifier, content, devices, scope) }
 
     private companion object {
         const val CROSSFADE_MILLIS = 150

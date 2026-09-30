@@ -109,7 +109,7 @@ class DevicesViewModel(private val graph: AppGraph) : ViewModel() {
         viewModelScope.launch {
             val failed = graph.devices.syncAll()
             notice.value = when (failed) {
-                0 -> "Saved stories are up to date"
+                0 -> "Saved stories and rules are up to date"
                 1 -> "Couldn't reach 1 device. Open Cartero on it and try again."
                 else -> "Couldn't reach $failed devices. Open Cartero on them and try again."
             }
@@ -163,7 +163,7 @@ fun DevicesScreen(pendingCode: String?, onPendingCodeConsumed: () -> Unit, onBac
         topBar = {
             LargeFlexibleTopAppBar(
                 title = { Text("Linked devices") },
-                subtitle = { Text("Sync saved stories between your devices") },
+                subtitle = { Text("Sync saved stories and rules between your devices") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(painterResource(Res.drawable.ic_arrow_back), contentDescription = "Back")
@@ -243,7 +243,7 @@ fun DevicesScreen(pendingCode: String?, onPendingCodeConsumed: () -> Unit, onBac
                     EmptyState(
                         icon = Res.drawable.ic_sync,
                         title = "No linked devices",
-                        body = "Saved stories sync directly between your devices, with no account. " +
+                        body = "Saved stories and rules sync directly between your devices, with no account. " +
                             "Both devices need Cartero open at the same time to sync.",
                     )
                 }

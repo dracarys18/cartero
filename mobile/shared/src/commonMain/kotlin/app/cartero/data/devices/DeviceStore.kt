@@ -28,27 +28,38 @@ class DeviceStore(private val store: DataStore<Preferences>) {
         store.edit { it[Keys.devices] = DeviceJson.encodeToString(transform(it.devices())) }
     }
 
-    suspend fun removals(): Map<String, Long> = store.data.first().removals()
+    suspend fun removals(): Map<String, Long> = store.data.first().stamps(Keys.removals)
 
-    suspend fun updateRemovals(now: Long, transform: (MutableMap<String, Long>) -> Unit) {
-        store.edit { prefs ->
-            val removals = prefs.removals().toMutableMap()
+    suspend fun updateRemovals(now: Long, transform: (MutableMap<String, Long>) -> Unit) =
+        updateStamps(Keys.removals) { removals ->
             transform(removals)
             removals.values.removeAll { now - it > REMOVAL_TTL_MILLIS }
-            prefs[Keys.removals] = DeviceJson.encodeToString(removals)
+        }
+
+    suspend fun ruleStamps(): Map<String, Long> = store.data.first().stamps(Keys.ruleStamps)
+
+    suspend fun updateRuleStamps(transform: (MutableMap<String, Long>) -> Unit) =
+        updateStamps(Keys.ruleStamps, transform)
+
+    private suspend fun updateStamps(key: Preferences.Key<String>, transform: (MutableMap<String, Long>) -> Unit) {
+        store.edit { prefs ->
+            val stamps = prefs.stamps(key).toMutableMap()
+            transform(stamps)
+            prefs[key] = DeviceJson.encodeToString(stamps)
         }
     }
 
     private fun Preferences.devices(): List<LinkedDevice> =
         this[Keys.devices]?.let { DeviceJson.decodeFromString<List<LinkedDevice>>(it) }.orEmpty()
 
-    private fun Preferences.removals(): Map<String, Long> =
-        this[Keys.removals]?.let { DeviceJson.decodeFromString<Map<String, Long>>(it) }.orEmpty()
+    private fun Preferences.stamps(key: Preferences.Key<String>): Map<String, Long> =
+        this[key]?.let { DeviceJson.decodeFromString<Map<String, Long>>(it) }.orEmpty()
 
     private object Keys {
         val secret = stringPreferencesKey("device_secret_key")
         val devices = stringPreferencesKey("linked_devices")
         val removals = stringPreferencesKey("saved_removals")
+        val ruleStamps = stringPreferencesKey("rule_stamps")
     }
 
     private companion object {

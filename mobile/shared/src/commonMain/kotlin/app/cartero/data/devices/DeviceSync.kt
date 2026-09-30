@@ -4,8 +4,13 @@ import app.cartero.data.db.ArticleDao
 import app.cartero.data.db.ArticleEntity
 import app.cartero.data.db.CarteroDatabase
 import app.cartero.data.db.FeedDao
+import app.cartero.data.db.RuleAction
+import app.cartero.data.db.RuleDao
+import app.cartero.data.db.RuleEntity
+import app.cartero.data.db.RuleField
 import app.cartero.data.db.SavedRow
 import app.cartero.data.sync.ContentLoader
+import app.cartero.notify.Notifier
 import app.cartero.nowMillis
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
@@ -29,6 +34,8 @@ class DeviceSync(
     private val store: DeviceStore,
     private val articles: ArticleDao,
     private val feeds: FeedDao,
+    private val rules: RuleDao,
+    private val notifier: Notifier,
     private val content: ContentLoader,
     private val deviceName: String,
     private val scope: CoroutineScope,
@@ -106,13 +113,23 @@ class DeviceSync(
         store.updateRemovals(now) { removals ->
             if (article.savedAt == null) removals[url] = now else removals.remove(url)
         }
+        push()
+    }
+
+    suspend fun ruleChanged(rule: RuleEntity) {
+        val now = nowMillis()
+        store.updateRuleStamps { it[rule.key()] = now }
+        push()
+    }
+
+    private suspend fun push() {
         if (store.devices.first().isNotEmpty()) pushes.trySend(Unit)
     }
 
     private suspend fun syncWith(device: LinkedDevice) {
-        val reply = send(device.id, DeviceMessage.Sync(changes())) as? DeviceMessage.Sync
+        val reply = send(device.id, snapshot()) as? DeviceMessage.Sync
             ?: error("Unexpected reply from ${device.name}")
-        merge(reply.changes)
+        merge(reply)
         markSynced(device.id)
     }
 
@@ -136,9 +153,9 @@ class DeviceSync(
         val reply = when (request) {
             is DeviceMessage.Link -> acceptLink(peer, request)
             is DeviceMessage.Sync -> store.device(peer)?.let {
-                merge(request.changes)
+                merge(request)
                 markSynced(peer)
-                DeviceMessage.Sync(changes())
+                snapshot()
             }
             is DeviceMessage.Linked -> null
         } ?: return null
@@ -158,14 +175,29 @@ class DeviceSync(
         store.updateDevices { devices -> devices.map { if (it.id == id) it.copy(syncedAt = now) else it } }
     }
 
-    private suspend fun changes(): List<SavedChange> {
+    private suspend fun snapshot() = DeviceMessage.Sync(savedChanges(), ruleChanges())
+
+    private suspend fun savedChanges(): List<SavedChange> {
         val saved = articles.savedRows().distinctBy { it.url }
         val savedAt = saved.associate { it.url to it.savedAt }
         val removed = store.removals().filter { (url, at) -> (savedAt[url] ?: Long.MIN_VALUE) < at }
         return saved.map { SavedChange(it.url, it.savedAt, it.story()) } + removed.map { (url, at) -> SavedChange(url, at) }
     }
 
-    private suspend fun merge(changes: List<SavedChange>) = mergeLock.withLock<Unit> {
+    private suspend fun ruleChanges(): List<RuleChange> {
+        val local = rules.all()
+        val stamps = store.ruleStamps()
+        val live = local.mapTo(mutableSetOf()) { it.key() }
+        return local.map { RuleChange(it.action, it.field, it.value, stamps[it.key()] ?: 0, it.enabled) } +
+            stamps.filterKeys { it !in live }.map { (key, at) -> ruleRemoval(key, at) }
+    }
+
+    private suspend fun merge(message: DeviceMessage.Sync) = mergeLock.withLock {
+        mergeSaved(message.changes)
+        mergeRules(message.rules)
+    }
+
+    private suspend fun mergeSaved(changes: List<SavedChange>) {
         val savedAt = articles.savedRows().associate { it.url to it.savedAt }
         val removals = store.removals()
         val removed = mutableMapOf<String, Long>()
@@ -189,6 +221,35 @@ class DeviceSync(
         if (added.isNotEmpty()) scope.launch { content.prefetch(added) }
     }
 
+    private suspend fun mergeRules(changes: List<RuleChange>) {
+        val local = rules.all().associateBy { it.key() }
+        val stamps = store.ruleStamps()
+        val applied = mutableMapOf<String, Long>()
+        for (change in changes) {
+            val key = change.key()
+            val rule = local[key]
+            val localAt = stamps[key] ?: if (rule == null) Long.MIN_VALUE else 0L
+            if (change.at <= localAt) continue
+            when {
+                change.enabled == null -> rule?.let { removeRule(it) }
+                rule == null -> addRule(change.toRule(change.enabled))
+                rule.enabled != change.enabled -> rules.setEnabled(rule.id, change.enabled)
+            }
+            applied[key] = change.at
+        }
+        if (applied.isNotEmpty()) store.updateRuleStamps { it.putAll(applied) }
+    }
+
+    private suspend fun addRule(rule: RuleEntity) {
+        val id = rules.insert(rule)
+        if (id != -1L && rule.action == RuleAction.Notify) notifier.ensureChannel(rule.copy(id = id))
+    }
+
+    private suspend fun removeRule(rule: RuleEntity) {
+        rules.delete(rule)
+        if (rule.action == RuleAction.Notify) notifier.deleteChannel(rule.id)
+    }
+
     private suspend fun save(url: String, story: SavedStory, at: Long): ArticleEntity? {
         val existing = articles.byUrl(url)
         if (existing == null) {
@@ -208,6 +269,20 @@ class DeviceSync(
         private const val REQUEST_TIMEOUT_MILLIS = 20_000L
         private const val INVITE_TTL_MILLIS = 10 * 60 * 1000L
     }
+}
+
+private fun ruleKey(action: RuleAction, field: RuleField, value: String) = "${action.name}|${field.name}|$value"
+
+private fun RuleEntity.key() = ruleKey(action, field, value)
+
+private fun RuleChange.key() = ruleKey(action, field, value)
+
+private fun RuleChange.toRule(enabled: Boolean) =
+    RuleEntity(action = action, field = field, value = value, enabled = enabled)
+
+private fun ruleRemoval(key: String, at: Long): RuleChange {
+    val (action, field, value) = key.split("|", limit = 3)
+    return RuleChange(RuleAction.valueOf(action), RuleField.valueOf(field), value, at)
 }
 
 private fun SavedRow.story() = SavedStory(
