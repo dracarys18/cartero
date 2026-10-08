@@ -24,6 +24,7 @@ interface PlatformServices {
 
 interface PlatformActions {
     val appVersion: String
+    val sponsorUrl: String?
     fun openLink(url: String, inApp: Boolean)
     fun share(title: String, url: String)
     fun openNotificationSettings(rule: RuleEntity?)

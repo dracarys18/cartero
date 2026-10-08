@@ -19,6 +19,7 @@ import platform.UIKit.popoverPresentationController
 object IosActions : PlatformActions {
     override val appVersion: String =
         NSBundle.mainBundle.infoDictionary?.get("CFBundleShortVersionString") as? String ?: ""
+    override val sponsorUrl: String? = null
 
     override fun openLink(url: String, inApp: Boolean) {
         val target = NSURL.URLWithString(url) ?: return

@@ -76,12 +76,14 @@ fun SettingsScreen(onBack: () -> Unit, onOpenRules: () -> Unit, onOpenDevices: (
                     Text("Cartero")
                 }
             }
-            link(
-                icon = Res.drawable.ic_favorite,
-                title = "Sponsor on GitHub",
-                summary = "Support dracarys18's open source work",
-                onClick = { actions.openLink(SPONSORS_URL, settings.inAppBrowser) },
-            )
+            actions.sponsorUrl?.let { url ->
+                link(
+                    icon = Res.drawable.ic_favorite,
+                    title = "Sponsor on GitHub",
+                    summary = "Support dracarys18's open source work",
+                    onClick = { actions.openLink(url, settings.inAppBrowser) },
+                )
+            }
 
             section("Automation")
             link(
@@ -178,6 +180,5 @@ private fun <T> LazyListScope.choice(
     }
 }
 
-private const val SPONSORS_URL = "https://github.com/sponsors/dracarys18"
 private val SYNC_INTERVALS = listOf(15, 30, 60, 180, 360)
 private val RETENTION_DAYS = listOf(7, 30, 90)

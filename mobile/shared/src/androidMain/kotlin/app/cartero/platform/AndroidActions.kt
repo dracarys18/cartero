@@ -12,6 +12,7 @@ import app.cartero.notify.AndroidNotifier
 class AndroidActions(private val activity: Activity) : PlatformActions {
     override val appVersion: String =
         activity.packageManager.getPackageInfo(activity.packageName, 0).versionName.orEmpty()
+    override val sponsorUrl: String = "https://github.com/sponsors/dracarys18"
 
     override fun openLink(url: String, inApp: Boolean) {
         val uri = url.toUri()
