@@ -47,9 +47,9 @@ import platform.WebKit.WKWebView
 import platform.WebKit.WKWebViewConfiguration
 import platform.darwin.NSObject
 
-private const val FONT_SCHEME = "cartero-font"
+private const val ASSET_SCHEME = "cartero-asset"
 
-actual val FONT_ORIGIN: String = "$FONT_SCHEME://fonts/"
+actual val ASSET_ORIGIN: String = "$ASSET_SCHEME://assets/"
 
 @OptIn(ExperimentalForeignApi::class)
 @Composable
@@ -132,7 +132,7 @@ actual fun ArticleView(
 }
 
 internal object ReaderWebViews {
-    private val fonts = FontSchemeHandler()
+    private val assets = AssetSchemeHandler()
     private var spare: WKWebView? = null
 
     fun prepare() {
@@ -152,11 +152,10 @@ internal object ReaderWebViews {
     @OptIn(ExperimentalForeignApi::class)
     private fun create(): WKWebView {
         val configuration = WKWebViewConfiguration().apply {
-            defaultWebpagePreferences.allowsContentJavaScript = false
-            setURLSchemeHandler(fonts, forURLScheme = FONT_SCHEME)
+            setURLSchemeHandler(assets, forURLScheme = ASSET_SCHEME)
         }
         return WKWebView(frame = CGRectZero.readValue(), configuration = configuration).apply {
-            loadHTMLString("", baseURL = NSURL.URLWithString(FONT_ORIGIN))
+            loadHTMLString("", baseURL = NSURL.URLWithString(ASSET_ORIGIN))
         }
     }
 
@@ -174,7 +173,7 @@ private class LoadedPage {
 
     fun load(view: WKWebView, page: String) {
         this.page = page
-        navigation = view.loadHTMLString(page, baseURL = NSURL.URLWithString(FONT_ORIGIN))
+        navigation = view.loadHTMLString(page, baseURL = NSURL.URLWithString(ASSET_ORIGIN))
     }
 }
 
@@ -277,22 +276,22 @@ private class TapHandler(private val onTap: () -> Unit) : NSObject(), UIGestureR
 }
 
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
-private class FontSchemeHandler : NSObject(), WKURLSchemeHandlerProtocol {
+private class AssetSchemeHandler : NSObject(), WKURLSchemeHandlerProtocol {
     @ObjCSignatureOverride
     override fun webView(webView: WKWebView, startURLSchemeTask: WKURLSchemeTaskProtocol) {
         val url = startURLSchemeTask.request.URL ?: return
-        val name = url.lastPathComponent
-        if (name == null || name !in READER_FONTS) {
-            startURLSchemeTask.didFailWithError(NSError.errorWithDomain(FONT_SCHEME, code = 404, userInfo = null))
+        val asset = url.lastPathComponent?.let(::readerAsset)
+        if (asset == null) {
+            startURLSchemeTask.didFailWithError(NSError.errorWithDomain(ASSET_SCHEME, code = 404, userInfo = null))
             return
         }
         MainScope().launch {
-            val bytes = Res.readBytes("font/$name")
+            val bytes = Res.readBytes(asset.path)
             val response = NSHTTPURLResponse(
                 uRL = url,
                 statusCode = 200,
                 HTTPVersion = "HTTP/1.1",
-                headerFields = mapOf<Any?, Any?>("Content-Type" to "font/ttf", "Access-Control-Allow-Origin" to "*"),
+                headerFields = mapOf<Any?, Any?>("Content-Type" to asset.type, "Access-Control-Allow-Origin" to "*"),
             )
             startURLSchemeTask.didReceiveResponse(response)
             startURLSchemeTask.didReceiveData(bytes.toNSData())

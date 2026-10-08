@@ -1,2 +1,3 @@
 Rules now sync between linked devices too. Adding, turning off or deleting a rule on one device does the same on the others.
 Fixed a crash when opening Settings while stories were still loading.
+Maths and LaTeX in articles now render as proper equations.

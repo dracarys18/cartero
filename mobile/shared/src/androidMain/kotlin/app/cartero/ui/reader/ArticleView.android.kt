@@ -25,7 +25,7 @@ import java.io.FilterInputStream
 import java.io.InputStream
 import java.net.URLConnection
 
-actual val FONT_ORIGIN: String = "https://cartero.invalid/fonts/"
+actual val ASSET_ORIGIN: String = "https://cartero.invalid/assets/"
 
 @Composable
 actual fun ArticleView(
@@ -52,7 +52,7 @@ actual fun ArticleView(
             ReaderWebView(context).apply {
                 setBackgroundColor(Color.TRANSPARENT)
                 isVerticalScrollBarEnabled = false
-                settings.javaScriptEnabled = false
+                settings.javaScriptEnabled = true
                 settings.allowFileAccess = false
                 settings.allowContentAccess = false
                 webViewClient = ReaderClient(
@@ -133,7 +133,7 @@ private class ReaderClient(
 
     override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
         val url = request.url.toString()
-        if (url.startsWith(FONT_ORIGIN)) return font(url.removePrefix(FONT_ORIGIN))
+        if (url.startsWith(ASSET_ORIGIN)) return asset(url.removePrefix(ASSET_ORIGIN))
         if (request.requestHeaders["Accept"]?.contains("image") != true) return null
         val snapshot = imageCache?.openSnapshot(url) ?: return null
         val stream = object : FilterInputStream(snapshot.data.toFile().inputStream() as InputStream) {
@@ -146,10 +146,10 @@ private class ReaderClient(
         return WebResourceResponse(type, null, stream)
     }
 
-    private fun font(name: String): WebResourceResponse? {
-        if (name !in READER_FONTS) return null
-        val bytes = runBlocking { Res.readBytes("font/$name") }
-        return WebResourceResponse("font/ttf", null, bytes.inputStream())
+    private fun asset(name: String): WebResourceResponse? {
+        val asset = readerAsset(name) ?: return null
+        val bytes = runBlocking { Res.readBytes(asset.path) }
+        return WebResourceResponse(asset.type, null, bytes.inputStream())
             .apply { responseHeaders = mapOf("Access-Control-Allow-Origin" to "*") }
     }
 }

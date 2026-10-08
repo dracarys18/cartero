@@ -25,6 +25,7 @@ object Readability {
         val title = doc.selectFirst("meta[property=og:title]")?.attr("content") ?: doc.title()
 
         val body = doc.body()
+        TexMath.normalize(body)
         body.select(JUNK).remove()
         dropUnlikely(body)
         fixLazyImages(body)

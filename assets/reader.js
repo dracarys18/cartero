@@ -110,6 +110,53 @@
     return img && img.getAttribute('src') ? img.getAttribute('src') : '';
   }
 
+  var MATH_DELIMITERS = [
+    { left: '$$', right: '$$', display: true },
+    { left: '\\[', right: '\\]', display: true },
+    { left: '\\(', right: '\\)', display: false }
+  ];
+
+  function texOf(math) {
+    if (!math) return '';
+    var note = math.querySelector('annotation[encoding="application/x-tex"]');
+    return (note && note.textContent.trim()) || math.getAttribute('alttext') || '';
+  }
+
+  function replaceWithTex(el, tex, display) {
+    tex = (tex || '').trim();
+    if (!tex || !el.parentNode) return;
+    el.replaceWith(el.ownerDocument.createTextNode(display ? '\\[' + tex + '\\]' : '\\(' + tex + '\\)'));
+  }
+
+  function normalizeMath(doc) {
+    doc.querySelectorAll('.mwe-math-element').forEach(function (el) {
+      var img = el.querySelector('img[alt]');
+      var tex = texOf(el.querySelector('math')) || (img && img.getAttribute('alt'));
+      replaceWithTex(el, tex, !!el.querySelector('[class*="-display"]'));
+    });
+    doc.querySelectorAll('.katex-display').forEach(function (el) { replaceWithTex(el, texOf(el.querySelector('math')), true); });
+    doc.querySelectorAll('.katex').forEach(function (el) { replaceWithTex(el, texOf(el.querySelector('math')), false); });
+    doc.querySelectorAll('script[type^="math/tex"]').forEach(function (el) {
+      replaceWithTex(el, el.textContent, el.type.indexOf('mode=display') >= 0);
+    });
+    doc.querySelectorAll('math').forEach(function (el) { replaceWithTex(el, texOf(el), el.getAttribute('display') === 'block'); });
+  }
+
+  function renderMath(el) {
+    if (!/\$\$|\\\(|\\\[/.test(el.textContent)) return;
+    var css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = '/assets/Temml-Local.css';
+    document.head.appendChild(css);
+    var script = document.createElement('script');
+    script.src = '/assets/temml.min.js';
+    script.onload = function () {
+      window.temml.renderMathInElement(el, { delimiters: MATH_DELIMITERS });
+      setProgress();
+    };
+    document.head.appendChild(script);
+  }
+
   function render(article, doc) {
     var title = article.title || fallbackTitle || url;
     var html = window.DOMPurify.sanitize(article.content || '');
@@ -138,6 +185,7 @@
     }
 
     bodyEl.innerHTML = html;
+    renderMath(bodyEl);
 
     current = {
       url: url,
@@ -171,6 +219,7 @@
     })
     .then(function (html) {
       var doc = new DOMParser().parseFromString(html, 'text/html');
+      normalizeMath(doc);
       doc.querySelectorAll('script,style,noscript,iframe,object,embed,link[rel=stylesheet]')
         .forEach(function (el) { el.remove(); });
       var article = new Readability(doc).parse();

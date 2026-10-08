@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import app.cartero.data.db.ArticleEntity
 import app.cartero.data.feed.Html
+import app.cartero.data.reader.TexMath
 import app.cartero.ui.components.fullDate
 import app.cartero.ui.components.localDate
 import app.cartero.ui.theme.TopicColor
@@ -13,7 +14,7 @@ import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.safety.Safelist
 
 const val FULL_TEXT_ACTION = "cartero-action:full-text"
-expect val FONT_ORIGIN: String
+expect val ASSET_ORIGIN: String
 
 @Immutable
 data class ReaderPalette(
@@ -57,7 +58,9 @@ object ArticleHtml {
 
     fun build(article: ArticleEntity, palette: ReaderPalette, needsFullText: Boolean): String {
         val base = article.url.orEmpty()
-        val clean = Ksoup.clean(bodyHtml = asHtml(article.content.orEmpty()), safelist = safelist, baseUri = base)
+        val source = Ksoup.parseBodyFragment(asHtml(article.content.orEmpty()), base).body()
+        TexMath.normalize(source)
+        val clean = Ksoup.clean(bodyHtml = source.html(), safelist = safelist, baseUri = base)
         val body = Ksoup.parseBodyFragment(clean, base).body()
         val images = body.select("img")
         images.forEach { img ->
@@ -65,10 +68,13 @@ object ArticleHtml {
             if (width != null && width < MIN_IMAGE_WIDTH) img.remove() else img.attr("loading", "lazy")
         }
         val heroInBody = images.any { it.attr("src") == article.imageUrl }
+        val math = TexMath.present(body.text())
 
         return buildString {
             append("<!DOCTYPE html><html><head><meta charset=\"utf-8\">")
             append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">")
+            append("<meta http-equiv=\"Content-Security-Policy\" content=\"script-src $ASSET_ORIGIN\">")
+            if (math) append("<link rel=\"stylesheet\" href=\"${ASSET_ORIGIN}Temml-Local.css\">")
             if (base.isNotEmpty()) append("<base href=\"").append(base.escape()).append("\">")
             append("<style>").append(palette.variables()).append(CSS).append("</style></head>")
             append("<body><main class=\"reader\">")
@@ -91,7 +97,12 @@ object ArticleHtml {
             append("<footer class=\"footer\">")
             if (needsFullText) append("<a href=\"$FULL_TEXT_ACTION\">Load full article</a>")
             article.url?.let { append("<a href=\"").append(it.escape()).append("\">Read on ").append(article.source.escape()).append(" ↗</a>") }
-            append("</footer></main></body></html>")
+            append("</footer></main>")
+            if (math) {
+                append("<script src=\"${ASSET_ORIGIN}temml.min.js\"></script>")
+                append("<script src=\"${ASSET_ORIGIN}math.js\"></script>")
+            }
+            append("</body></html>")
         }
     }
 
@@ -123,14 +134,14 @@ object ArticleHtml {
     private const val MIN_IMAGE_WIDTH = 48
 
     private val CSS = """
-        @font-face{font-family:Manrope;src:url(${FONT_ORIGIN}manrope_regular.ttf);font-weight:400}
-        @font-face{font-family:Manrope;src:url(${FONT_ORIGIN}manrope_medium.ttf);font-weight:500}
-        @font-face{font-family:Manrope;src:url(${FONT_ORIGIN}manrope_semibold.ttf);font-weight:600}
-        @font-face{font-family:Manrope;src:url(${FONT_ORIGIN}manrope_bold.ttf);font-weight:700}
-        @font-face{font-family:Manrope;src:url(${FONT_ORIGIN}manrope_extrabold.ttf);font-weight:800}
-        @font-face{font-family:"Source Serif 4";src:url(${FONT_ORIGIN}source_serif_regular.ttf);font-weight:400;font-style:normal}
-        @font-face{font-family:"Source Serif 4";src:url(${FONT_ORIGIN}source_serif_bold.ttf);font-weight:700;font-style:normal}
-        @font-face{font-family:"Source Serif 4";src:url(${FONT_ORIGIN}source_serif_italic.ttf);font-weight:400;font-style:italic}
+        @font-face{font-family:Manrope;src:url(${ASSET_ORIGIN}manrope_regular.ttf);font-weight:400}
+        @font-face{font-family:Manrope;src:url(${ASSET_ORIGIN}manrope_medium.ttf);font-weight:500}
+        @font-face{font-family:Manrope;src:url(${ASSET_ORIGIN}manrope_semibold.ttf);font-weight:600}
+        @font-face{font-family:Manrope;src:url(${ASSET_ORIGIN}manrope_bold.ttf);font-weight:700}
+        @font-face{font-family:Manrope;src:url(${ASSET_ORIGIN}manrope_extrabold.ttf);font-weight:800}
+        @font-face{font-family:"Source Serif 4";src:url(${ASSET_ORIGIN}source_serif_regular.ttf);font-weight:400;font-style:normal}
+        @font-face{font-family:"Source Serif 4";src:url(${ASSET_ORIGIN}source_serif_bold.ttf);font-weight:700;font-style:normal}
+        @font-face{font-family:"Source Serif 4";src:url(${ASSET_ORIGIN}source_serif_italic.ttf);font-weight:400;font-style:italic}
         *{margin:0;padding:0;box-sizing:border-box}
         html{-webkit-text-size-adjust:100%}
         body{background:var(--paper);color:var(--ink);font-family:Manrope,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
@@ -160,6 +171,8 @@ object ArticleHtml {
         .article-body code{font-family:ui-monospace,"Roboto Mono",monospace;font-size:.85em;background:var(--code-bg);border-radius:6px;padding:.12em .36em}
         .article-body pre{background:var(--code-bg);border-radius:12px;padding:14px 16px;margin:1.4em 0;overflow-x:auto;line-height:1.5}
         .article-body pre code{background:none;padding:0;font-size:.84rem}
+        .article-body math{font-size:1.1em}
+        .article-body math.tml-display{margin:1.2em 0;overflow-x:auto;overflow-y:hidden}
         .article-body hr{border:none;border-top:1px solid var(--rule);margin:2em 0}
         .article-body table{display:block;overflow-x:auto;border-collapse:collapse;margin:1.4em 0;font-family:Manrope,sans-serif;font-size:.86rem;line-height:1.45;font-variant-numeric:tabular-nums}
         .article-body th,.article-body td{border:1px solid var(--rule);padding:8px 12px;text-align:left;vertical-align:top;overflow-wrap:normal;hyphens:manual}
@@ -174,7 +187,22 @@ object ArticleHtml {
 
 private fun Color.css(): String = "#" + (toArgb() and 0xFFFFFF).toString(16).padStart(6, '0')
 
-val READER_FONTS = setOf(
+class ReaderAsset(val path: String, val type: String)
+
+fun readerAsset(name: String): ReaderAsset? {
+    val dir = when (name) {
+        in READER_FONTS -> "font"
+        in MATH_FILES -> "files"
+        else -> return null
+    }
+    return ReaderAsset("$dir/$name", ASSET_TYPES.getValue(name.substringAfterLast('.')))
+}
+
+private val ASSET_TYPES = mapOf("ttf" to "font/ttf", "woff2" to "font/woff2", "js" to "text/javascript", "css" to "text/css")
+
+private val MATH_FILES = setOf("temml.min.js", "math.js", "Temml-Local.css", "Temml.woff2")
+
+private val READER_FONTS = setOf(
     "manrope_regular.ttf",
     "manrope_medium.ttf",
     "manrope_semibold.ttf",
