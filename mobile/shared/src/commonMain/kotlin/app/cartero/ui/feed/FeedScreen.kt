@@ -59,7 +59,12 @@ import org.jetbrains.compose.resources.painterResource
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun FeedScreen(onOpenArticle: (Long) -> Unit, onOpenSettings: () -> Unit, onAddFeed: () -> Unit) {
+fun FeedScreen(
+    onOpenArticle: (Long) -> Unit,
+    onOpenSearch: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onAddFeed: () -> Unit,
+) {
     val viewModel = graphViewModel { FeedViewModel(this) }
     val items = viewModel.items.collectAsLazyPagingItems()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
@@ -82,6 +87,9 @@ fun FeedScreen(onOpenArticle: (Long) -> Unit, onOpenSettings: () -> Unit, onAddF
                 title = { Text("Cartero") },
                 subtitle = { Text(if (unread == 0) "All caught up" else "$unread unread") },
                 actions = {
+                    IconButton(onClick = onOpenSearch) {
+                        Icon(painterResource(Res.drawable.ic_search), contentDescription = "Search")
+                    }
                     IconButton(onClick = viewModel::markAllRead) {
                         Icon(painterResource(Res.drawable.ic_done_all), contentDescription = "Mark all read")
                     }

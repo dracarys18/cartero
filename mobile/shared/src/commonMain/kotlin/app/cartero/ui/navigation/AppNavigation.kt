@@ -43,6 +43,7 @@ import app.cartero.ui.feeds.FeedsScreen
 import app.cartero.ui.reader.ReaderScreen
 import app.cartero.ui.rules.RulesScreen
 import app.cartero.ui.saved.SavedScreen
+import app.cartero.ui.search.SearchScreen
 import app.cartero.ui.settings.SettingsScreen
 import org.jetbrains.compose.resources.painterResource
 
@@ -125,12 +126,21 @@ fun AppNavigation(request: AppRequest?, onRequestHandled: () -> Unit) {
                 entry<FeedRoute>(metadata = ListDetailSceneStrategy.listPane(detailPlaceholder = { DetailPlaceholder() })) {
                     FeedScreen(
                         onOpenArticle = { backStack.openArticle(it) },
+                        onOpenSearch = { backStack.add(SearchRoute) },
                         onOpenSettings = { backStack.add(SettingsRoute) },
                         onAddFeed = { backStack.selectTab(FeedsRoute) },
                     )
                 }
                 entry<SavedRoute>(metadata = ListDetailSceneStrategy.listPane(detailPlaceholder = { DetailPlaceholder() })) {
                     SavedScreen(onOpenArticle = { backStack.openArticle(it) })
+                }
+                entry<SearchRoute>(
+                    metadata = ListDetailSceneStrategy.listPane(detailPlaceholder = { DetailPlaceholder() }) + motion.pushed,
+                ) {
+                    SearchScreen(
+                        onOpenArticle = { backStack.openArticle(it) },
+                        onBack = { backStack.removeLastOrNull() },
+                    )
                 }
                 entry<RulesRoute>(metadata = motion.pushed) {
                     RulesScreen(onBack = { backStack.removeLastOrNull() })

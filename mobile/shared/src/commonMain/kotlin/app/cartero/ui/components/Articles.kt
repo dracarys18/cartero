@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -114,6 +115,18 @@ fun LazyListScope.articleItems(
     }
 }
 
+fun LazyListScope.articleItems(
+    rows: List<ArticleRow>,
+    onOpen: (Long) -> Unit,
+    onToggleSaved: (Long) -> Unit,
+    onToggleRead: (ArticleRow) -> Unit,
+    showSummary: Boolean = false,
+) {
+    items(rows, key = { "article:${it.id}" }, contentType = { "search-article" }) { row ->
+        SwipeableArticle(row, onOpen, onToggleSaved, onToggleRead, showSummary)
+    }
+}
+
 @Composable
 private fun DayHeader(label: String) {
     Text(
@@ -130,6 +143,7 @@ private fun SwipeableArticle(
     onOpen: (Long) -> Unit,
     onToggleSaved: (Long) -> Unit,
     onToggleRead: (ArticleRow) -> Unit,
+    showSummary: Boolean = false,
 ) {
     val threshold = with(LocalDensity.current) { SWIPE_THRESHOLD.toPx() }
     val haptics = LocalHapticFeedback.current
@@ -148,6 +162,7 @@ private fun SwipeableArticle(
         ArticleCard(
             row = row,
             onClick = { onOpen(row.id) },
+            showSummary = showSummary,
             modifier = Modifier
                 .offset { IntOffset(offset.roundToInt(), 0) }
                 .draggable(
@@ -192,7 +207,12 @@ private fun SwipeBackground(started: Boolean, row: ArticleRow) {
 }
 
 @Composable
-fun ArticleCard(row: ArticleRow, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ArticleCard(
+    row: ArticleRow,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    showSummary: Boolean = false,
+) {
     val colors = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
     val meta = remember(row.source, row.publishedAt, row.readingMinutes, colors.secondary) { metaLine(row, colors.secondary) }
@@ -238,6 +258,16 @@ fun ArticleCard(row: ArticleRow, onClick: () -> Unit, modifier: Modifier = Modif
                     style = typography.bodySmall.copy(fontWeight = FontWeight.Normal),
                     color = colors.outline,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (showSummary && row.summary.isNotBlank()) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = row.summary,
+                    style = typography.bodySmall,
+                    color = colors.onSurfaceVariant,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
                 )
             }

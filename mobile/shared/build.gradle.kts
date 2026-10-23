@@ -13,6 +13,7 @@ kotlin {
         compileSdk = 37
         minSdk = 33
         androidResources.enable = true
+        withHostTest {}
     }
 
     listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
@@ -65,6 +66,9 @@ kotlin {
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
             implementation(libs.sqlite.bundled)
+        }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
         }
     }
 }

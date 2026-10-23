@@ -8,10 +8,12 @@ import app.cartero.data.db.ArticleDao
 import app.cartero.data.db.ArticleEntity
 import app.cartero.data.db.ArticleRow
 import app.cartero.data.db.Facet
+import app.cartero.data.db.SearchQuery
 import app.cartero.data.devices.DeviceSync
 import app.cartero.data.sync.ContentLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 data class FeedFilter(
@@ -44,6 +46,11 @@ class ArticleRepository(
         }.flow
 
     fun saved(): Flow<PagingData<ArticleRow>> = Pager(PAGING) { dao.saved() }.flow
+
+    fun search(text: String): Flow<List<ArticleRow>> {
+        val query = SearchQuery.parse(text) ?: return flowOf(emptyList())
+        return dao.search(query.toRawQuery())
+    }
 
     fun article(id: Long): Flow<ArticleEntity?> = dao.observe(id)
 

@@ -30,6 +30,9 @@ data object RulesRoute : NavKey
 data object FeedsRoute : TabRoute
 
 @Serializable
+data object SearchRoute : NavKey
+
+@Serializable
 data class ReaderRoute(val articleId: Long) : NavKey
 
 @Serializable
@@ -55,6 +58,7 @@ val NavigationState = SavedStateConfiguration {
             subclass(FeedRoute::class)
             subclass(SavedRoute::class)
             subclass(FeedsRoute::class)
+            subclass(SearchRoute::class)
             subclass(RulesRoute::class)
             subclass(ReaderRoute::class)
             subclass(SettingsRoute::class)
