@@ -6,11 +6,13 @@ import androidx.room3.Delete
 import androidx.room3.Insert
 import androidx.room3.OnConflictStrategy
 import androidx.room3.Query
+import androidx.room3.RawQuery
+import androidx.room3.RoomRawQuery
 import androidx.room3.Transaction
 import androidx.room3.Update
 import kotlinx.coroutines.flow.Flow
 
-private const val ROW = "id, title, summary, imageUrl, source, topic, publishedAt, readingMinutes, isRead, savedAt"
+internal const val ARTICLE_ROW = "id, title, summary, imageUrl, source, topic, publishedAt, readingMinutes, isRead, savedAt"
 
 private const val FILTER = """
     (:anyTopic OR topic IN (:topics))
@@ -20,7 +22,7 @@ private const val FILTER = """
 
 @Dao
 interface ArticleDao {
-    @Query("SELECT $ROW FROM articles WHERE $FILTER ORDER BY publishedAt DESC, id DESC")
+    @Query("SELECT $ARTICLE_ROW FROM articles WHERE $FILTER ORDER BY publishedAt DESC, id DESC")
     fun feed(
         topics: List<String>,
         anyTopic: Boolean,
@@ -29,7 +31,10 @@ interface ArticleDao {
         unreadOnly: Boolean,
     ): PagingSource<Int, ArticleRow>
 
-    @Query("SELECT $ROW FROM articles WHERE savedAt IS NOT NULL ORDER BY savedAt DESC")
+    @RawQuery(observedEntities = [ArticleEntity::class])
+    fun search(query: RoomRawQuery): Flow<List<ArticleRow>>
+
+    @Query("SELECT $ARTICLE_ROW FROM articles WHERE savedAt IS NOT NULL ORDER BY savedAt DESC")
     fun saved(): PagingSource<Int, ArticleRow>
 
     @Query("SELECT * FROM articles WHERE id = :id")
