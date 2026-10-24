@@ -31,6 +31,7 @@ type InterestConfig struct {
 	OffTopicThreshold    float64                       `toml:"off_topic_threshold"`
 	MinQuality           float64                       `toml:"min_quality"`
 	MinQualityIncomplete float64                       `toml:"min_quality_incomplete"`
+	SourceMinQuality     map[string]float64            `toml:"source_min_quality"`
 }
 
 type Prompts struct {

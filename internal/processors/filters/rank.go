@@ -261,6 +261,9 @@ func contentIncomplete(item *types.Item) bool {
 }
 
 func (f *RankFilter) minQuality(item *types.Item) float64 {
+	if floor, ok := f.cfg.SourceMinQuality[item.Source]; ok {
+		return floor
+	}
 	if contentIncomplete(item) {
 		return f.cfg.MinQualityIncomplete
 	}

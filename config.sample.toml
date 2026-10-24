@@ -147,6 +147,13 @@ min_quality = 2.0
 # sees the title and summary.
 min_quality_incomplete = 1.4
 
+# Optional higher quality floors for specific sources. The key is the pipeline
+# source name. Each feed loaded from an OPML file is named "<source>_<feed>",
+# so an arXiv feed under tech_blogs is tech_blogs_arxiv. The floor replaces
+# min_quality for that source, including when the article text is incomplete.
+[interests.source_min_quality]
+# tech_blogs_arxiv = 3.0
+
 # Questions Jev answers for every article: the topic, a 0-4 quality score from
 # the levels below (lowest first), and yes/no flags that reject at threshold.
 [prompts.topic]
@@ -178,6 +185,11 @@ threshold = 0.7
 name = "advertisement"
 question = "Is this a sales pitch: content whose main purpose is getting readers to buy, subscribe to or sign up for a commercial product or service (landing page, sponsored post, webinar or event promo, customer case study)? Announcements of new AI models, software or library releases, and open-source projects are news, not sales pitches."
 threshold = 0.7
+
+[[prompts.flags]]
+name = "research_slop"
+question = "Is this an unrefereed preprint (for example on arXiv) whose main contribution is a benchmark, evaluation, survey or a minor variation of existing work, rather than a new result or method worth reading?"
+threshold = 0.6
 
 [blocklist]
 domains_file = "https://gist.githubusercontent.com/you/id/raw/blocklist.txt"
