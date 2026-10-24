@@ -4,7 +4,7 @@
   <p>Your own opinionated personal feed</p>
   <p>
     <a href="https://apps.apple.com/app/id6817048564"><img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" height="40"></a>
-    <a href="https://github.com/dracarys18/cartero/releases/latest"><img src="https://img.shields.io/badge/Download_APK-000000?style=for-the-badge&amp;logo=android&amp;logoColor=3DDC84" alt="Download the Android APK" height="40"></a>
+    <a href="https://github.com/dracarys18/cartero/releases/latest"><img src="docs/assets/download-apk.svg" alt="Download the Android APK" height="40"></a>
   </p>
 </div>
 
