@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -47,7 +49,20 @@ func GetArticle(ctx context.Context, u *url.URL, timeout time.Duration, resolver
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	result, err := trafilatura.Extract(resp.Body, trafilatura.Options{
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("fetch %s: status %d", u.Host, resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxArticleBytes))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if provider, blocked := BlockedByAntibot(resp.StatusCode, resp.Header, string(body), u.String()); blocked {
+		return nil, fmt.Errorf("fetch %s: blocked by %s", u.Host, provider)
+	}
+
+	result, err := trafilatura.Extract(bytes.NewReader(body), trafilatura.Options{
 		OriginalURL:     u,
 		EnableFallback:  true,
 		ExcludeComments: true,
@@ -68,12 +83,37 @@ func GetArticle(ctx context.Context, u *url.URL, timeout time.Duration, resolver
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert content to markdown: %w", err)
 	}
+	markdown = stripInlineImages(markdown)
+	if isFullDocument(markdown) {
+		return nil, fmt.Errorf("extraction returned a full HTML document")
+	}
 
 	return &types.Article{
 		Text:        markdown,
 		Image:       result.Metadata.Image,
 		Description: strutils.Clean(result.Metadata.Description),
 	}, nil
+}
+
+const maxArticleBytes = 8 << 20
+
+// Inline base64 images are single multi-kilobyte tokens: they bloat the row,
+// blow past Postgres' 2047-character lexeme limit and bloat the feed payload.
+var (
+	inlineDataImage  = regexp.MustCompile(`!\[[^\]]*\]\(\s*data:[^)]*\)\s*`)
+	inlineDataImgTag = regexp.MustCompile(`(?is)<img[^>]*\ssrc=["']?data:[^>]*>\s*`)
+	fullHTMLDocument = regexp.MustCompile(`(?is)</body>|<html[\s>]`)
+)
+
+func stripInlineImages(markdown string) string {
+	markdown = inlineDataImgTag.ReplaceAllString(markdown, "")
+	return inlineDataImage.ReplaceAllString(markdown, "")
+}
+
+// Trafilatura's fallback extractor sometimes hands back the entire document
+// instead of the article, which is not something worth storing.
+func isFullDocument(markdown string) bool {
+	return fullHTMLDocument.MatchString(markdown)
 }
 
 func promoteCodeBlocks(n *html.Node) {

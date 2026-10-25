@@ -360,17 +360,52 @@ func (s *entryStore) scanEntries(rows *sql.Rows, capacity int) ([]storage.FeedEn
 }
 
 func (s *entryStore) Search(ctx context.Context, query string, limit int) ([]storage.FeedEntry, error) {
+	// Topic first, then title, then body text. Ties inside a tier fall back to
+	// the full-text rank, then recency.
 	q := `
-		SELECT fe.id, fe.title, fe.link, fe.description, fe.content, fe.author, fe.source, fe.image_url, fe.matched_keywords, fe.hash, fe.entry_timestamp, fe.published_at, fe.created_at
-		FROM feed_entries fe
-		WHERE to_tsvector('english', coalesce(fe.title, '') || ' ' || coalesce(fe.description, '')) @@ websearch_to_tsquery('english', $1)
-		ORDER BY ts_rank(to_tsvector('english', coalesce(fe.title, '') || ' ' || coalesce(fe.description, '')), websearch_to_tsquery('english', $1)) DESC, fe.published_at DESC NULLS LAST
+		WITH parsed AS (
+			SELECT websearch_to_tsquery('english', $1) AS ts
+		), hits AS (
+			SELECT fe.id, fe.title, fe.link, fe.description, fe.content, fe.author, fe.source, fe.image_url, fe.matched_keywords, fe.hash, fe.entry_timestamp, fe.published_at, fe.created_at,
+				CASE
+					WHEN fe.keyword_vector @@ parsed.ts THEN 1
+					WHEN fe.title_vector @@ parsed.ts THEN 2
+					ELSE 3
+				END AS tier,
+				ts_rank(fe.title_vector, parsed.ts) AS rank
+			FROM feed_entries fe, parsed
+			WHERE fe.keyword_vector @@ parsed.ts
+			   OR fe.title_vector @@ parsed.ts
+			   OR fe.body_vector @@ parsed.ts
+		)
+		SELECT id, title, link, description, content, author, source, image_url, matched_keywords, hash, entry_timestamp, published_at, created_at
+		FROM hits
+		ORDER BY tier ASC, rank DESC, published_at DESC NULLS LAST
 		LIMIT $2
 	`
 
 	rows, err := s.db.QueryContext(ctx, q, query, limit)
 	if err != nil {
 		return nil, fmt.Errorf("lexical search failed: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	return s.scanEntries(rows, limit)
+}
+
+func (s *entryStore) SearchSimilar(ctx context.Context, model string, embedding []float32, maxDistance float64, limit int) ([]storage.FeedEntry, error) {
+	q := `
+		SELECT fe.id, fe.title, fe.link, fe.description, fe.content, fe.author, fe.source, fe.image_url, fe.matched_keywords, fe.hash, fe.entry_timestamp, fe.published_at, fe.created_at
+		FROM feed_entries fe
+		JOIN entry_embeddings e ON e.id = fe.id
+		WHERE e.model = $1 AND (e.embedding <=> $2::vector) <= $3
+		ORDER BY e.embedding <=> $2::vector
+		LIMIT $4
+	`
+
+	rows, err := s.db.QueryContext(ctx, q, model, vectorLiteral(embedding), maxDistance, limit)
+	if err != nil {
+		return nil, fmt.Errorf("semantic search failed: %w", err)
 	}
 	defer func() { _ = rows.Close() }()
 

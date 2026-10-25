@@ -26,7 +26,14 @@ type ReadabilityExtractor struct {
 }
 
 func (r ReadabilityExtractor) Extract(ctx context.Context, u *url.URL, timeout time.Duration) (*types.Article, error) {
-	return utils.GetArticle(ctx, u, timeout, r.resolver)
+	article, err := utils.GetArticle(ctx, u, timeout, r.resolver)
+	if err != nil {
+		return nil, err
+	}
+	if article == nil || !looksLikeArticle(article.Text) {
+		return nil, fmt.Errorf("page had no article content")
+	}
+	return article, nil
 }
 
 type JinaExtractor struct {
@@ -73,7 +80,21 @@ func (j JinaExtractor) Extract(ctx context.Context, u *url.URL, timeout time.Dur
 		return nil, err
 	}
 
-	return &types.Article{Text: string(body)}, nil
+	text := string(body)
+	if !looksLikeArticle(text) {
+		return nil, fmt.Errorf("reader returned no article content")
+	}
+
+	return &types.Article{Text: text}, nil
+}
+
+// minArticleWords is the floor for extracted body text. Bot challenges,
+// interstitials and error pages are only a sentence or two of prose, so they
+// fail this regardless of how the vendor words them.
+const minArticleWords = 120
+
+func looksLikeArticle(text string) bool {
+	return len(strings.Fields(text)) >= minArticleWords
 }
 
 type TieredExtractor struct {

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"cartero/internal/platforms"
 	"cartero/internal/server/feed/handler"
 	"cartero/internal/storage"
 )
@@ -17,6 +18,7 @@ type Config struct {
 	SiteURL         string
 	SiteName        string
 	SiteDescription string
+	Embedder        platforms.Embedder
 }
 
 type Server struct {
@@ -45,7 +47,7 @@ func New(name string, config Config, entryStore storage.EntryStore) *Server {
 		SiteURL:         config.SiteURL,
 		SiteName:        config.SiteName,
 		SiteDescription: config.SiteDescription,
-	}, entryStore)
+	}, entryStore, config.Embedder)
 
 	return &Server{
 		name:    name,

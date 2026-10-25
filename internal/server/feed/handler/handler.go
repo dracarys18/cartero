@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"cartero/internal/platforms"
 	"cartero/internal/storage"
 	"cartero/internal/template"
 )
@@ -23,13 +24,14 @@ type Config struct {
 type Handler struct {
 	config     Config
 	entryStore storage.EntryStore
+	embedder   platforms.Embedder
 	tmpl       *template.Template
 	readerTmpl *template.Template
 	cache      *pageCache
 	locations  sync.Map
 }
 
-func New(config Config, entryStore storage.EntryStore) *Handler {
+func New(config Config, entryStore storage.EntryStore, embedder platforms.Embedder) *Handler {
 	tmpl := &template.Template{}
 	if err := tmpl.Load("templates/homepage.gotmpl", template.HtmlTemplate, funcMap()); err != nil {
 		panic(err.Error())
@@ -43,6 +45,7 @@ func New(config Config, entryStore storage.EntryStore) *Handler {
 	return &Handler{
 		config:     config,
 		entryStore: entryStore,
+		embedder:   embedder,
 		tmpl:       tmpl,
 		readerTmpl: readerTmpl,
 		cache:      newPageCache(renderCacheTTL),

@@ -76,6 +76,7 @@ type EntryStore interface {
 	ListEntriesPaginated(ctx context.Context, page, perPage int, filter EntryFilter) (*PaginationResult, error)
 	ListFacets(ctx context.Context, filter EntryFilter) (topics, sources []Facet, err error)
 	Search(ctx context.Context, query string, limit int) ([]FeedEntry, error)
+	SearchSimilar(ctx context.Context, model string, embedding []float32, maxDistance float64, limit int) ([]FeedEntry, error)
 	SetEmbedding(ctx context.Context, id, model string, embedding []float32) error
 	FindSimilarEntry(ctx context.Context, model string, embedding []float32, threshold float64, since time.Time) (bool, error)
 }

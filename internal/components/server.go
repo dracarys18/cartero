@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"cartero/internal/platforms"
 	"cartero/internal/server/feed"
 	"cartero/internal/storage"
 )
@@ -75,6 +76,11 @@ func (c *ServerComponent) startServer(ctx context.Context, cfg ServerConfig, ent
 		cfg.MaxItems = 50
 	}
 
+	var embedder platforms.Embedder
+	if comp, ok := c.registry.Get(PlatformComponentName).(*PlatformComponent); ok {
+		embedder = comp.Embedder()
+	}
+
 	server := feed.New(cfg.Name, feed.Config{
 		Port:            cfg.Port,
 		FeedSize:        cfg.FeedSize,
@@ -82,6 +88,7 @@ func (c *ServerComponent) startServer(ctx context.Context, cfg ServerConfig, ent
 		SiteURL:         cfg.SiteURL,
 		SiteName:        cfg.SiteName,
 		SiteDescription: cfg.SiteDescription,
+		Embedder:        embedder,
 	}, entryStore)
 
 	if err := server.Start(ctx); err != nil {

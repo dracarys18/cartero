@@ -1,14 +1,38 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
 
+	"cartero/internal/storage"
 	utils "cartero/internal/utils/string"
 )
 
-const searchLimit = 40
+const (
+	searchLimit = 40
+	// Cosine distance ceiling for the embedding fallback: roughly 0.45+
+	// similarity, so only genuinely related stories come back.
+	semanticMaxDistance = 0.55
+)
+
+func (h *Handler) searchSemantic(ctx context.Context, query string) []storage.FeedEntry {
+	if h.embedder == nil {
+		return nil
+	}
+
+	vectors, err := h.embedder.Embed(ctx, []string{query})
+	if err != nil || len(vectors) != 1 {
+		return nil
+	}
+
+	entries, err := h.entryStore.SearchSimilar(ctx, h.embedder.Model(), vectors[0], semanticMaxDistance, searchLimit)
+	if err != nil {
+		return nil
+	}
+	return entries
+}
 
 type searchResult struct {
 	Title           string `json:"title"`
@@ -44,6 +68,11 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		if len(entries) == 0 {
+			entries = h.searchSemantic(r.Context(), query)
+		}
+
 		for _, e := range entries {
 			resp.Results = append(resp.Results, searchResult{
 				Title:           e.Title,
