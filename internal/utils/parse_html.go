@@ -53,15 +53,27 @@ func GetArticle(ctx context.Context, u *url.URL, timeout time.Duration, resolver
 		return nil, fmt.Errorf("fetch %s: status %d", u.Host, resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxArticleBytes))
+	body, err := io.ReadAll(io.LimitReader(resp.Body, MaxArticleBytes))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response: %w", err)
 	}
 
 	if provider, blocked := BlockedByAntibot(resp.StatusCode, resp.Header, string(body), u.String()); blocked {
-		return nil, fmt.Errorf("fetch %s: blocked by %s", u.Host, provider)
+		return nil, &AntibotError{Provider: provider}
 	}
 
+	return ParseArticle(body, u)
+}
+
+type AntibotError struct {
+	Provider string
+}
+
+func (e *AntibotError) Error() string {
+	return fmt.Sprintf("blocked by %s", e.Provider)
+}
+
+func ParseArticle(body []byte, u *url.URL) (*types.Article, error) {
 	result, err := trafilatura.Extract(bytes.NewReader(body), trafilatura.Options{
 		OriginalURL:     u,
 		EnableFallback:  true,
@@ -87,6 +99,9 @@ func GetArticle(ctx context.Context, u *url.URL, timeout time.Duration, resolver
 	if isFullDocument(markdown) {
 		return nil, fmt.Errorf("extraction returned a full HTML document")
 	}
+	if !looksLikeArticle(markdown) {
+		return nil, fmt.Errorf("extraction returned no article content")
+	}
 
 	return &types.Article{
 		Text:        markdown,
@@ -95,7 +110,13 @@ func GetArticle(ctx context.Context, u *url.URL, timeout time.Duration, resolver
 	}, nil
 }
 
-const maxArticleBytes = 8 << 20
+const MaxArticleBytes = 8 << 20
+
+const minArticleWords = 120
+
+func looksLikeArticle(text string) bool {
+	return len(strings.Fields(text)) >= minArticleWords
+}
 
 // Inline base64 images are single multi-kilobyte tokens: they bloat the row,
 // blow past Postgres' 2047-character lexeme limit and bloat the feed payload.

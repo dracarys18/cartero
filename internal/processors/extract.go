@@ -19,8 +19,12 @@ type ExtractText struct {
 	extractor Extractor
 }
 
-func NewExtractProcessor(settings config.ExtractTextSettings) *ExtractText {
-	return &ExtractText{settings: settings, extractor: newExtractor(settings)}
+func NewExtractProcessor(settings config.ExtractTextSettings) (*ExtractText, error) {
+	extractor, err := newExtractor(settings)
+	if err != nil {
+		return nil, err
+	}
+	return &ExtractText{settings: settings, extractor: extractor}, nil
 }
 
 func (e *ExtractText) Name() string {

@@ -206,7 +206,8 @@ type ExtractTextSettings struct {
 	MinContentLength int    `toml:"min_content_length"`
 	Concurrency      int    `toml:"concurrency"`
 	TimeoutSeconds   int    `toml:"timeout_seconds"`
-	ReaderURL        string `toml:"reader_url"`
+	FlareSolverrURL  string `toml:"flaresolverr_url"`
+	FlareTimeoutMS   int    `toml:"flaresolverr_timeout_ms"`
 	Resolver         string `toml:"resolver"`
 }
 

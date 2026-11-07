@@ -2,12 +2,9 @@ package processors
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
-	"strconv"
-	"strings"
 	"time"
 
 	"cartero/internal/config"
@@ -26,91 +23,29 @@ type ReadabilityExtractor struct {
 }
 
 func (r ReadabilityExtractor) Extract(ctx context.Context, u *url.URL, timeout time.Duration) (*types.Article, error) {
-	article, err := utils.GetArticle(ctx, u, timeout, r.resolver)
-	if err != nil {
-		return nil, err
-	}
-	if article == nil || !looksLikeArticle(article.Text) {
-		return nil, fmt.Errorf("page had no article content")
-	}
-	return article, nil
-}
-
-type JinaExtractor struct {
-	url string
-}
-
-func (j JinaExtractor) Extract(ctx context.Context, u *url.URL, timeout time.Duration) (*types.Article, error) {
-	if j.url == "" {
-		return nil, fmt.Errorf("reader URL is empty")
-	}
-	if u == nil || u.String() == "" {
-		return nil, fmt.Errorf("URL is empty")
-	}
-
-	if timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, timeout)
-		defer cancel()
-	}
-
-	endpoint := strings.TrimRight(j.url, "/") + "/" + u.String()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("X-Return-Format", "markdown")
-	req.Header.Set("X-Retain-Images", "none")
-	if timeout > 0 {
-		req.Header.Set("X-Timeout", strconv.Itoa(int(timeout.Seconds())))
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("reader request failed: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("reader returned status %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	text := string(body)
-	if !looksLikeArticle(text) {
-		return nil, fmt.Errorf("reader returned no article content")
-	}
-
-	return &types.Article{Text: text}, nil
-}
-
-// minArticleWords is the floor for extracted body text. Bot challenges,
-// interstitials and error pages are only a sentence or two of prose, so they
-// fail this regardless of how the vendor words them.
-const minArticleWords = 120
-
-func looksLikeArticle(text string) bool {
-	return len(strings.Fields(text)) >= minArticleWords
+	return utils.GetArticle(ctx, u, timeout, r.resolver)
 }
 
 type TieredExtractor struct {
 	primary  Extractor
-	fallback Extractor
+	renderer Extractor
 	minLen   int
 }
 
 func (t TieredExtractor) Extract(ctx context.Context, u *url.URL, timeout time.Duration) (*types.Article, error) {
+	if u == nil || u.String() == "" {
+		return nil, fmt.Errorf("URL is empty")
+	}
+
 	article, err := t.primary.Extract(ctx, u, timeout)
 	if err == nil && article != nil && len(article.Text) >= t.minLen {
 		return article, nil
 	}
 
-	if t.fallback != nil {
-		if rendered, rerr := t.fallback.Extract(ctx, u, timeout); rerr == nil && rendered != nil && len(rendered.Text) > 0 {
+	var blocked *utils.AntibotError
+	if t.renderer != nil && errors.As(err, &blocked) {
+		rendered, rerr := t.renderer.Extract(ctx, u, timeout)
+		if rerr == nil && rendered != nil {
 			return rendered, nil
 		}
 	}
@@ -121,10 +56,17 @@ func (t TieredExtractor) Extract(ctx context.Context, u *url.URL, timeout time.D
 	return nil, err
 }
 
-func newExtractor(settings config.ExtractTextSettings) Extractor {
-	var fallback Extractor
-	if settings.ReaderURL != "" {
-		fallback = JinaExtractor{url: settings.ReaderURL}
+func newExtractor(settings config.ExtractTextSettings) (Extractor, error) {
+	var renderer Extractor
+	if settings.FlareSolverrURL != "" {
+		flare, err := NewFlareSolverrExtractor(
+			settings.FlareSolverrURL,
+			time.Duration(settings.FlareTimeoutMS)*time.Millisecond,
+		)
+		if err != nil {
+			return nil, err
+		}
+		renderer = flare
 	}
 	resolver := settings.Resolver
 	if resolver == "" {
@@ -132,7 +74,7 @@ func newExtractor(settings config.ExtractTextSettings) Extractor {
 	}
 	return TieredExtractor{
 		primary:  ReadabilityExtractor{resolver: resolver},
-		fallback: fallback,
+		renderer: renderer,
 		minLen:   settings.MinContentLength,
-	}
+	}, nil
 }

@@ -120,7 +120,11 @@ func (s *State) Initialize(ctx context.Context, configPath string) error {
 		return fmt.Errorf("failed to initialize pipeline: %w", err)
 	}
 
-	s.Filters = s.buildFilterChain(ctx)
+	chain, err := s.buildFilterChain(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to build filter chain: %w", err)
+	}
+	s.Filters = chain
 
 	return nil
 }
@@ -214,7 +218,7 @@ func (s *State) buildPipeline(ctx context.Context) (*core.Pipeline, error) {
 	return pipeline, nil
 }
 
-func (s *State) buildFilterChain(ctx context.Context) *filters.Chain {
+func (s *State) buildFilterChain(ctx context.Context) (*filters.Chain, error) {
 	var fs []filters.Processor
 
 	for _, procCfg := range s.Config.Processors {
@@ -238,7 +242,12 @@ func (s *State) buildFilterChain(ctx context.Context) *filters.Chain {
 	}
 	fs = append(fs, filters.NewPublishedDedupeFilter(targetNames))
 	fs = append(fs, filters.NewBlocklistFilter())
-	fs = append(fs, processors.NewExtractProcessor(s.Config.Processors[names.ExtractText].Settings.ExtractTextSettings))
+
+	extract, err := processors.NewExtractProcessor(s.Config.Processors[names.ExtractText].Settings.ExtractTextSettings)
+	if err != nil {
+		return nil, err
+	}
+	fs = append(fs, extract)
 
 	pc := s.Registry.Get(components.PlatformComponentName).(*components.PlatformComponent)
 	fs = append(fs,
@@ -246,7 +255,7 @@ func (s *State) buildFilterChain(ctx context.Context) *filters.Chain {
 		filters.NewDiversifyFilter(),
 	)
 
-	return filters.NewChain(fs...)
+	return filters.NewChain(fs...), nil
 }
 
 func (s *State) createSource(name string, cfg config.SourceConfig) types.Source {
