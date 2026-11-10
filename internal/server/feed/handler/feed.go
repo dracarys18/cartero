@@ -61,5 +61,6 @@ func (h *Handler) serveFeed(w http.ResponseWriter, r *http.Request, key string, 
 
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
 	_, _ = fmt.Fprintf(w, `{"status":"ok","name":"%s","time":"%s"}`, h.config.Name, time.Now().UTC().Format(time.RFC3339))
 }

@@ -30,6 +30,7 @@ func (h *Handler) Routes() http.Handler {
 	r.Get("/feed.atom", h.AtomFeed)
 	r.Get("/feed.json", h.JSONFeed)
 	r.Get("/feed.health", h.Health)
+	r.Get("/health", h.Health)
 	r.Get("/sw.js", h.ServiceWorker)
 	r.Get("/robots.txt", h.Robots)
 	r.Get("/sitemap.xml", h.Sitemap)
