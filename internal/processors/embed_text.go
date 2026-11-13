@@ -6,9 +6,13 @@ import (
 	"cartero/internal/components"
 	procnames "cartero/internal/processors/names"
 	"cartero/internal/types"
+	strutils "cartero/internal/utils/string"
 )
 
-const embedBatchSize = 64
+const (
+	embedBatchSize    = 64
+	embedSummaryBytes = 400
+)
 
 type EmbedTextProcessor struct {
 	name string
@@ -42,19 +46,25 @@ func (e *EmbedTextProcessor) Process(ctx context.Context, st types.StateAccessor
 
 	for start := 0; start < len(pending); start += embedBatchSize {
 		chunk := pending[start:min(start+embedBatchSize, len(pending))]
-		titles := make([]string, len(chunk))
+
+		inputs := make([]string, len(chunk))
 		for i, item := range chunk {
-			titles[i] = item.GetTitle()
+			inputs[i] = item.GetTitle()
+			if summary := strutils.Truncate(item.GetDescription(), embedSummaryBytes); summary != "" {
+				inputs[i] += ". " + summary
+			}
 		}
 
-		vecs, err := embedder.Embed(ctx, titles)
+		vecs, err := embedder.Embed(ctx, inputs)
 		if err != nil || len(vecs) != len(chunk) {
 			st.GetLogger().Warn("embed_text: embedding failed", "processor", e.name, "error", err)
 			return items, nil
 		}
+
 		for i, item := range chunk {
 			item.SetEmbedding(embedder.Model(), vecs[i])
 		}
 	}
+
 	return items, nil
 }
